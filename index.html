@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FourHash — Premium Linear Positioning Network</title>
+  <meta name="description" content="FourHash — Plataforma digital de posicionamento linear e networking baseada em blockchain USDT BEP20.">
+
+  <!-- Tailwind CSS (CDN com config inline) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#00FF66',
+              glow: '#05DF72',
+              dark: '#00B849',
+              muted: '#00471B',
+              bg: '#000000',
+              card: '#080808',
+              cardLight: '#0D0D0D',
+              surface: '#111111',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderGreen: 'rgba(0, 255, 102, 0.3)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['Space Mono', 'ui-monospace', 'monospace']
+          },
+          boxShadow: {
+            'neon': '0 0 20px rgba(0, 255, 102, 0.35)',
+            'neon-lg': '0 0 35px rgba(0, 255, 102, 0.5)',
+            'neon-sm': '0 0 10px rgba(0, 255, 102, 0.25)',
+            'card': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Estilos customizados -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="bg-black text-white antialiased transition-colors duration-200 min-h-screen flex flex-col font-sans select-none">
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- HEADER & NAVBAR -->
+  <header class="sticky top-0 z-[100] w-full border-b border-brand-border bg-black/90 dark:bg-black/90 backdrop-blur-xl transition-colors overflow-visible">
+    <div class="relative max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-1 overflow-visible">
+      <!-- LOGO HEADER: 4# SOLO PNG + TEXTO FOURHASH (COMPACTADO MOBILE) -->
+      <div onclick="Router.navigate('landing')" class="flex items-center gap-1.5 sm:gap-3 cursor-pointer group min-w-0 flex-shrink">
+        <div class="relative flex items-center justify-center flex-shrink-0">
+          <img src="/assets/logo/Logo_4h_solo.png" alt="FourHash 4#" class="h-7 sm:h-9 w-auto object-contain drop-shadow-[0_0_8px_rgba(0,255,102,0.6)] group-hover:scale-105 transition-transform">
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="font-extrabold text-base sm:text-xl tracking-wider text-white font-['Space_Grotesk'] flex items-center gap-0.5 truncate">
+            FOUR<span class="text-brand neon-text-glow truncate">HASH</span>
+          </span>
+          <span class="hidden sm:flex text-[9px] text-gray-400 tracking-widest -mt-1 font-mono whitespace-nowrap">LINEAR PROTOCOL</span>
+        </div>
+      </div>
+
+      <!-- NAVEGAÇÃO PRINCIPAL (DESKTOP) -->
+      <nav id="desktop-nav" class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-300">
+      </nav>
+
+      <!-- CONTROLES: IDIOMA, TEMA, NOTIFICAÇÕES & USUÁRIO (COMPACTADO MOBILE) -->
+      <div class="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 overflow-visible">
+
+        <!-- SELETOR DE IDIOMAS (8 IDIOMAS) — MINIATURIZADO NO MOBILE -->
+        <div class="header-dropdown-parent relative flex-shrink-0 z-[110] overflow-visible">
+          <button id="lang-btn" onclick="UI.toggleLanguageMenu()" class="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/10 hover:border-brand/40 bg-brand-card hover:bg-brand-surface text-xs font-medium transition-all">
+            <span id="current-lang-flag" class="text-base sm:text-base leading-none">🇵🇹</span>
+            <span id="current-lang-code" class="hidden sm:inline font-mono uppercase text-gray-200 text-[11px]">PT</span>
+            <i class="fa-solid fa-chevron-down hidden sm:inline text-[10px] text-gray-400 ml-0.5"></i>
+          </button>
+
+          <div id="lang-dropdown" class="hidden absolute top-full right-4 sm:right-0 mt-2 w-44 rounded-xl glass-panel shadow-2xl border border-brand-border py-1 z-[120] origin-top-right">
+            <div class="px-3 py-1.5 text-[10px] font-mono text-gray-400 border-b border-white/5 uppercase" data-i18n="selectLanguage">
+              Selecione o Idioma
+            </div>
+            <div class="max-h-60 overflow-y-auto">
+              <button onclick="I18n.setLanguage('pt')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇵🇹 Português</span> <span class="text-[10px] font-mono text-gray-500">PT</span>
+              </button>
+              <button onclick="I18n.setLanguage('en')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇺🇸 English</span> <span class="text-[10px] font-mono text-gray-500">EN</span>
+              </button>
+              <button onclick="I18n.setLanguage('es')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇪🇸 Español</span> <span class="text-[10px] font-mono text-gray-500">ES</span>
+              </button>
+              <button onclick="I18n.setLanguage('zh')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇨🇳 中文</span> <span class="text-[10px] font-mono text-gray-500">ZH</span>
+              </button>
+              <button onclick="I18n.setLanguage('ja')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇯🇵 日本語</span> <span class="text-[10px] font-mono text-gray-500">JA</span>
+              </button>
+              <button onclick="I18n.setLanguage('th')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇹🇭 ไทย</span> <span class="text-[10px] font-mono text-gray-500">TH</span>
+              </button>
+              <button onclick="I18n.setLanguage('fr')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇫🇷 Français</span> <span class="text-[10px] font-mono text-gray-500">FR</span>
+              </button>
+              <button onclick="I18n.setLanguage('ru')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇷🇺 Русский</span> <span class="text-[10px] font-mono text-gray-500">RU</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEMA DARK / LIGHT — OCULTO MOBILE (ACESSÍVEL PELO MENU HAMBÚRGUER) -->
+        <button id="theme-btn" onclick="Theme.toggle()" title="Alternar Tema" class="hidden sm:flex w-8 sm:w-9 h-8 sm:h-9 items-center justify-center rounded-lg border border-white/10 hover:border-brand/40 bg-brand-card hover:bg-brand-surface text-gray-300 hover:text-brand transition-all flex-shrink-0">
+          <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
+        </button>
+
+        <!-- NOTIFICAÇÕES (COM BADGE MINIATURIZADO) -->
+        <div class="header-dropdown-parent relative auth-only hidden flex-shrink-0 z-[110] overflow-visible">
+          <button onclick="UI.toggleNotifications()" class="relative w-8 sm:w-9 h-8 sm:h-9 flex items-center justify-center rounded-lg border border-white/10 hover:border-brand/40 bg-brand-card hover:bg-brand-surface text-gray-300 hover:text-brand transition-all">
+            <i class="fa-solid fa-bell text-xs sm:text-xs"></i>
+            <span id="notif-badge" class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-brand text-black font-extrabold text-[9px] rounded-full flex items-center justify-center ring-2 ring-black">2</span>
+          </button>
+
+          <div id="notif-dropdown" class="hidden absolute top-full left-4 right-4 mt-2 sm:left-auto sm:right-0 sm:w-80 rounded-xl glass-panel shadow-2xl border border-brand-border py-2 z-[120] origin-top-right">
+            <div class="px-4 py-2 flex items-center justify-between border-b border-white/5">
+              <span class="text-xs font-bold uppercase tracking-wider" data-i18n="notifications">Notificações</span>
+              <button onclick="AppState.clearNotifications()" class="text-[10px] text-brand hover:underline" data-i18n="markAllRead">Limpar</button>
+            </div>
+            <div id="notif-list" class="max-h-64 overflow-y-auto divide-y divide-white/5 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- PERFIL & DROPDOWN OU BOTÃO DE ENTRAR — OCULTO TEXTO BOTÕES NO MOBILE -->
+        <div id="header-auth-action" class="flex-shrink-0">
+        </div>
+
+        <!-- BOTÃO MOBILE MENU -->
+        <button onclick="UI.toggleMobileMenu()" class="md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 bg-brand-card text-gray-300 hover:text-brand flex-shrink-0">
+          <i class="fa-solid fa-bars text-sm"></i>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- MENU MOBILE RETRÁTIL -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-brand-border bg-black/95 px-3 sm:px-4 py-4 space-y-3">
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL (SPA CONTAINER) -->
+  <main id="app-view" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 cyber-grid transition-all duration-300">
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-brand-border bg-black text-gray-500 text-xs py-8 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded bg-brand/10 border border-brand/40 flex items-center justify-center overflow-hidden">
+          <img src="/assets/logo/Logo_4h_solo.png" alt="4#" class="w-4 h-4 object-contain">
+        </div>
+        <span class="font-mono text-gray-400" data-i18n="copyright">FOURHASH PROTOCOL © 2026 Phase 1 Live Mock</span>
+      </div>
+
+      <div class="flex items-center gap-6 text-xs text-gray-400">
+        <button onclick="Router.navigate('landing')" class="hover:text-brand transition" data-i18n="navHome">Início</button>
+        <button onclick="Router.navigate('deposit')" class="hover:text-brand transition" data-i18n="navDeposit">Depositar</button>
+        <button onclick="Router.navigate('support')" class="hover:text-brand transition" data-i18n="navSupport">Suporte & FAQ</button>
+        <button onclick="AppState.toggleAdminDemo()" class="text-brand hover:underline font-mono" title="Alternar Role de Administrador">
+          <i class="fa-solid fa-shield-halved mr-1"></i><span id="admin-toggle-label" data-i18n="userMode">Modo: Usuário</span>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL GENÉRICO / BOTTOM SHEET -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] hidden opacity-0 transition-opacity duration-200 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="modal-panel" class="bg-brand-card w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-brand-border p-6 shadow-2xl transform translate-y-full sm:translate-y-0 transition-transform duration-200">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ================================================== -->
+  <!-- JAVASCRIPT: ARQUITETURA MODULAR (ORDEM IMPORTANTE) -->
+  <!-- ================================================== -->
+
+  <!-- 1. Traduções (dados puros) -->
+  <script src="js/i18n/translations.js"></script>
+
+  <!-- 2. Estado Global da Aplicação -->
+  <script src="js/state/AppState.js"></script>
+
+  <!-- 3. Utilitários de Interface (Toasts, Modais, Clipboard...) -->
+  <script src="js/ui/UI.js"></script>
+
+  <!-- 4. Motor de Internacionalização -->
+  <script src="js/i18n/i18n.js"></script>
+
+  <!-- 5. Sistema de Temas Dark/Light -->
+  <script src="js/theme/Theme.js"></script>
+
+  <!-- 6. Motores auxiliares -->
+  <script src="js/engine/Countdown.js"></script>
+  <script src="js/engine/TreeEngine.js"></script>
+
+  <!-- 7. Templates das Telas -->
+  <script src="js/views/Views.js"></script>
+
+  <!-- 8. Roteador SPA -->
+  <script src="js/router/Router.js"></script>
+
+  <!-- 9. Bootstrap / Entry Point (listeners globais + onload) -->
+  <script src="js/app.js"></script>
+
+</body>
+</html>

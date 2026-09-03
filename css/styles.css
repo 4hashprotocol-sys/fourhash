@@ -1,0 +1,578 @@
+/* ============================================================
+   FOURHASH — Estilos Customizados de Alta Precisão & Glow Neon
+   ============================================================ */
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: #00FF66 #080808;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080808;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00FF66;
+  border-radius: 3px;
+}
+
+.neon-text-glow {
+  text-shadow: 0 0 12px rgba(0, 255, 102, 0.6);
+}
+
+.neon-border-glow {
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+}
+
+.glass-panel {
+  background: rgba(8, 8, 8, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Estilo de Conexões da Árvore de Níveis */
+.tree-line-v {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(180deg, #00FF66 0%, rgba(0,255,102,0.2) 100%);
+  box-shadow: 0 0 8px rgba(0,255,102,0.4);
+}
+
+.tree-line-h {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #00FF66 50%, transparent 100%);
+  box-shadow: 0 0 8px rgba(0,255,102,0.4);
+}
+
+/* Grid de Fundo Futurista */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.light .cyber-grid {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+}
+
+/* Transições suaves */
+.view-transition {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   CORREÇÕES CRÍTICAS DE HEADER DROPDOWNS
+   Evitam que dropdowns de idioma/notificações sejam cortados
+   pelo contexto de empilhamento do backdrop-blur / sticky
+   ============================================================ */
+
+/* Header e todos os seus ancestrais imediatos não podem cortar conteúdo */
+header,
+header > div {
+  overflow: visible !important;
+}
+
+/* Dropdowns no header: garantem posicionamento acima de qualquer outro conteúdo */
+#lang-dropdown,
+#notif-dropdown {
+  z-index: 9995 !important;
+  position: absolute !important;
+  transform-origin: top right;
+  animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  /* Protege contra cortes de borda: largura máxima = viewport - 32px (16px cada lado) */
+  max-width: calc(100vw - 2rem) !important;
+  box-sizing: border-box;
+}
+
+/* MOBILE (<640px): dropdown de notificações = amarra nas duas bordas (16px) */
+@media (max-width: 639.98px) {
+  /* CHAVE: containers individuais PERDEM position:relative APENAS no mobile.
+     Assim os dropdowns passam a usar o container do header (largura total) como referência,
+     e não o botão de 36px de largura — que causava transbordamento/colapso lateral. */
+  .header-dropdown-parent {
+    position: static !important;
+  }
+
+  #notif-dropdown {
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto !important;
+    top: 100% !important;
+    margin-top: 0.5rem !important;
+  }
+  #lang-dropdown {
+    right: 1rem !important;
+    left: auto !important;
+    top: 100% !important;
+    margin-top: 0.5rem !important;
+  }
+}
+
+/* DESKTOP (>=640px): comportamento original, alinhado ao botão individual
+   (os containers .header-dropdown-parent permanecem com position:relative) */
+@media (min-width: 640px) {
+  #notif-dropdown {
+    left: auto !important;
+    right: 0 !important;
+    width: 20rem !important;
+  }
+  #lang-dropdown {
+    left: auto !important;
+    right: 0 !important;
+  }
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Container <main> NÃO pode sobrepor o conteúdo que transborda do header */
+#app-view {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+/* Garante que o backdrop-blur do header não crie containing block que prenda os filhos */
+header {
+  isolation: isolate;
+}
+
+/* Aplica overflow-x APENAS no conteúdo principal, NUNCA no body —
+   pois overflow combinado no body força corte de dropdowns absolute
+   (regra CSS: overflow-x:hidden + overflow-y:visible → converte visible→auto) */
+#app-view,
+footer,
+#mobile-menu {
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   FOURHASH — TEMA LIGHT PREMIUM
+   Paleta: fundos off-white clean, contornos suaves, marca verde
+   vibrante (branding), contraste WCAG AA+ em todos os textos
+   ============================================================ */
+
+/* ====== TOKENS GLOBAIS LIGHT ====== */
+.light,
+.light body {
+  color: #0b1220;
+  background: #f7f8fb;
+}
+.light body { background: #f7f8fb; }
+
+.light .text-white  { color: #0b1220 !important; }
+.light .text-gray-50 { color: #1f2937 !important; }
+.light .text-gray-100{ color: #1f2937 !important; }
+.light .text-gray-200{ color: #374151 !important; }
+.light .text-gray-300{ color: #4b5563 !important; }
+.light .text-gray-400{ color: #6b7280 !important; }
+.light .text-gray-500{ color: #9ca3af !important; }
+.light .text-black  { color: #000000 !important; }
+
+/* ====== FUNDO ESTRUTURA ====== */
+.light header {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-bottom-color: #e5e7eb !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ====== GRID CYBER (fundo suave no light) ====== */
+.light .cyber-grid {
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px) !important;
+}
+
+/* ====== PAINÉIS DE VIDRO ====== */
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #e5e7eb !important;
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 10px 30px -12px rgba(15, 23, 42, 0.10);
+}
+
+/* ====== CORES DE MARCA (brand) — sobreposição light ====== */
+.light .bg-brand-bg        { background: #ffffff !important; }
+.light .bg-brand-card      { background: #ffffff !important; }
+.light .bg-brand-cardLight { background: #f3f4f6 !important; }
+.light .bg-brand-surface   { background: #f7f8fb !important; }
+.light .bg-brand-muted     { background: #ecfdf3 !important; }
+
+.light .border-brand-border       { border-color: #e5e7eb !important; }
+.light .border-brand-borderGreen  { border-color: #bbf7d0 !important; }
+.light .border-white\/5           { border-color: rgba(15,23,42,0.05) !important; }
+.light .border-white\/10          { border-color: rgba(15,23,42,0.08) !important; }
+.light .border-white\/20          { border-color: rgba(15,23,42,0.12) !important; }
+.light .border-brand\/20          { border-color: rgba(5,193,94,0.20) !important; }
+.light .border-brand\/30          { border-color: rgba(5,193,94,0.30) !important; }
+.light .border-brand\/40          { border-color: rgba(5,193,94,0.40) !important; }
+.light .border-brand\/60          { border-color: rgba(5,193,94,0.60) !important; }
+.light .border-brand\/100,
+.light .border-brand              { border-color: #05c15e !important; }
+
+/* Textos marca preservam a cor de brand no light também (visibilidade total) */
+.light .text-brand { color: #05c15e !important; }
+
+/* ====== HOVER STATES ====== */
+.light .hover\:bg-brand-surface:hover  { background: #f0f1f5 !important; }
+.light .hover\:bg-brand-card:hover     { background: #fafafa !important; }
+.light .hover\:bg-brand:hover          { background: #05c15e !important; }
+.light .hover\:bg-brand-glow:hover     { background: #08da6c !important; }
+.light .hover\:border-brand\/40:hover  { border-color: rgba(5,193,94,0.40) !important; }
+.light .hover\:border-brand\/60:hover  { border-color: rgba(5,193,94,0.60) !important; }
+.light .hover\:text-brand:hover        { color: #05c15e !important; }
+.light .hover\:text-white:hover        { color: #0b1220 !important; }
+.light .hover\:bg-white\/\[0\.02\]:hover{ background: rgba(15,23,42,0.02) !important; }
+.light .hover\:bg-brand\/10:hover      { background: rgba(5,193,94,0.08) !important; }
+
+/* ====== INPUTS, SELECTS, TEXTAREA — aparência clean premium ====== */
+.light input,
+.light select,
+.light textarea {
+  color: #0b1220 !important;
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  caret-color: #05c15e;
+}
+.light input::placeholder,
+.light select::placeholder,
+.light textarea::placeholder { color: #9ca3af !important; opacity: 1; }
+.light input:disabled,
+.light input[readonly] {
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+  border-color: #e5e7eb !important;
+}
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  outline: none !important;
+  border-color: #05c15e !important;
+  box-shadow: 0 0 0 3px rgba(5, 193, 94, 0.12) !important;
+}
+.light label,
+.light .font-mono { color: #4b5563; }
+.light label { color: #374151 !important; }
+
+/* ====== CHECKBOX + RADIO ====== */
+.light input[type="checkbox"],
+.light input[type="radio"] {
+  accent-color: #05c15e;
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+/* ====== BOTÕES ====== */
+/* Botão primário verde marca */
+.light .bg-brand { background: #05c15e !important; color: #ffffff !important; }
+.light .bg-brand.text-black { color: #ffffff !important; }
+.light .bg-brand:hover      { background: #04a852 !important; }
+.light .hover\:bg-brand-glow:hover { background: #08da6c !important; color: #ffffff !important; }
+
+/* Botão secundário (contornado) */
+.light button:not([class*="bg-brand"]):not([onclick*="toggleLanguageMenu"]):not([onclick*="toggleNotifications"]):not([onclick*="toggleMobileMenu"]):not([onclick*="toggle"]) {
+  /* exceções: controles do header (pequenos) estilizados separadamente abaixo */
+}
+
+/* Botões pequenos do header (PT, 🔔, ☰, tema) */
+.light header button[onclick*="toggleLanguageMenu"],
+.light header button[onclick*="toggleNotifications"],
+.light header button[onclick*="toggleMobileMenu"],
+.light header button[onclick*="toggleTheme"],
+.light header button[onclick*="Theme.toggle"],
+.light header button[title="Alternar Tema"],
+.light header button.w-8,
+.light header button.h-8,
+.light #lang-btn {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #0b1220 !important;
+}
+.light #lang-btn:hover,
+.light header button[onclick*="toggleLanguageMenu"]:hover,
+.light header button[onclick*="toggleNotifications"]:hover,
+.light header button[onclick*="toggleMobileMenu"]:hover,
+.light header button[title="Alternar Tema"]:hover {
+  background: #f7f8fb !important;
+  border-color: rgba(5,193,94,0.40) !important;
+  color: #05c15e !important;
+}
+.light #lang-btn #current-lang-code { color: #374151 !important; }
+
+/* Botão contornado genérico (ex: "ENTRAR" hero, "Ver Árvore 3D") */
+.light .border-white\/20.bg-brand-card,
+.light .border-white\/10.bg-brand-card {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #0b1220 !important;
+}
+.light .border-white\/20.bg-brand-card:hover,
+.light .border-white\/10.bg-brand-card:hover {
+  border-color: #05c15e !important;
+  color: #05c15e !important;
+  background: #ecfdf3 !important;
+}
+
+/* Badge notificação */
+.light #notif-badge {
+  background: #05c15e !important;
+  color: #ffffff !important;
+  ring-color: #ffffff;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+/* ====== CARTÕES ESTRUTURAIS ====== */
+.light .bg-brand-card {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.03),
+    0 8px 24px -12px rgba(15, 23, 42, 0.08);
+}
+.light .bg-brand-surface { background: #f7f8fb !important; }
+.light .bg-brand-cardLight { background: #f3f4f6 !important; }
+
+/* Cards com hover de borda marca */
+.light .hover\:border-brand\/40:hover { border-color: rgba(5,193,94,0.40) !important; }
+
+/* ====== GRADIENTES ESPECIAIS (hero banner, pré-cadastro, admin, etc) ====== */
+.light .bg-gradient-to-b.from-brand-card.to-black,
+.light .bg-gradient-to-r.from-brand-card.via-black.to-brand-card,
+.light .bg-gradient-to-r.from-brand-card.via-brand-surface.to-brand-card {
+  background:
+    radial-gradient(1200px 400px at 50% -10%, rgba(5,193,94,0.08), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%) !important;
+}
+.light .bg-gradient-to-r.from-brand-surface.via-black.to-brand-surface {
+  background: linear-gradient(90deg, #f7f8fb 0%, #ffffff 50%, #f7f8fb 100%) !important;
+}
+.light .bg-black\/60,
+.light .bg-black\/90,
+.light .bg-black\/95,
+.light .bg-black\/50 { background: #ffffff !important; }
+
+/* Blur orb no hero */
+.light .bg-brand\/10 { background: rgba(5, 193, 94, 0.08) !important; }
+.light .bg-brand\/20 { background: rgba(5, 193, 94, 0.12) !important; }
+
+/* ====== CONTADOR (Countdown timer) ====== */
+.light .bg-black\/60.p-6,
+.light .rounded-2xl.border.border-brand\/30.p-6 {
+  background: #ffffff !important;
+  border-color: #bbf7d0 !important;
+  box-shadow: 0 10px 30px -15px rgba(5,193,94,0.18);
+}
+.light #presale-timer-landing > div,
+.light #presale-timer-dash > div {
+  background: #f7f8fb !important;
+  border: 1px solid #e5e7eb !important;
+  color: #0b1220 !important;
+  border-radius: 0.75rem;
+}
+
+/* ====== TABELAS ====== */
+.light table thead tr { border-bottom-color: #e5e7eb !important; }
+.light table thead th { color: #6b7280 !important; }
+.light table tbody { color: #0b1220 !important; }
+.light table tbody tr { border-top-color: #f3f4f6 !important; }
+.light table tbody tr:hover { background: #f7f8fb !important; }
+.light table td { color: #374151 !important; }
+.light table tbody td.font-medium,
+.light table tbody td.font-bold,
+.light table tbody td:first-child { color: #0b1220 !important; }
+
+/* Chips / status tables */
+.light .rounded.bg-brand\/10.text-brand,
+.light .bg-brand\/10.border.border-brand\/30 {
+  background: #ecfdf3 !important;
+  border-color: #bbf7d0 !important;
+  color: #047a42 !important;
+}
+.light .bg-white\/5,
+.light .bg-white\/\[0\.02\] {
+  background: #f7f8fb !important;
+}
+
+/* ====== DROPDOWNS (idioma / notificações) ====== */
+.light #lang-dropdown,
+.light #notif-dropdown {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #0b1220 !important;
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 20px 40px -15px rgba(15, 23, 42, 0.18);
+}
+.light #lang-dropdown button,
+.light #notif-dropdown button {
+  color: #0b1220 !important;
+}
+.light #lang-dropdown button:hover,
+.light #notif-dropdown button:hover {
+  background: #ecfdf3 !important;
+  color: #05c15e !important;
+}
+.light #lang-dropdown .border-b,
+.light #notif-dropdown .border-b {
+  border-color: #f3f4f6 !important;
+}
+.light #notif-dropdown #notif-list .divide-y > * {
+  border-color: #f3f4f6 !important;
+}
+.light #notif-dropdown .bg-brand\/5 {
+  background: #ecfdf3 !important;
+}
+
+/* ====== MENU MOBILE ====== */
+.light #mobile-menu {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-top-color: #e5e7eb !important;
+}
+.light #mobile-menu button {
+  color: #374151 !important;
+}
+.light #mobile-menu button:hover {
+  color: #05c15e !important;
+}
+
+/* ====== TOASTS ====== */
+.light #toast-container .glass-panel {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #0b1220 !important;
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 20px 40px -15px rgba(15, 23, 42, 0.18);
+}
+.light #toast-container .pointer-events-auto .text-white {
+  color: #0b1220 !important;
+}
+
+/* ====== MODAL / BOTTOM-SHEET ====== */
+.light #modal-backdrop { background: rgba(15, 23, 42, 0.55) !important; }
+.light #modal-panel {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #0b1220 !important;
+  box-shadow:
+    0 20px 50px -12px rgba(15, 23, 42, 0.25);
+}
+
+/* ====== FOOTER ====== */
+.light footer {
+  background: #ffffff !important;
+  border-top-color: #e5e7eb !important;
+  color: #6b7280 !important;
+}
+.light footer button { color: #4b5563 !important; }
+.light footer button:hover { color: #05c15e !important; }
+
+/* Chip premium 4# do footer */
+.light footer .rounded.bg-brand\/10.border.border-brand\/40 {
+  background: #ecfdf3 !important;
+  border-color: #bbf7d0 !important;
+  color: #047a42 !important;
+}
+.light footer .border-brand\/30.bg-brand\/10.text-brand {
+  background: #ecfdf3 !important;
+  border-color: #bbf7d0 !important;
+  color: #047a42 !important;
+}
+
+/* ====== ÁRVORE DE NÍVEIS (Position / TreeEngine) ====== */
+.light .tree-line-v {
+  background: linear-gradient(180deg, #05c15e 0%, rgba(5,193,94,0.2) 100%) !important;
+  box-shadow: 0 0 6px rgba(5,193,94,0.3) !important;
+}
+.light .tree-line-h {
+  background: linear-gradient(90deg, transparent 0%, #05c15e 50%, transparent 100%) !important;
+  box-shadow: 0 0 6px rgba(5,193,94,0.3) !important;
+}
+.light #tree-viewport {
+  background: linear-gradient(180deg, #ffffff 0%, #f7f8fb 50%, #ffffff 100%) !important;
+  border-color: #e5e7eb !important;
+}
+
+/* ====== WARNING / AMBER BANNER ====== */
+.light .border-amber-500\/30.bg-amber-500\/10,
+.light .bg-amber-500\/10 {
+  background: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+}
+.light .text-amber-300 { color: #b45309 !important; }
+.light .text-amber-200\/80 { color: #92400e !important; opacity: 0.85; }
+
+/* Admin banner */
+.light .border-amber-500\/30 { border-color: #fcd34d !important; }
+.light .bg-amber-500\/20 { background: #fef3c7 !important; }
+.light .text-amber-400 { color: #d97706 !important; }
+.light .text-amber-300\/80 { color: #92400e !important; }
+
+/* ====== LOGO NEON DROP (soft no light) ====== */
+.light img[alt="FourHash 4#"],
+.light img[alt="FourHash Logo 4#"] {
+  filter: drop-shadow(0 0 6px rgba(5, 193, 94, 0.35));
+}
+.light .neon-text-glow {
+  text-shadow: 0 0 10px rgba(5, 193, 94, 0.35);
+}
+
+/* QR code container no Deposit (fundo branco padrão já ok — só reforça borda) */
+.light .w-36.h-36.bg-white {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 16px -8px rgba(15, 23, 42, 0.15);
+}
+
+/* ====== SHADOWS VERDES (Neon adaptados para light = sombras suaves verdes) ====== */
+.light .shadow-neon,
+.light .shadow-neon-lg,
+.light .shadow-neon-sm {
+  box-shadow: 0 10px 25px -12px rgba(5, 193, 94, 0.35) !important;
+}
+.light .shadow-card {
+  box-shadow: 0 6px 20px 0 rgba(15, 23, 42, 0.06) !important;
+}
+.light .shadow-2xl {
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Scrollbar no light (mais suave) */
+.light * {
+  scrollbar-color: #bbf7d0 #f3f4f6;
+}
+.light ::-webkit-scrollbar-track { background: #f3f4f6; }
+.light ::-webkit-scrollbar-thumb {
+  background: #86efac;
+  border-radius: 3px;
+}
+.light ::-webkit-scrollbar-thumb:hover { background: #05c15e; }
+
