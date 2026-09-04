@@ -374,6 +374,24 @@ const UI = {
       window.alert('Resposta muito curta.');
       return;
     }
+    const closeChk = document.getElementById('admin_reply_close');
+    const closeAfter = closeChk ? !!closeChk.checked : false;
+    var btn = form && form.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    const finalize = function(){
+      UI.closeModal();
+      UI._toast(`${I18n.t('adminSupportReplySent')} — ${ticketId}${closeAfter ? ' + fechado' : ''}`, 'success', 'fa-reply');
+      setTimeout(function(){ if (Router && Router.refresh) { Router.refresh(); } else if (Router && Router.navigate) { Router.navigate('admin'); } }, 220);
+    };
+    if (window.SupabaseOK && window.SupabaseOK() && AppState && typeof AppState.sbReplyTicket === 'function') {
+      if (closeAfter) {
+        Promise.resolve(AppState.sbCloseTicket(ticketId, msg)).then(finalize).catch(function(err){ UI._toast((err && err.message) || 'Erro', 'error', 'fa-triangle-exclamation'); if (btn) { btn.disabled=false; btn.style.opacity='1';} });
+      } else {
+        Promise.resolve(AppState.sbReplyTicket(ticketId, msg)).then(finalize).catch(function(err){ UI._toast((err && err.message) || 'Erro', 'error', 'fa-triangle-exclamation'); if (btn) { btn.disabled=false; btn.style.opacity='1';} });
+      }
+      return;
+    }
+    /* Fallback offline (modo antigo em memória) */
     const tk = AppState.supportTickets.find(t => t.id === ticketId);
     if (!tk) return;
     const replyObj = {
@@ -383,21 +401,29 @@ const UI = {
     };
     if (!tk.replies) tk.replies = [];
     tk.replies.push(replyObj);
-    if (tk.status === 'Aberto') tk.status = 'Respondido';
-    if (tk.status === 'Open') tk.status = 'Replied';
-
-    UI.closeModal();
-    UI._toast(`${I18n.t('adminSupportReplySent')} @${tk.username}`, 'success', 'fa-reply');
-    setTimeout(() => Router.navigate('admin'), 250);
+    if (tk.status === 'Aberto') tk.status = (closeAfter ? 'Fechado' : 'Respondido');
+    if (tk.status === 'Open')   tk.status = (closeAfter ? 'Closed' : 'Replied');
+    if (tk.status === 'Respondido' && closeAfter) tk.status = 'Fechado';
+    if (tk.status === 'Replied' && closeAfter) tk.status = 'Closed';
+    finalize();
   },
 
   closeAdminTicket(ticketId) {
+    if (window.SupabaseOK && window.SupabaseOK() && AppState && typeof AppState.sbCloseTicket === 'function') {
+      Promise.resolve(AppState.sbCloseTicket(ticketId, I18n.t('adminSupportClosedOk')))
+        .then(function(){
+          UI._toast(`${I18n.t('adminSupportClosedOk')} — ${ticketId}`, 'warning', 'fa-lock');
+          setTimeout(function(){ if (Router && Router.refresh) Router.refresh(); else if (Router) Router.navigate('admin'); }, 200);
+        })
+        .catch(function(err){ UI._toast((err && err.message) || 'Erro ao fechar', 'error', 'fa-triangle-exclamation'); });
+      return;
+    }
     const tk = AppState.supportTickets.find(t => t.id === ticketId);
     if (!tk) return;
     if (tk.status === 'Respondido') tk.status = 'Fechado';
     if (tk.status === 'Replied') tk.status = 'Closed';
     UI._toast(`${I18n.t('adminSupportClosedOk')} (@${tk.username})`, 'warning', 'fa-lock');
-    setTimeout(() => Router.navigate('admin'), 200);
+    setTimeout(function(){ if (Router && Router.refresh) Router.refresh(); else if (Router) Router.navigate('admin'); }, 200);
   },
 
   viewFinanceHash(hash, network, currency) {
@@ -537,43 +563,60 @@ const UI = {
   },
 
   submitFinanceResolution(form, pId) {
-    const p = AppState.financeProblems.find(f => f.id === pId);
-    if (!p) return;
-    const dec = document.getElementById('fin_decisao').value;
-    const obs = document.getElementById('fin_obs').value.trim();
-    const val = parseFloat(document.getElementById('fin_valor').value || '0');
-    const cred = document.getElementById('fin_credito').checked;
+    const p = AppState.financeProblems.find(f => f.id === pId || f.fin_id === pId || f.code === pId);
+    if (!p) { UI._toast('Problema não encontrado', 'error', 'fa-triangle-exclamation'); return; }
+    const decEl = document.getElementById('fin_decisao');
+    const valEl = document.getElementById('fin_valor');
+    const credEl = document.getElementById('fin_credito');
+    const obsEl = document.getElementById('fin_obs');
+    const dec = decEl ? decEl.value : '';
+    const obs = obsEl ? obsEl.value.trim() : '';
+    const val = valEl ? parseFloat(valEl.value || '0') : 0;
+    const cred = credEl ? !!credEl.checked : false;
     if (!dec) { alert('Seleccione uma decisão.'); return; }
     if (!obs || obs.length < 8) { alert('Descreva a nota interna (mínimo 8 caracteres).'); return; }
-
-    let novoStatus = p.status;
-    if (dec === 'aprovado_total' || dec === 'credito_manual' || dec === 'reembolso') novoStatus = 'Fechado Resolvido';
-    else if (dec === 'aprovado_parcial') novoStatus = 'Resolvido Parcial';
-    else if (dec === 'rejeitado') novoStatus = 'Fechado Resolvido';
-    else if (dec === 'aguardar') novoStatus = 'Em Análise';
-    p.status = novoStatus;
-
+    let statusTo = p.status;
+    if (dec === 'aprovado_total' || dec === 'credito_manual' || dec === 'reembolso' || dec === 'rejeitado') statusTo = 'Resolvido Total';
+    else if (dec === 'aprovado_parcial') statusTo = 'Resolvido Parcial';
+    else if (dec === 'aguardar') statusTo = 'Em Análise';
+    const creditAmount = (cred && val && val > 0) ? val : 0;
+    const btn = form && form.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    const launchMoney = creditAmount > 0;
+    const finalize = function(){
+      UI.closeModal();
+      const toastIco = statusTo.includes('Fechado') || statusTo.includes('Total') ? 'fa-circle-check' : statusTo.includes('Parcial') ? 'fa-clock-rotate-left' : 'fa-magnifying-glass';
+      const toastType = statusTo.includes('Análise') ? 'warning' : (statusTo.includes('Resolv') ? 'success' : 'info');
+      UI._toast(`${p.code || pId} resolvido · ${statusTo}${launchMoney ? ' · +US$ ' + creditAmount.toFixed(2) : ''}`, toastType, toastIco);
+      setTimeout(function(){ if (Router && Router.refresh) { Router.refresh(); } else if (Router) { Router.navigate('admin'); } }, 260);
+    };
+    if (window.SupabaseOK && window.SupabaseOK() && AppState && typeof AppState.sbResolveFinance === 'function') {
+      Promise.resolve(AppState.sbResolveFinance(p.code || pId, obs, {
+        credit: !!launchMoney, amount: creditAmount, statusTo: statusTo,
+        finalObservation: obs, signature: 'Admin Master',
+        message: `[${dec.replace(/_/g, ' ').toUpperCase()}] ${obs}${launchMoney ? ' · 💸 Crédito US$ ' + creditAmount.toFixed(2) : ''}`
+      })).then(finalize).catch(function(err){
+        UI._toast((err && err.message) || 'Erro ao resolver', 'error', 'fa-triangle-exclamation');
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      });
+      return;
+    }
+    /* Fallback offline */
+    p.status = statusTo;
     const nowStr = new Date().toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-    const launchMoney = val && val>0 && cred;
     if (!p.notes) p.notes = [];
     p.notes.push({
       from: 'admin',
       date: nowStr,
-      text: `[${dec.replace(/_/g,' ').toUpperCase()}] ${obs}${launchMoney?` · 💸 Crédito em carteira aplicado US$ ${val.toFixed(2)}`:''}`
+      text: `[${dec.replace(/_/g,' ').toUpperCase()}] ${obs}${launchMoney ? ' · 💸 Crédito em carteira aplicado US$ ' + creditAmount.toFixed(2) : ''}`
     });
-
     if (launchMoney) {
       const user = AppState.currentUser;
       if (user && user.username && user.username === p.username) {
-        user.availableBalance = parseFloat(((user.availableBalance||0) + val).toFixed(2));
+        user.availableBalance = parseFloat(((user.availableBalance || 0) + creditAmount).toFixed(2));
       }
     }
-
-    UI.closeModal();
-    const toastIco = novoStatus.includes('Fechado') ? 'fa-circle-check' : novoStatus.includes('Parcial') ? 'fa-clock-rotate-left' : 'fa-magnifying-glass';
-    const toastType = novoStatus.includes('Fechado') ? 'success' : (novoStatus.includes('Análise')?'warning':'info');
-    UI._toast(`${p.code} resolvido · @${p.username} · ${novoStatus}${launchMoney?' · +US$ '+val.toFixed(2):''}`, toastType, toastIco);
-    setTimeout(() => Router.navigate('admin'), 260);
+    finalize();
   },
 
   _toast(message, type = 'info', icon = 'fa-circle-info') {

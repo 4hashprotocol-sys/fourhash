@@ -6,7 +6,38 @@
 const Router = {
   currentRoute: 'landing',
 
+  _privateRoutes: Object.freeze(['dashboard','position','wallet','deposit','referrals','profile','security','admin','notifications']),
+  _guestOnlyRoutes: Object.freeze(['login','register']),
+
+  isAuthenticated() {
+    return !!(AppState.isAuthenticated || (AppState.sbAuth && AppState.sbAuth.id));
+  },
+
+  isAdmin() {
+    if (!this.isAuthenticated()) return false;
+    const localRole = AppState.userRole === 'admin';
+    const bancoRole = AppState.sbProfile && (AppState.sbProfile.role === 'admin' || AppState.sbProfile.role === 'superadmin');
+    return localRole || bancoRole;
+  },
+
   navigate(route, params = {}) {
+    if (this._guestOnlyRoutes.includes(route) && this.isAuthenticated()) {
+      UI.showToast('Já se encontra com sessão iniciada.', 'info');
+      this.navigate('dashboard');
+      return;
+    }
+    if (this._privateRoutes.includes(route) && !this.isAuthenticated()) {
+      UI.showToast('É necessário iniciar sessão para aceder a esta página.', 'warning', 'fa-triangle-exclamation');
+      this.navigate('landing');
+      return;
+    }
+    if (route === 'admin' && !this.isAdmin()) {
+      UI.showToast('Acesso Negado. Apenas administradores.', 'error', 'fa-shield-halved');
+      if (this.isAuthenticated()) { this.navigate('dashboard'); return; }
+      this.navigate('landing');
+      return;
+    }
+
     this.currentRoute = route;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     this.renderNav();
@@ -25,7 +56,7 @@ const Router = {
     const authAction = document.getElementById('header-auth-action');
     const notifWrappers = document.querySelectorAll('.auth-only');
 
-    if (AppState.isAuthenticated) {
+    if (this.isAuthenticated()) {
       notifWrappers.forEach(el => el.classList.remove('hidden'));
 
       let links = `
@@ -36,7 +67,7 @@ const Router = {
         <button onclick="Router.navigate('referrals')" class="hover:text-brand transition ${this.currentRoute === 'referrals' ? 'text-brand font-bold' : ''}">${I18n.t('navReferrals')}</button>
       `;
 
-      if (AppState.userRole === 'admin') {
+      if (this.isAdmin()) {
         links += `<button onclick="Router.navigate('admin')" class="text-amber-400 hover:text-amber-300 transition font-bold ${this.currentRoute === 'admin' ? 'underline' : ''}"><i class="fa-solid fa-crown mr-1"></i>${I18n.t('navAdmin')}</button>`;
       }
 
@@ -45,7 +76,7 @@ const Router = {
       mobileNav.innerHTML = `
         <div class="flex items-center gap-3 p-3 bg-brand-surface rounded-xl border border-white/10 mb-4">
           <div class="w-10 h-10 rounded-full bg-brand/20 border border-brand/50 flex items-center justify-center font-bold text-brand">
-            @${AppState.currentUser.username.substring(0, 2).toUpperCase()}
+            @${(AppState.currentUser.username || 'U').substring(0, 2).toUpperCase()}
           </div>
           <div>
             <div class="font-bold text-sm text-white">@${AppState.currentUser.username}</div>
@@ -71,6 +102,7 @@ const Router = {
           <button onclick="Router.navigate('referrals')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-users mr-2 text-brand"></i>${I18n.t('navReferrals')}</button>
           <button onclick="Router.navigate('security')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-shield-halved mr-2 text-brand"></i>${I18n.t('navSecurity')}</button>
         </div>
+        ${this.isAdmin() ? `<button onclick="Router.navigate('admin')" class="w-full mt-2 py-2 text-center text-xs font-bold text-amber-400 border border-amber-500/30 rounded-lg bg-amber-500/5 hover:bg-amber-500/10"><i class="fa-solid fa-crown mr-1"></i>Painel Admin</button>` : ''}
         <button onclick="Router.logout()" class="w-full mt-2 py-2 text-center text-xs text-red-400 hover:text-red-300 font-medium border border-red-500/20 rounded-lg"><i class="fa-solid fa-right-from-bracket mr-1"></i>${I18n.t('logout')}</button>
       `;
 
@@ -110,12 +142,31 @@ const Router = {
         </div>
       `;
     }
+
+    const footerAdminLink = document.getElementById('footer-admin-link');
+    if (footerAdminLink) {
+      if (this.isAdmin()) {
+        footerAdminLink.classList.remove('hidden');
+      } else {
+        footerAdminLink.classList.add('hidden');
+      }
+    }
   },
 
   logout() {
-    AppState.isAuthenticated = false;
-    UI.showToast('Você desconectou da sua conta.', 'info');
-    this.navigate('landing');
+    const doFallback = () => {
+      AppState.isAuthenticated = false;
+      AppState.sbAuth = null;
+      AppState.sbProfile = null;
+      AppState.userRole = 'user';
+      UI.showToast('Você desconectou da sua conta.', 'info');
+      this.navigate('landing');
+    };
+    if (window.SupabaseOK && window.SupabaseOK() && AppState && typeof AppState.sbSignOut === 'function') {
+      Promise.resolve(AppState.sbSignOut()).then(doFallback).catch(doFallback);
+    } else {
+      doFallback();
+    }
   },
 
   loginMock() {
@@ -129,6 +180,16 @@ const Router = {
     app.innerHTML = '';
     app.className = 'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 cyber-grid view-transition';
 
+    if (this._privateRoutes.includes(route) && !this.isAuthenticated()) {
+      UI.showToast('É necessário iniciar sessão para aceder a esta página.', 'warning', 'fa-triangle-exclamation');
+      this.navigate('landing');
+      return;
+    }
+    if (this._guestOnlyRoutes.includes(route) && this.isAuthenticated()) {
+      this.navigate('dashboard');
+      return;
+    }
+
     switch (route) {
       case 'landing':
         app.innerHTML = Views.Landing();
@@ -138,7 +199,7 @@ const Router = {
         app.innerHTML = Views.Login();
         break;
       case 'register':
-        app.innerHTML = Views.Register(params.ref || 'joao123');
+        app.innerHTML = Views.Register(params.ref || '4hashprotocol');
         break;
       case 'dashboard':
         app.innerHTML = Views.Dashboard();
@@ -167,9 +228,10 @@ const Router = {
         app.innerHTML = Views.Support();
         break;
       case 'admin':
-        if (AppState.userRole !== 'admin') {
-          UI.showToast('Acesso restrito para administradores!', 'error');
-          this.navigate('dashboard');
+        if (!this.isAdmin()) {
+          UI.showToast('Acesso Negado. Apenas administradores.', 'error', 'fa-shield-halved');
+          if (this.isAuthenticated()) { this.navigate('dashboard'); return; }
+          this.navigate('landing');
           return;
         }
         app.innerHTML = Views.Admin();

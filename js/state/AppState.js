@@ -6,7 +6,7 @@
 const AppState = {
   currentLang: 'pt',
   currentTheme: 'dark',
-  isAuthenticated: true,
+  isAuthenticated: false,
   userRole: 'user',
   adminActiveTab: 'backoffice',
   adminFinanceFilter: 'Todos',
@@ -33,219 +33,46 @@ const AppState = {
   },
 
   currentUser: {
-    id: 'usr_001248',
-    fullName: 'Alexandre FourHash',
-    username: 'alexandre',
-    email: 'alexandre@fourhash.io',
-    country: '🇧🇷 Brasil',
-    phone: '+55 11 98765-4321',
-    sponsor: 'joao123',
-    positionNumber: '#001248',
-    level: 4,
-    status: 'ACTIVE',
-    entryDate: '28/08/2026',
-    availableBalance: 245.00,
-    pendingBalance: 15.00,
-    totalReceived: 560.00,
-    directReferralsCount: 14,
-    activeReferralsCount: 11,
-    inactiveReferralsCount: 3
+    id: null,
+    fullName: 'Usuário Convidado',
+    username: 'guest',
+    email: '',
+    country: '',
+    phone: '',
+    sponsor: '',
+    positionNumber: '-',
+    level: 0,
+    status: 'GUEST',
+    entryDate: '',
+    availableBalance: 0,
+    pendingBalance: 0,
+    totalReceived: 0,
+    directReferralsCount: 0,
+    activeReferralsCount: 0,
+    inactiveReferralsCount: 0
   },
 
-  transactions: [
-    { id: 'tx_1', type: 'BÔNUS DE INDICAÇÃO', amount: 5.00, status: 'Confirmed', date: '29/08/2026 13:40', hash: '0x3f9a72b...e4a1' },
-    { id: 'tx_2', type: 'BÔNUS DE INDICAÇÃO', amount: 5.00, status: 'Confirmed', date: '29/08/2026 10:15', hash: '0x88c21e0...99b2' },
-    { id: 'tx_3', type: 'POSICIONAMENTO', amount: 15.00, status: 'Confirmed', date: '28/08/2026 19:22', hash: '0x44a19dc...77d3' },
-    { id: 'tx_4', type: 'DEPÓSITO', amount: 10.00, status: 'Confirmed', date: '28/08/2026 08:00', hash: '0x11b988f...12c4' }
-  ],
+  transactions: [],
 
-  notifications: [
-    { id: 'n1', title: 'Pagamento Confirmado', message: 'Sua ativação de US$ 10 USDT BEP20 foi validada na rede.', read: false, time: 'Há 10 min' },
-    { id: 'n2', title: 'Novo Bônus Direto!', message: '@crypto_king acabou de se posicionar através do seu link (+US$ 5.00).', read: false, time: 'Há 2 horas' },
-    { id: 'n3', title: 'Bônus de Equipe N2', message: 'Recebeu US$ 0.25 do nível 2 pela ativação do @zen_trader.', read: true, time: 'Ontem' }
-  ],
+  notifications: [],
 
   treeLevels: [],
 
-  withdrawals: [
-    { id: 'wd_001', amount: 40.00, fee: 0.50, netAmount: 39.50, wallet: '0x7Ab8...9fC2dE11', network: 'BEP20 (BNB Chain)', status: 'Processando', hash: null, date: '03/09/2026 11:02', eta: '04/09/2026 11:02' },
-    { id: 'wd_002', amount: 15.00, fee: 0.50, netAmount: 14.50, wallet: '0x4cF2...83b7Aa90', network: 'BEP20 (BNB Chain)', status: 'Concluído', hash: '0x8f11bc42...', date: '29/08/2026 16:40', eta: '-' }
-  ],
+  withdrawals: [],
 
-  supportTickets: [
-    {
-      id: 'tk_001',
-      username: 'crypto_king',
-      email: 'crypto.king@protonmail.com',
-      subject: 'Dúvida Saque BEP20 — taxa de rede',
-      message: 'Bom dia! Realizei meu primeiro saque de $40,00 em BEP20 hoje (03/09) e queria entender a cobrança da taxa fixa de $0,50. A taxa é sempre a mesma independente do valor sacado? E qual o prazo exato para receber — 24h úteis ou dias corridos? Obrigado!',
-      date: '03/09/2026 09:42',
-      status: 'Aberto',
-      replies: [],
-      priority: 'Média'
-    },
-    {
-      id: 'tk_002',
-      username: 'victor_web3',
-      email: 'victor.web3@mail.com',
-      subject: 'Minha ativação está pendente há 2 dias',
-      message: 'Hi team! I paid my $10 entry on 01/09 via Binance Pay transaction hash 0xc8f2...77aa11 but my profile still shows AGUARDANDO ATIVAÇÃO. Can you verify and activate? My referrer is @alexandre, position #001262. Thanks a lot, waiting to start building my team.',
-      date: '02/09/2026 22:15',
-      status: 'Aberto',
-      replies: [],
-      priority: 'Alta'
-    },
-    {
-      id: 'tk_003',
-      username: 'elena_chain',
-      email: 'elena.chain@yandex.ru',
-      subject: 'Link de indicação — caractere especial no username',
-      message: 'Olá FourHash! Meu username tem _ (underline): @elena_chain. Quando eu compartilho o link fourhash.com/register?ref=elena_chain alguns navegadores quebram. Isso é normal? Poderia gerar um link alternativo? Muito obrigada, adoro o projeto!',
-      date: '02/09/2026 14:08',
-      status: 'Respondido',
-      replies: [
-        { from: 'admin', date: '02/09/2026 16:30', message: 'Olá @elena_chain! O underline é totalmente compatível, alguns apps de mensagem apenas cortam a URL automaticamente. Use encurtador oficial (breve liberamos) ou envie direto por Telegram. Qualquer coisa estamos aqui! Atenciosamente, Equipe FourHash.' }
-      ],
-      priority: 'Baixa'
-    },
-    {
-      id: 'tk_004',
-      username: 'zen_trader',
-      email: 'zen.trader.eth@gmail.com',
-      subject: 'Bônus Nível 3 NÃO creditado — @quantum_vault upline',
-      message: 'Boa tarde. O usuário @quantum_vault entrou dia 30/08 pelo link do @elena_chain (que é minha indicada N2). Pela regra de distribuição 60/40 eu deveria receber N3 = $0,25. Apareceu na carteira? No meu histórico só consigo ver 2 bônus até hoje. Grato pela verificação!',
-      date: '01/09/2026 11:50',
-      status: 'Respondido',
-      replies: [
-        { from: 'admin', date: '01/09/2026 14:22', message: 'Olá @zen_trader! Verificamos sua upline — o bônus N3 foi creditado corretamente dia 30/08 às 18:04, o refresh da tela Wallet pode ter atrasado. Recarregue com Ctrl+Shift+R e aparecerá no histórico. Qualquer coisa nos chame!' }
-      ],
-      priority: 'Alta'
-    },
-    {
-      id: 'tk_005',
-      username: 'marcos_defi',
-      email: 'marcos.defi@outlook.com',
-      subject: 'Sugestão: tema Light Mode na cor branca',
-      message: 'Líderes! FANTASTICO projeto. Sugestão pequena: o botão Alternar Tema está funcionando, mas eu adoraria um fundo branco puro (255,255,255) para usar no sol ao ar livre, em vez do cinza claro atual. Vi que vocês fazem ajustes rápido, fica a sugestão. Parabéns pelo lançamento!',
-      date: '31/08/2026 20:03',
-      status: 'Fechado',
-      replies: [
-        { from: 'admin', date: '01/09/2026 09:20', message: 'E aí @marcos_defi! Obrigado pelo carinho e sugestão. Já levantamos a flag para a próxima atualização de tema White Mode (puro). Equipe de UI já está trabalhando nisso. Abraço!' }
-      ],
-      priority: 'Baixa'
-    }
-  ],
+  supportTickets: [],
 
-  financeProblems: [
-    {
-      id: 'fin_001',
-      code: 'FIN-2026-0903-001',
-      username: 'crypto_king',
-      email: 'crypto.king@protonmail.com',
-      type: 'Depósito NowPayments',
-      category: 'Valor Incorreto',
-      currency: 'BTC',
-      amount: 9.5,
-      expected: 10.00,
-      network: 'Bitcoin',
-      txHash: '3FZc9LmQkx8WnR72pT4aH6eD1bU5sN9vY2jK8qR3tV7wX',
-      opened: '03/09/2026 11:12',
-      status: 'Pendente Revisão',
-      description: 'Enviei 0.000089 BTC via NowPayments (taxa incluída), mas apareceu apenas $9.50 de entrada, o protocolo pede $10.00. Quero completar o restante ou receber crédito manual.',
-      notes: []
-    },
-    {
-      id: 'fin_002',
-      code: 'FIN-2026-0902-014',
-      username: 'victor_web3',
-      email: 'victor.web3@mail.com',
-      type: 'Depósito Atrasado',
-      category: 'Hash Não Confirmado',
-      currency: 'USDT',
-      amount: 10.00,
-      expected: 10.00,
-      network: 'TRC20',
-      txHash: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE_tx_0x88a1c7e2f4…',
-      opened: '02/09/2026 08:44',
-      status: 'Em Análise',
-      description: 'NowPayments confirmou o pagamento há 26h mas minha carteira ainda não recebeu crédito. Hash TRC20 já tem 180 confirmações na TronScan. Preciso da ativação hoje.',
-      notes: [
-        { from: 'admin', date: '02/09/2026 10:05', text: 'Equipe verificou o hash na TronScan. Aguarde confirmação do provedor NowPayments.' }
-      ]
-    },
-    {
-      id: 'fin_003',
-      code: 'FIN-2026-0901-007',
-      username: 'zen_trader',
-      email: 'zen.trader.eth@gmail.com',
-      type: 'Saque Não Recebido',
-      category: 'Saque BEP20',
-      currency: 'USDT',
-      amount: 49.50,
-      expected: 49.50,
-      network: 'BEP20',
-      txHash: '0x7e2c91f6a44bd8130c66e07d6b25c941f0a3e78d…',
-      opened: '01/09/2026 14:33',
-      status: 'Resolvido Parcial',
-      description: 'Solicitei saque de US$ 50.00 (líquido $49.50) dia 30/08 há 4 dias úteis. Carteira MetaMask 0xB1… ainda não recebeu. Já confirmei endereço 2 vezes.',
-      notes: [
-        { from: 'admin', date: '01/09/2026 19:11', text: 'Bloqueio encontrado: endereço foi marcado como contrato pela Binance. Reforçado manualmente agora. TxID na 0x7e2c….' }
-      ]
-    },
-    {
-      id: 'fin_004',
-      code: 'FIN-2026-0831-022',
-      username: 'elena_chain',
-      email: 'elena.chain@yandex.ru',
-      type: 'Reembolso NowPayments',
-      category: 'Rede Errada',
-      currency: 'ETH',
-      amount: 10.00,
-      expected: 10.00,
-      network: 'ERC20 (enviada)',
-      txHash: '0x24db7F91B8ce4C2f0A55Db4fDd1c29F4c5d4400F_txNP',
-      opened: '31/08/2026 22:05',
-      status: 'Pendente Revisão',
-      description: 'Olá! Enviei USDT via ERC20 ETH sem ler o aviso e o protocolo pede BEP20. Agora quero reembolso do valor (minha carteira ETH: 0x24dB7F…). Já vi que a documentação diz que erros de rede são irreversíveis mas vi atendimentos no Telegram que foram.',
-      notes: []
-    },
-    {
-      id: 'fin_005',
-      code: 'FIN-2026-0830-003',
-      username: 'marcos_defi',
-      email: 'marcos.defi@outlook.com',
-      type: 'Bônus Não Creditado (Upline)',
-      category: 'Bônus N3',
-      currency: 'USDT',
-      amount: 2.50,
-      expected: 2.50,
-      network: 'BEP20',
-      txHash: 'Ajuste manual — upline quantum_vault (referência)',
-      opened: '30/08/2026 10:15',
-      status: 'Fechado Resolvido',
-      description: 'Indicado @quantum_vault entrou via link @elena_chain e eu sou N3 na árvore. Já passou de 72h e não apareceu bônus US$ 2.50.',
-      notes: [
-        { from: 'admin', date: '30/08/2026 15:40', text: 'Creditado US$ 2.50 em carteira manualmente para @marcos_defi. Valor líquido recebido.' }
-      ]
-    },
-    {
-      id: 'fin_006',
-      code: 'FIN-2026-0903-002',
-      username: 'joao123',
-      email: 'joao.matos@proton.me',
-      type: 'Saques em Massa (Lote)',
-      category: 'Processamento Lote 24h',
-      currency: 'USDT',
-      amount: 2150.75,
-      expected: 2150.75,
-      network: 'BEP20',
-      txHash: 'LOTE-2026-09-03_7-users_batch_verify',
-      opened: '03/09/2026 07:02',
-      status: 'Em Análise',
-      description: 'Suporte! Ontem dia 02/09 solicitei um saque em lote (usuários patrocinados: 7 contas) totalizando US$ 2.150,75. O aviso fala 24h úteis. Qual status?',
-      notes: []
-    }
-  ],
+  financeProblems: [],
+
+  adminSummaries: { support: {}, finance: {} },
+
+  referrals: {
+    direct: [],
+    binary: { left: [], right: [] },
+    totalEarned: 0
+  },
+
+  adminUsersList: [],
 
   init() {
     this.generateTreeData();
@@ -269,47 +96,21 @@ const AppState = {
   },
 
   generateTreeData() {
-    const mockNames = [
-      'satoshi_dev', 'luna_eth', 'crypto_king', 'victor_web3', 'elena_chain',
-      'marcos_defi', 'sarah_node', 'gabriel_btc', 'token_master', 'binance_pro',
-      'lucas_linear', 'beatriz_hash', 'zen_trader', 'quantum_vault', 'nexus_ai'
-    ];
-
     this.treeLevels = [];
-    for (let lvl = 1; lvl <= 12; lvl++) {
-      const countInLevel = Math.max(1, Math.min(6, Math.floor(Math.random() * 4) + 1));
-      const positions = [];
-      for (let i = 0; i < countInLevel; i++) {
-        const randomName = mockNames[(lvl + i) % mockNames.length] + (lvl > 5 ? `_${lvl}` : '');
-        const isUser = (lvl === 4 && i === 0);
-        positions.push({
-          id: `pos_lvl${lvl}_${i}`,
-          username: isUser ? this.currentUser.username : randomName,
-          isSelf: isUser,
-          level: lvl,
-          positionNumber: `#00${1200 + (lvl * 10) + i}`,
-          status: lvl > 8 ? (Math.random() > 0.5 ? 'PENDING' : 'INACTIVE') : 'ACTIVE',
-          entryDate: `${20 - lvl}/08/2026`,
-          directReferrals: Math.floor(Math.random() * 8)
-        });
-      }
-      this.treeLevels.push({
-        level: lvl,
-        name: `LEVEL ${String(lvl).padStart(2, '0')}`,
-        expanded: lvl <= 5,
-        positions: positions
-      });
-    }
   },
 
   toggleAdminDemo() {
-    this.userRole = (this.userRole === 'user') ? 'admin' : 'user';
-    const label = document.getElementById('admin-toggle-label');
-    if (label) {
-      label.innerText = I18n.t(this.userRole === 'admin' ? 'adminMode' : 'userMode');
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      UI.showToast('Operação não permitida em ambiente de produção.', 'error');
+      return;
     }
-    UI.showToast(`${I18n.t(this.userRole === 'admin' ? 'adminMode' : 'userMode')}`, 'info');
+    this.userRole = (this.userRole === 'user') ? 'admin' : 'user';
+    UI.showToast(`${I18n.t(this.userRole === 'admin' ? 'adminMode' : 'userMode')} [DEV]`, 'info');
     Router.renderNav();
+    const footerAdminLink = document.getElementById('footer-admin-link');
+    if (footerAdminLink) {
+      if (Router.isAdmin()) footerAdminLink.classList.remove('hidden'); else footerAdminLink.classList.add('hidden');
+    }
     if (Router.currentRoute === 'admin' && this.userRole !== 'admin') {
       Router.navigate('dashboard');
     } else if (this.userRole === 'admin') {
@@ -323,5 +124,679 @@ const AppState = {
     if (badge) badge.classList.add('hidden');
     UI.renderNotificationList();
     UI.showToast('Todas as notificações foram marcadas como lidas.', 'success');
+  },
+
+  /* ========================================================
+   * FASE 2 — INTEGRAÇÃO SUPABASE (Fallback Offline)
+   * ======================================================== */
+
+  _sb() { return (typeof window !== 'undefined' && window.sb) ? window.sb : null; },
+  sbAuth: null,
+  sbSession: null,
+  sbProfile: null,
+  sbError: null,
+  _sbReady: false,
+
+  async _loadUserProfileFromSupabase(userAuth, sessionAuth) {
+    if (!userAuth || !userAuth.id) return false;
+    try {
+      var sb = this._sb();
+      if (!sb) return false;
+      if (sessionAuth) this.sbSession = sessionAuth;
+      this.sbAuth = userAuth;
+      var p = await sb.from('profiles').select('*').eq('id', userAuth.id).limit(1).maybeSingle();
+      this.sbProfile = (p && p.data) ? p.data : null;
+      if (this.sbProfile) {
+        this.currentUser.id = this.sbProfile.id;
+        var full = (this.sbProfile.full_name || '').toString().trim();
+        this.currentUser.fullName = full || this.sbProfile.username || this.currentUser.fullName;
+        this.currentUser.username = this.sbProfile.username || this.currentUser.username;
+        this.currentUser.email = this.sbProfile.email || userAuth.email || this.currentUser.email;
+        this.currentUser.country = this.sbProfile.country || this.currentUser.country;
+        this.currentUser.phone = this.sbProfile.phone || this.currentUser.phone;
+        this.currentUser.sponsor = this.sbProfile.upline_username || this.sbProfile.sponsor_code || this.currentUser.sponsor;
+        var pos = '';
+        if (this.sbProfile.position_index) pos = '#' + this.sbProfile.position_index;
+        else if (this.sbProfile.line_row && this.sbProfile.line_seat) pos = '#' + this.sbProfile.line_row + '-' + this.sbProfile.line_seat;
+        else pos = '#' + (userAuth.id || '').toString().slice(0, 6);
+        this.currentUser.positionNumber = pos;
+        this.currentUser.level = Number(this.sbProfile.level_number || 0);
+        if (this.sbProfile.created_at) {
+          try {
+            var d = new Date(this.sbProfile.created_at);
+            this.currentUser.entryDate = d.toLocaleDateString('pt-PT');
+          } catch(e) {}
+        }
+        if (this.sbProfile.role) this.userRole = (this.sbProfile.role === 'superadmin' || this.sbProfile.role === 'admin') ? 'admin' : 'user';
+        if (this.sbProfile.status === 'active') this.currentUser.status = 'ACTIVE';
+        if (this.sbProfile.preferred_lang) this.currentLang = this.sbProfile.preferred_lang;
+        if (this.sbProfile.theme) this.currentTheme = this.sbProfile.theme;
+        this.isAuthenticated = true;
+      } else {
+        this.currentUser.id = userAuth.id;
+        this.currentUser.email = userAuth.email || this.currentUser.email;
+        this.currentUser.username = (userAuth.email || 'user').split('@')[0].toLowerCase();
+        this.currentUser.fullName = this.currentUser.username;
+        this.isAuthenticated = true;
+      }
+      var ADMIN_MASTER_UUID = '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f';
+      var ADMIN_MASTER_EMAIL = '4hashprotocol@gmail.com';
+      var uid = (this.currentUser.id || userAuth.id || '').toString().toLowerCase();
+      var eml = (this.currentUser.email || userAuth.email || '').toString().toLowerCase();
+      var ehMaster = (uid === ADMIN_MASTER_UUID.toLowerCase()) || (eml === ADMIN_MASTER_EMAIL.toLowerCase());
+      if (ehMaster) {
+        this.userRole = 'admin';
+        this.currentUser.status = 'ACTIVE';
+        if (!this.currentUser.level || this.currentUser.level <= 0) this.currentUser.level = 1;
+        if (!this.currentUser.positionNumber || this.currentUser.positionNumber === '-' || this.currentUser.positionNumber === '') this.currentUser.positionNumber = '#1';
+      }
+      var w = await sb.from('wallets').select('*').eq('profile_id', userAuth.id).limit(1).maybeSingle();
+      if (w && w.data) {
+        this.currentUser.availableBalance = Number(w.data.available_balance || 0);
+        this.currentUser.pendingBalance   = Number(w.data.pending_balance   || 0);
+        var dep = Number(w.data.total_deposited || 0);
+        var bT = Number(w.data.total_bonus_team || 0);
+        var bM = Number(w.data.total_bonus_matrix || 0);
+        this.currentUser.totalReceived    = dep + bT + bM;
+      }
+      return true;
+    } catch(e) {
+      this.sbError = (e && e.message) ? e.message : String(e);
+      return false;
+    }
+  },
+
+  async sbInit() {
+    try {
+      if (!window.SupabaseOK || !window.SupabaseOK()) {
+        this._sbReady = false;
+        this.sbError = (window.SUPABASE_LAST_ERROR || 'SDK não carregou');
+        this.isAuthenticated = false;
+        this.sbAuth = null; this.sbSession = null; this.sbProfile = null; this.userRole = 'user';
+        return false;
+      }
+      var sb = this._sb();
+      if (!sb) {
+        this._sbReady = false;
+        this.isAuthenticated = false; this.sbAuth = null; this.sbProfile = null; this.userRole = 'user';
+        return false;
+      }
+      var gs = await sb.auth.getSession();
+      this.sbSession = (gs && gs.data && gs.data.session) ? gs.data.session : null;
+      var gu = await sb.auth.getUser();
+      this.sbAuth = (gu && gu.data && gu.data.user) ? gu.data.user : null;
+      if (!this.sbAuth) {
+        this.isAuthenticated = false;
+        this.sbProfile = null;
+        this.userRole = 'user';
+        this.currentUser = {
+          id: null, fullName: 'Usuário Convidado', username: 'guest', email: '', country: '',
+          phone: '', sponsor: '', positionNumber: '-', level: 0, status: 'GUEST',
+          entryDate: '', availableBalance: 0, pendingBalance: 0, totalReceived: 0,
+          directReferralsCount: 0, activeReferralsCount: 0, inactiveReferralsCount: 0
+        };
+        this.transactions = [];
+        this.notifications = [];
+        this.withdrawals = [];
+        this.treeLevels = [];
+        this.adminUsersList = [];
+        this._sbReady = true;
+        return true;
+      }
+
+      await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession);
+
+      this._sbReady = true;
+      await this.refreshFromSupabase();
+      return true;
+    } catch (e) {
+      this.sbError = (e && e.message) ? e.message : String(e);
+      this._sbReady = false;
+      this.isAuthenticated = false;
+      this.sbAuth = null; this.sbSession = null; this.sbProfile = null; this.userRole = 'user';
+      this.adminUsersList = [];
+      return false;
+    }
+  },
+
+  async refreshFromSupabase() {
+    try {
+      await Promise.all([
+        this.refreshSupportTickets(),
+        this.refreshFinanceProblems(),
+        this.refreshAdminSummaries(),
+        this.refreshAdminUsersList()
+      ]);
+      return true;
+    } catch (e) {
+      this.sbError = (e && e.message) ? e.message : String(e);
+      return false;
+    }
+  },
+
+  async refreshAdminUsersList() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) { this.adminUsersList = []; return false; }
+    try {
+      var sb = this._sb(); if (!sb) { this.adminUsersList = []; return false; }
+      var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: true });
+      var rows = (r && r.data) ? r.data : [];
+      this.adminUsersList = rows.map(function(p){
+        var full = (p.full_name || '').toString().trim();
+        var pos = '';
+        if (p.position_index) pos = '#' + p.position_index;
+        else if (p.line_row && p.line_seat) pos = '#' + p.line_row + '-' + p.line_seat;
+        else pos = '-';
+        var lvl = Number(p.level_number || 0);
+        return {
+          id: p.id,
+          username: p.username || '',
+          fullName: full || p.username || '',
+          email: p.email || '',
+          country: p.country || '',
+          phone: p.phone || '',
+          sponsor: p.upline_username || p.sponsor_code || '',
+          positionNumber: pos,
+          level: lvl,
+          levelLabel: 'Level ' + String(lvl).padStart(2, '0'),
+          role: p.role || 'user',
+          status: p.status || 'pending',
+          kyc: p.kyc_status || 'none',
+          createdAt: p.created_at || ''
+        };
+      });
+      return true;
+    } catch (e) {
+      this.sbError = 'admin-users: ' + ((e && e.message) || String(e));
+      this.adminUsersList = [];
+      return false;
+    }
+  },
+
+  _mapTicket(row) {
+    if (!row) return null;
+    return {
+      id: row.code || ('tk_' + row.id),
+      ticket_id: row.id,
+      username: (row.username_cache || row.profile_id || '').toString(),
+      email: (row.email_cache || '').toString(),
+      subject: row.subject || '(sem assunto)',
+      message: row.message || '',
+      category: row.category || 'Outro',
+      priority: row.priority || 'Média',
+      status: row.status || 'Aberto',
+      created: row.created_at ? new Date(row.created_at) : new Date(),
+      createdAt: row.created_at ? row.created_at : '',
+      created_at: row.created_at,
+      assignedTo: row.assigned_to,
+      closedBy: row.closed_by,
+      closedAt: row.closed_at,
+      lastReplyAt: row.last_reply_at,
+      internalTags: row.internal_tags || [],
+      privateNote: row.private_note,
+      viewCount: row.view_count || 0,
+      replies: []
+    };
+  },
+
+  _mapFinance(row) {
+    if (!row) return null;
+    return {
+      id: row.code || ('fin_' + row.id),
+      fin_id: row.id,
+      type: row.type || 'Depósito NowPayments',
+      category: row.category || row.type || '',
+      username: (row.username_cache || row.profile_id || '').toString(),
+      email: (row.email_cache || '').toString(),
+      amount: Number(row.amount || 0),
+      expected: Number(row.expected || 0),
+      currency: row.currency || 'USDT',
+      network: row.network || 'BEP20',
+      txHash: row.tx_hash || '',
+      nowpaymentsId: row.nowpayments_id || '',
+      status: row.status || 'Pendente Revisão',
+      priority: (row.status === 'Em Análise') ? 'Alta' : 'Normal',
+      opened: row.opened || '',
+      openedAt: row.opened || '',
+      assignedTo: row.assigned_to,
+      resolution: row.resolution || '',
+      resolvedBy: row.resolved_by,
+      resolvedAt: row.resolved_at,
+      finalDecision: row.final_decision || '',
+      finalObservation: row.final_observation || '',
+      signatureName: row.signature_name || '',
+      signatureTime: row.signature_time || '',
+      creditWallet: !!row.credit_wallet,
+      adjustedAmount: Number(row.adjusted_amount || 0),
+      internalTags: row.internal_tags || [],
+      privateNote: row.private_note
+    };
+  },
+
+  async refreshSupportTickets() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var q = sb.from('support_tickets').select('*').order('created_at', { ascending: false });
+      var r = await q;
+      if (!r || !r.data || !r.data.length) return false;
+      var rows = r.data.map(this._mapTicket.bind(this)).filter(Boolean);
+      var repl = await sb.from('support_ticket_replies').select('*').in('ticket_id', r.data.map(function(x){return x.id;}));
+      if (repl && repl.data && repl.data.length) {
+        var byId = {};
+        repl.data.forEach(function(rr){
+          if (!byId[rr.ticket_id]) byId[rr.ticket_id] = [];
+          byId[rr.ticket_id].push({
+            id: rr.id,
+            author: rr.author_name || (rr.is_admin_reply ? 'Admin' : 'Utilizador'),
+            authorRole: rr.author_role || (rr.is_admin_reply ? 'admin' : 'user'),
+            isAdmin: !!rr.is_admin_reply,
+            isInternal: !!rr.is_internal,
+            message: rr.message || '',
+            createdAt: rr.created_at
+          });
+        });
+        rows.forEach(function(t){ if (byId[t.ticket_id]) t.replies = byId[t.ticket_id]; });
+      }
+      this.supportTickets = rows;
+      return true;
+    } catch (e) {
+      this.sbError = 'support: ' + ((e && e.message) || String(e));
+      return false;
+    }
+  },
+
+  async refreshFinanceProblems() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var r = await sb.from('finance_problems').select('*').order('created_at', { ascending: false });
+      if (!r || !r.data || !r.data.length) return false;
+      var rows = r.data.map(this._mapFinance.bind(this)).filter(Boolean);
+      var notes = await sb.from('finance_problem_notes').select('*').in('problem_id', r.data.map(function(x){return x.id;}));
+      if (notes && notes.data) {
+        var byP = {};
+        notes.data.forEach(function(n){
+          if (!byP[n.problem_id]) byP[n.problem_id] = [];
+          byP[n.problem_id].push({
+            id: n.id, kind: n.kind || 'note',
+            from: n.status_from || '', to: n.status_to || '',
+            resolution: n.resolution_text || '',
+            message: n.message || '',
+            amount: Number(n.credit_amount || 0),
+            internal: !!n.is_internal,
+            createdAt: n.created_at
+          });
+        });
+        rows.forEach(function(f){ if (byP[f.fin_id]) f.history = byP[f.fin_id]; });
+      }
+      this.financeProblems = rows;
+      return true;
+    } catch (e) {
+      this.sbError = 'finance: ' + ((e && e.message) || String(e));
+      return false;
+    }
+  },
+
+  async refreshAdminSummaries() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      try {
+        var setR = await sb.from('system_settings').select('*').limit(1).maybeSingle();
+        if (setR && setR.data && typeof setR.data === 'object') {
+          var d = setR.data;
+          if (typeof d.entry_amount === 'number' || typeof d.entry_amount === 'string') this.projectSettings.entryAmount = Number(d.entry_amount);
+          if (typeof d.currency === 'string') this.projectSettings.currency = d.currency;
+          if (typeof d.network === 'string') this.projectSettings.network = d.network;
+          if (typeof d.team_percent_n1 === 'number' || typeof d.team_percent_n1 === 'string') this.projectSettings.teamCommissionPercents[0] = Number(d.team_percent_n1);
+          if (typeof d.team_percent_n2 === 'number' || typeof d.team_percent_n2 === 'string') this.projectSettings.teamCommissionPercents[1] = Number(d.team_percent_n2);
+          if (typeof d.team_percent_n3 === 'number' || typeof d.team_percent_n3 === 'string') this.projectSettings.teamCommissionPercents[2] = Number(d.team_percent_n3);
+          if (typeof d.team_percent_n4 === 'number' || typeof d.team_percent_n4 === 'string') this.projectSettings.teamCommissionPercents[3] = Number(d.team_percent_n4);
+          if (typeof d.team_percent_n5 === 'number' || typeof d.team_percent_n5 === 'string') this.projectSettings.teamCommissionPercents[4] = Number(d.team_percent_n5);
+          if (typeof d.project_fund_percentage === 'number' || typeof d.project_fund_percentage === 'string') this.projectSettings.projectFundPercentage = Number(d.project_fund_percentage);
+          if (typeof d.total_distributed_percentage === 'number' || typeof d.total_distributed_percentage === 'string') this.projectSettings.totalDistributedPercentage = Number(d.total_distributed_percentage);
+          if (typeof d.vault_address === 'string') this.projectSettings.depositAddress = d.vault_address;
+          if (typeof d.presale_end_date !== 'undefined' && d.presale_end_date !== null) this.projectSettings.presaleEndDate = d.presale_end_date;
+          if (typeof d.withdraw_min === 'number' || typeof d.withdraw_min === 'string') this.projectSettings.withdraw.minAmount = Number(d.withdraw_min);
+          if (typeof d.withdraw_max === 'number' || typeof d.withdraw_max === 'string') this.projectSettings.withdraw.maxAmountPerRequest = Number(d.withdraw_max);
+          if (typeof d.withdraw_fee_flat === 'number' || typeof d.withdraw_fee_flat === 'string') this.projectSettings.withdraw.networkFeeFlat = Number(d.withdraw_fee_flat);
+          if (typeof d.withdraw_hours === 'number' || typeof d.withdraw_hours === 'string') this.projectSettings.withdraw.processingHours = Number(d.withdraw_hours);
+        }
+      } catch(settErr) {}
+
+      var rProfiles = await sb.from('profiles').select('id, status, role, created_at');
+      var rowsProfiles = (rProfiles && rProfiles.data) ? rProfiles.data : [];
+      var totalUsers = rowsProfiles.length;
+      var activeUsers = rowsProfiles.filter(function(p){ return p.status === 'active' || p.status === 'ACTIVE'; }).length;
+      var pendingUsers = rowsProfiles.filter(function(p){ return p.status === 'pending' || p.status === 'PENDING'; }).length;
+      var adminUsers = rowsProfiles.filter(function(p){ return p.role === 'superadmin' || p.role === 'admin'; }).length;
+      var pctAtivos = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 1000) / 10 : 0;
+
+      var rTx = await sb.from('transactions').select('amount, kind, status');
+      var rowsTx = (rTx && rTx.data) ? rTx.data : [];
+      var sumDep = 0; var sumDepOK = 0; var sumWd = 0; var sumWdOK = 0;
+      var sumBonus = 0;
+      rowsTx.forEach(function(t){
+        var a = Number(t.amount || 0);
+        var k = (t.kind || '').toString().toLowerCase();
+        var s = (t.status || '').toString().toLowerCase();
+        if (k === 'deposit') { sumDep += a; if (s === 'completed' || s === 'confirmed' || s === 'success') sumDepOK += a; }
+        else if (k === 'withdrawal' || k === 'withdraw') { sumWd += a; if (s === 'completed' || s === 'confirmed' || s === 'success') sumWdOK += a; }
+        else if (k.indexOf('bonus') >= 0 || k.indexOf('referral') >= 0 || k.indexOf('matrix') >= 0 || k.indexOf('team') >= 0) { sumBonus += a; }
+      });
+      var volumeEntradas = sumDepOK > 0 ? sumDepOK : sumDep;
+      var fundoLiquidez = volumeEntradas * (Number(this.projectSettings.projectFundPercentage || 40) / 100);
+      var bonusEquipe = volumeEntradas * (Number(this.projectSettings.totalDistributedPercentage || 60) / 100);
+
+      var rWallets = await sb.from('wallets').select('available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix');
+      var rowsW = (rWallets && rWallets.data) ? rWallets.data : [];
+      var totalBalance = 0; var totalDeposited = 0; var totalWithdrawn = 0; var totalBTeam = 0; var totalBMatrix = 0;
+      rowsW.forEach(function(w){
+        totalBalance += Number(w.available_balance || 0);
+        totalDeposited += Number(w.total_deposited || 0);
+        totalWithdrawn += Number(w.total_withdrawn || 0);
+        totalBTeam += Number(w.total_bonus_team || 0);
+        totalBMatrix += Number(w.total_bonus_matrix || 0);
+      });
+
+      this.adminSummaries = {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          pending: pendingUsers,
+          admins: adminUsers,
+          pctAtivos: pctAtivos
+        },
+        volume: {
+          totalDeposits: sumDep,
+          totalDepositsCompleted: sumDepOK,
+          totalWithdrawals: sumWd,
+          totalWithdrawalsCompleted: sumWdOK,
+          totalBonus: sumBonus,
+          volumeEntradas: volumeEntradas,
+          fundoLiquidez: fundoLiquidez,
+          bonusEquipe: bonusEquipe
+        },
+        wallets: {
+          totalBalance: totalBalance,
+          totalDeposited: totalDeposited,
+          totalWithdrawn: totalWithdrawn,
+          totalBonusTeam: totalBTeam,
+          totalBonusMatrix: totalBMatrix
+        },
+        support: {},
+        finance: {}
+      };
+
+      this.adminSupportSummary = { open: 0, pending: 0, closed: 0 };
+      this.adminFinanceSummary = { open: 0, pending: 0, resolved: 0 };
+
+      try {
+        var tSup = await sb.from('support_tickets').select('status');
+        var rs = (tSup && tSup.data) ? tSup.data : [];
+        rs.forEach(function(t){
+          var s = (t.status || 'open').toString().toLowerCase();
+          if (s === 'open' || s === 'new') this.adminSupportSummary.open += 1;
+          else if (s === 'pending' || s === 'in_progress') this.adminSupportSummary.pending += 1;
+          else if (s === 'closed' || s === 'resolved') this.adminSupportSummary.closed += 1;
+        }.bind(this));
+        var tFin = await sb.from('finance_problems').select('status');
+        var rf = (tFin && tFin.data) ? tFin.data : [];
+        rf.forEach(function(t){
+          var s = (t.status || 'open').toString().toLowerCase();
+          if (s === 'open' || s === 'new') this.adminFinanceSummary.open += 1;
+          else if (s === 'pending' || s === 'in_progress') this.adminFinanceSummary.pending += 1;
+          else if (s === 'closed' || s === 'resolved') this.adminFinanceSummary.resolved += 1;
+        }.bind(this));
+      } catch(ee) {}
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async saveProjectSettings(cfg) {
+    if (cfg && typeof cfg === 'object') {
+      if (typeof cfg.entryAmount !== 'undefined') this.projectSettings.entryAmount = Number(cfg.entryAmount || 0);
+      if (Array.isArray(cfg.teamCommissionPercents) && cfg.teamCommissionPercents.length >= 5) {
+        for (var i=0; i<5; i++) this.projectSettings.teamCommissionPercents[i] = Number(cfg.teamCommissionPercents[i] || 0);
+      }
+      if (typeof cfg.depositAddress === 'string') this.projectSettings.depositAddress = cfg.depositAddress;
+      var totalEq = 0;
+      for (var j=0; j<5; j++) totalEq += Number(this.projectSettings.teamCommissionPercents[j] || 0);
+      this.projectSettings.totalDistributedPercentage = totalEq;
+      this.projectSettings.projectFundPercentage = 100 - totalEq;
+      if (this.projectSettings.projectFundPercentage < 0) this.projectSettings.projectFundPercentage = 0;
+    }
+    if (window.SupabaseOK && window.SupabaseOK()) {
+      try {
+        var sb = this._sb();
+        if (sb) {
+          var p = {
+            id: 1,
+            entry_amount: Number(this.projectSettings.entryAmount || 0),
+            currency: this.projectSettings.currency,
+            network: this.projectSettings.network,
+            team_percent_n1: Number(this.projectSettings.teamCommissionPercents[0] || 0),
+            team_percent_n2: Number(this.projectSettings.teamCommissionPercents[1] || 0),
+            team_percent_n3: Number(this.projectSettings.teamCommissionPercents[2] || 0),
+            team_percent_n4: Number(this.projectSettings.teamCommissionPercents[3] || 0),
+            team_percent_n5: Number(this.projectSettings.teamCommissionPercents[4] || 0),
+            project_fund_percentage: Number(this.projectSettings.projectFundPercentage || 0),
+            total_distributed_percentage: Number(this.projectSettings.totalDistributedPercentage || 0),
+            vault_address: this.projectSettings.depositAddress,
+            withdraw_min: Number(this.projectSettings.withdraw.minAmount || 0),
+            withdraw_max: Number(this.projectSettings.withdraw.maxAmountPerRequest || 0),
+            withdraw_fee_flat: Number(this.projectSettings.withdraw.networkFeeFlat || 0),
+            withdraw_hours: Number(this.projectSettings.withdraw.processingHours || 0),
+            updated_at: new Date().toISOString()
+          };
+          try {
+            var ex = await sb.from('system_settings').select('id').limit(1).maybeSingle();
+            if (ex && ex.data) {
+              await sb.from('system_settings').update(p).eq('id', Number(ex.data.id || 1));
+            } else {
+              await sb.from('system_settings').insert([p]);
+            }
+          } catch (tblErr) {
+            return true;
+          }
+        }
+      } catch(e) {}
+    }
+    return true;
+  },
+
+  async sbSignIn(email, password) {
+    if (!window.SupabaseOK || !window.SupabaseOK()) { UI.showToast('Modo offline: login demo ativado.', 'info'); this.isAuthenticated = true; return true; }
+    var sb = this._sb();
+    try {
+      var r = await sb.auth.signInWithPassword({ email: email, password: password });
+      if (r && r.error) { UI.showToast(r.error.message || 'Erro de login', 'error'); return false; }
+      var userAuth = (r && r.data && r.data.user) ? r.data.user : null;
+      var sessAuth = (r && r.data && r.data.session) ? r.data.session : null;
+      if (!userAuth) { UI.showToast('Credenciais inválidas.', 'error'); return false; }
+      await this._loadUserProfileFromSupabase(userAuth, sessAuth);
+      try { await this.refreshFromSupabase(); } catch(err) {}
+      if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
+      UI.showToast(`Bem-vindo(a) ${this.currentUser.fullName || 'usuário'}! Autenticado com sucesso.`, 'success', 'fa-circle-check');
+      var route = 'dashboard';
+      try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
+      if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
+      return true;
+    } catch (e) { UI.showToast((e && e.message) || 'Erro login', 'error'); return false; }
+  },
+
+  async sbSignUp(email, password, meta) {
+    if (!window.SupabaseOK || !window.SupabaseOK()) { UI.showToast('Modo offline: registo demo salvo.', 'info'); this.isAuthenticated = true; return true; }
+    var sb = this._sb();
+    try {
+      var r = await sb.auth.signUp({
+        email: email, password: password,
+        options: { data: meta || {} }
+      });
+      if (r && r.error) { UI.showToast(r.error.message || 'Erro registo', 'error'); return false; }
+      var userAuth = (r && r.data && r.data.user) ? r.data.user : null;
+      var sessAuth = (r && r.data && r.data.session) ? r.data.session : null;
+      if (userAuth && sessAuth) {
+        await this._loadUserProfileFromSupabase(userAuth, sessAuth);
+        try { await this.refreshFromSupabase(); } catch(err) {}
+        if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
+        UI.showToast(`Conta criada com sucesso! Bem-vindo(a) ${this.currentUser.fullName || 'usuário'}.`, 'success', 'fa-circle-check');
+        var route = 'dashboard';
+        if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
+      } else {
+        UI.showToast('Conta criada! Verifique seu email para confirmar a ativação.', 'success');
+        if (typeof Router !== 'undefined') try { Router.navigate('landing'); } catch(e) {}
+      }
+      return true;
+    } catch (e) { UI.showToast((e && e.message) || 'Erro registo', 'error'); return false; }
+  },
+
+  async sbSignOut() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) {
+      this.isAuthenticated = false; this.userRole = 'user';
+      this.sbAuth = null; this.sbSession = null; this.sbProfile = null;
+      if (typeof Router !== 'undefined') Router.navigate('landing');
+      return true;
+    }
+    var sb = this._sb();
+    try { if (sb) await sb.auth.signOut(); } catch(e) {}
+    this.sbAuth = null; this.sbSession = null; this.sbProfile = null;
+    this.isAuthenticated = false; this.userRole = 'user';
+    this.currentUser = {
+      id: null, fullName: 'Usuário Convidado', username: 'guest', email: '', country: '',
+      phone: '', sponsor: '', positionNumber: '-', level: 0, status: 'GUEST',
+      entryDate: '', availableBalance: 0, pendingBalance: 0, totalReceived: 0,
+      directReferralsCount: 0, activeReferralsCount: 0, inactiveReferralsCount: 0
+    };
+    this.transactions = []; this.notifications = []; this.withdrawals = []; this.treeLevels = [];
+    this.supportTickets = []; this.financeProblems = [];
+    this.adminSummaries = { support: {}, finance: {} };
+    if (typeof Router !== 'undefined') Router.navigate('landing');
+    if (typeof UI !== 'undefined') UI.showToast('Sessão terminada.', 'info');
+    return true;
+  },
+
+  async sbReplyTicket(ticketIdOrCode, message, opts) {
+    opts = opts || {};
+    var sb = this._sb();
+    var tktId = ticketIdOrCode;
+    if (sb && typeof ticketIdOrCode === 'string' && ticketIdOrCode.indexOf('tk_') === 0) {
+      var t = await sb.from('support_tickets').select('id').eq('code', ticketIdOrCode).limit(1).maybeSingle();
+      if (t && t.data) tktId = t.data.id;
+    }
+    if (!window.SupabaseOK || !window.SupabaseOK() || !sb) {
+      this.supportTickets.forEach(function(t){
+        if ((t.id === ticketIdOrCode || t.ticket_id === ticketIdOrCode)) {
+          t.replies.push({ author:'Admin', authorRole:'admin', isAdmin:true, message: message, createdAt: new Date().toISOString() });
+          t.status = 'Respondido'; t.lastReplyAt = new Date().toISOString();
+        }
+      });
+      UI.showToast('Resposta adicionada (modo offline).', 'success');
+      return true;
+    }
+    try {
+      var me = this.sbAuth && this.sbAuth.id ? this.sbAuth.id : null;
+      await sb.from('support_ticket_replies').insert({
+        ticket_id: tktId, author_id: me, is_admin_reply: true, is_internal: !!opts.internal,
+        message: message
+      });
+      var up = { status: (opts.close ? 'Fechado' : 'Respondido'), last_reply_at: new Date().toISOString() };
+      if (opts.close) { up.closed_by = me; up.closed_at = new Date().toISOString(); }
+      if (me) up.assigned_to = me;
+      await sb.from('support_tickets').update(up).eq('id', tktId);
+      await this.refreshSupportTickets();
+      UI.showToast(opts.close ? 'Ticket respondido e fechado.' : 'Resposta enviada.', 'success');
+      if (typeof Router !== 'undefined') Router.refresh();
+      return true;
+    } catch (e) { UI.showToast((e && e.message) || 'Erro ao responder', 'error'); return false; }
+  },
+
+  async sbCloseTicket(ticketIdOrCode, note) {
+    return await this.sbReplyTicket(ticketIdOrCode, note || 'Resolvido', { close: true });
+  },
+
+  async sbCreateFinanceProblem(data) {
+    data = data || {};
+    var def = {
+      type: 'Depósito NowPayments', category: 'Depósito NowPayments',
+      amount: 10.00, expected: 10.00, currency: 'USDT', network: 'BEP20',
+      status: 'Pendente Revisão', opened: new Date().toISOString().slice(0,16).replace('T',' ').slice(0,16),
+      profile_id: null, tx_hash: '', nowpayments_id: '', internal_tags: [], private_note: ''
+    };
+    for (var k in def) if (!(k in data)) data[k] = def[k];
+    if (!window.SupabaseOK || !window.SupabaseOK()) {
+      var fid = 'fin_' + String(this.financeProblems.length + 1).padStart(3,'0');
+      var nr = this._mapFinance({ code: fid, created_at: new Date().toISOString(), username_cache: data.username_cache || 'demo', email_cache: data.email_cache || '',
+        type: data.type, category: data.category, amount: data.amount, expected: data.expected, currency: data.currency, network: data.network,
+        tx_hash: data.tx_hash, nowpayments_id: data.nowpayments_id, status: data.status, opened: data.opened });
+      this.financeProblems.unshift(nr);
+      UI.showToast('Problema adicionado (modo offline).', 'success');
+      return true;
+    }
+    var sb = this._sb();
+    try {
+      if (!data.profile_id && this.sbAuth) data.profile_id = this.sbAuth.id;
+      await sb.from('finance_problems').insert(data);
+      await this.refreshFinanceProblems();
+      UI.showToast('Problema financeiro criado.', 'success');
+      if (typeof Router !== 'undefined') Router.refresh();
+      return true;
+    } catch (e) { UI.showToast((e && e.message) || 'Erro ao criar', 'error'); return false; }
+  },
+
+  async sbResolveFinance(finIdOrCode, resolution, opts) {
+    opts = opts || {};
+    var sb = this._sb();
+    var pid = finIdOrCode;
+    if (sb && typeof finIdOrCode === 'string' && finIdOrCode.indexOf('fin_') === 0) {
+      var f = await sb.from('finance_problems').select('id').eq('code', finIdOrCode).limit(1).maybeSingle();
+      if (f && f.data) pid = f.data.id;
+    }
+    if (!window.SupabaseOK || !window.SupabaseOK() || !sb) {
+      this.financeProblems.forEach(function(fx){
+        if (fx.id === finIdOrCode || fx.fin_id === finIdOrCode) {
+          fx.status = 'Resolvido Total'; fx.resolution = resolution || '';
+          if (opts.credit) { fx.creditWallet = true; fx.adjustedAmount = Number(opts.amount || 0); }
+          if (!fx.history) fx.history = [];
+          fx.history.push({ kind: opts.credit ? 'credit' : 'note', resolution: resolution, amount: Number(opts.amount||0), createdAt: new Date().toISOString() });
+        }
+      });
+      UI.showToast('Resolução aplicada (modo offline).', 'success');
+      return true;
+    }
+    try {
+      var me = this.sbAuth && this.sbAuth.id ? this.sbAuth.id : null;
+      var now = new Date().toISOString();
+      await sb.from('finance_problem_notes').insert({
+        problem_id: pid, author_id: me, kind: (opts.credit ? 'credit':'note'), is_internal: !!opts.internal,
+        status_from: 'Em Análise', status_to: (opts.statusTo || 'Resolvido Total'),
+        resolution_text: resolution,
+        message: opts.message || resolution,
+        credit_amount: Number(opts.amount || 0)
+      });
+      var up = { status: (opts.statusTo || 'Resolvido Total'), resolved_by: me, resolved_at: now, final_decision: resolution,
+        final_observation: opts.finalObservation || resolution, signature_name: (opts.signature || 'Admin Master'),
+        signature_time: now, credit_wallet: !!opts.credit, adjusted_amount: Number(opts.amount || 0), updated_at: now };
+      if (me) up.assigned_to = me;
+      await sb.from('finance_problems').update(up).eq('id', pid);
+      if (opts.credit && Number(opts.amount || 0) > 0) {
+        var pr = await sb.from('finance_problems').select('profile_id').eq('id', pid).limit(1).maybeSingle();
+        if (pr && pr.data && pr.data.profile_id) {
+          await sb.rpc('increment_wallet_balance', {
+            profile_id_input: pr.data.profile_id,
+            amount_input: Number(opts.amount),
+            kind_input: 'credit'
+          }).catch(function(){ /* safe se RPC não existir ainda */ });
+        }
+      }
+      await this.refreshFinanceProblems();
+      UI.showToast(opts.credit ? 'Crédito aplicado e resolvido.' : 'Resolução assinada.', 'success');
+      if (typeof Router !== 'undefined') Router.refresh();
+      return true;
+    } catch (e) { UI.showToast((e && e.message) || 'Erro resolver financeiro', 'error'); return false; }
   }
+
 };

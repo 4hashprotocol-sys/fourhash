@@ -86,12 +86,12 @@ const Views = {
             <p class="text-xs text-gray-400 mt-1">Insira suas credenciais para visualizar sua rede</p>
           </div>
 
-          <form onsubmit="event.preventDefault(); Router.loginMock();" class="space-y-4">
+          <form id="login-form" class="space-y-4">
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">E-mail ou Username</label>
               <div class="relative">
                 <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
-                <input type="text" required value="alexandre" placeholder="seu@email.com ou @username" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="login-email" type="text" required value="" placeholder="seu@email.com ou @username" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
             </div>
 
@@ -102,14 +102,14 @@ const Views = {
               </div>
               <div class="relative">
                 <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
-                <input id="login-pass" type="password" required value="password123" placeholder="••••••••" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="login-pass" type="password" required value="" placeholder="••••••••" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
                 <button type="button" onclick="UI.togglePasswordVisibility('login-pass', this)" class="absolute right-3.5 top-3.5 text-gray-400 hover:text-white">
                   <i class="fa-solid fa-eye text-xs"></i>
                 </button>
               </div>
             </div>
 
-            <button type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="login">
+            <button id="login-submit" type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="login">
               ENTRAR
             </button>
           </form>
@@ -123,7 +123,7 @@ const Views = {
     `;
   },
 
-  Register(sponsorRef = 'joao123') {
+  Register(sponsorRef = '4hashprotocol') {
     return `
       <div class="max-w-xl mx-auto py-8">
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
@@ -155,44 +155,45 @@ const Views = {
             <div class="text-[11px] text-gray-400 mt-1">Posicionamento vitalício na estrutura linear de 12 níveis</div>
           </div>
 
-          <form onsubmit="event.preventDefault(); UI.showToast('Conta criada com sucesso! Redirecionando...', 'success'); setTimeout(() => Router.navigate('deposit'), 1000);" class="space-y-4">
+          <form id="register-form" class="space-y-4" data-sponsor="${sponsorRef}">
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">Nome Completo</label>
-              <input type="text" required placeholder="Seu nome completo" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input id="reg-fullname" type="text" required placeholder="Seu nome completo" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">Username (@)</label>
               <div class="relative">
                 <span class="absolute left-3.5 top-2.5 text-gray-400 text-sm font-mono">@</span>
-                <input type="text" required placeholder="seu_username" pattern="[a-zA-Z0-9_]+" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="reg-username" type="text" required placeholder="seu_username" pattern="[a-zA-Z0-9_]+" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
-              <span class="text-[10px] text-gray-500 mt-1 block">Apenas letras, números e underline. Sem espaços.</span>
+              <span class="text-[10px] text-gray-500 mt-1 block">Apenas letras, números e underline. Sem espaços. (3-32 chars)</span>
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">E-mail</label>
-              <input type="email" required placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input id="reg-email" type="email" required placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">País</label>
-                <select class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
-                  <option value="BR">🇧🇷 Brasil (+55)</option>
-                  <option value="PT">🇵🇹 Portugal (+351)</option>
-                  <option value="US">🇺🇸 Estados Unidos (+1)</option>
-                  <option value="ES">🇪🇸 Espanha (+34)</option>
-                  <option value="FR">🇫🇷 França (+33)</option>
-                  <option value="CN">🇨🇳 China (+86)</option>
-                  <option value="JP">🇯🇵 Japão (+81)</option>
-                  <option value="RU">🇷🇺 Rússia (+7)</option>
+                <select id="reg-country" required class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                  ${(typeof COUNTRIES !== 'undefined' ? COUNTRIES : window.COUNTRIES || []).map(function(c) {
+                    const L = (typeof AppState !== 'undefined' ? AppState.currentLang : null) || (typeof I18n !== 'undefined' ? (I18n.lang || 'pt') : 'pt');
+                    const i18n = (window.COUNTRY_I18N && window.COUNTRY_I18N[L]) ? window.COUNTRY_I18N[L][c.code] : null;
+                    const pt_ = (window.COUNTRY_I18N && window.COUNTRY_I18N.pt) ? window.COUNTRY_I18N.pt[c.code] : null;
+                    const nm = i18n || pt_ || c.name;
+                    return '<option value="' + c.code + '"' + (c.code === 'BR' ? ' selected' : '') + '>' +
+                      c.flag + ' ' + c.code + ' ' + nm + ' (' + c.dial + ')' +
+                    '</option>';
+                  }).join('')}
                 </select>
               </div>
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">Telefone / WhatsApp</label>
-                <input type="tel" required placeholder="(11) 99999-9999" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="reg-phone" type="tel" required placeholder="(11) 99999-9999" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
             </div>
 
@@ -218,7 +219,7 @@ const Views = {
             </div>
 
             <div class="pt-2">
-              <button type="submit" class="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="createAccount">
+              <button id="register-submit" type="submit" class="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="createAccount">
                 FINALIZAR CADASTRO
               </button>
             </div>
@@ -282,11 +283,11 @@ const Views = {
           <div class="w-full md:w-auto">
             <div class="text-xs font-mono text-gray-400 mb-1 uppercase tracking-wider" data-i18n="referralsYourLinkLabel">Seu Link de Indicação Oficial</div>
             <div class="text-sm font-mono text-brand font-bold break-all">
-              https://fourhash.com/register?ref=${u.username}
+              https://fourhash.app/register?ref=${u.username}
             </div>
           </div>
           <div class="flex items-center gap-3 w-full md:w-auto">
-            <button onclick="UI.copyToClipboard('https://fourhash.com/register?ref=${u.username}')" class="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs shadow-neon transition">
+            <button onclick="UI.copyToClipboard('https://fourhash.app/register?ref=${u.username}')" class="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs shadow-neon transition">
               <i class="fa-solid fa-copy mr-1.5"></i>${I18n.t('copyLink')}
             </button>
             <button onclick="Router.navigate('position')" class="px-5 py-2.5 rounded-xl border border-white/20 hover:border-brand bg-brand-surface text-white font-bold text-xs transition">
@@ -748,16 +749,16 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <div class="text-xs font-mono text-gray-400 mb-1 uppercase" data-i18n="referralsYourLinkLabel">Seu Link de Convite Pessoal</div>
-            <div class="text-sm font-mono text-brand font-bold">https://fourhash.com/register?ref=${u.username}</div>
+            <div class="text-sm font-mono text-brand font-bold">https://fourhash.app/register?ref=${u.username}</div>
           </div>
           <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
-            <button onclick="UI.copyToClipboard('https://fourhash.com/register?ref=${u.username}'); UI.showToast(I18n.t('referralsCopySuccess'), 'success');" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs shadow-neon transition">
+            <button onclick="UI.copyToClipboard('https://fourhash.app/register?ref=${u.username}'); UI.showToast(I18n.t('referralsCopySuccess'), 'success');" class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs shadow-neon transition">
               <i class="fa-solid fa-copy mr-1.5"></i><span data-i18n="referralsShareCopy">Copiar Link</span>
             </button>
-            <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent('${I18n.t('tagline')} https://fourhash.com/register?ref=${u.username}'), '_blank');" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 hover:border-green-400 bg-brand-surface text-green-400 font-bold text-xs transition">
+            <button onclick="window.open('https://wa.me/?text=' + encodeURIComponent('${I18n.t('tagline')} https://fourhash.app/register?ref=${u.username}'), '_blank');" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 hover:border-green-400 bg-brand-surface text-green-400 font-bold text-xs transition">
               <i class="fa-brands fa-whatsapp mr-1.5"></i><span data-i18n="referralsShareWhatsApp">WhatsApp</span>
             </button>
-            <button onclick="window.open('https://t.me/share/url?url=' + encodeURIComponent('https://fourhash.com/register?ref=${u.username}') + '&text=' + encodeURIComponent('${I18n.t('tagline')}'), '_blank');" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 hover:border-sky-400 bg-brand-surface text-sky-400 font-bold text-xs transition">
+            <button onclick="window.open('https://t.me/share/url?url=' + encodeURIComponent('https://fourhash.app/register?ref=${u.username}') + '&text=' + encodeURIComponent('${I18n.t('tagline')}'), '_blank');" class="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 hover:border-sky-400 bg-brand-surface text-sky-400 font-bold text-xs transition">
               <i class="fa-brands fa-telegram mr-1.5"></i><span data-i18n="referralsShareTelegram">Telegram</span>
             </button>
           </div>
@@ -777,27 +778,31 @@ const Views = {
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                <tr>
-                  <td class="py-3 font-bold text-white">@crypto_king</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-mono">● ${I18n.t('active')}</span></td>
-                  <td class="py-3 font-mono text-gray-300">#001250</td>
-                  <td class="py-3 font-mono font-bold text-brand">+US$ 5.00</td>
-                  <td class="py-3 text-right font-mono text-gray-400">29/08/2026</td>
-                </tr>
-                <tr>
-                  <td class="py-3 font-bold text-white">@luna_eth</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-mono">● ${I18n.t('active')}</span></td>
-                  <td class="py-3 font-mono text-gray-300">#001254</td>
-                  <td class="py-3 font-mono font-bold text-brand">+US$ 5.00</td>
-                  <td class="py-3 text-right font-mono text-gray-400">28/08/2026</td>
-                </tr>
-                <tr>
-                  <td class="py-3 font-bold text-white">@victor_web3</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px] font-mono">● ${I18n.t('pending')}</span></td>
-                  <td class="py-3 font-mono text-gray-300">#001262</td>
-                  <td class="py-3 font-mono text-gray-500">US$ 0.00</td>
-                  <td class="py-3 text-right font-mono text-gray-400">28/08/2026</td>
-                </tr>
+                ${(() => {
+                  var rows = '';
+                  try {
+                    var list = (AppState.referrals && AppState.referrals.direct && AppState.referrals.direct.length) ? AppState.referrals.direct : [];
+                    if (!list.length) return `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                    list.forEach(function(ref){
+                      var isActive = (ref.status === 'ACTIVE' || ref.status === 'active');
+                      var statusClass = isActive ? 'bg-brand/10 text-brand' : 'bg-amber-400/10 text-amber-400';
+                      var statusLabel = isActive ? I18n.t('active') : I18n.t('pending');
+                      var bonusClass = isActive ? 'font-bold text-brand' : 'text-gray-500';
+                      var bonusVal = isActive ? ('+US$ ' + (Number(ref.bonus || 5.00)).toFixed(2)) : 'US$ 0.00';
+                      var dt = '';
+                      try { if (ref.date) dt = ref.date; else if (ref.createdAt) dt = new Date(ref.createdAt).toLocaleDateString('pt-PT'); } catch(e){}
+                      rows += `
+                        <tr>
+                          <td class="py-3 font-bold text-white">@${ref.username || 'user'}</td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded ${statusClass} text-[10px] font-mono">● ${statusLabel}</span></td>
+                          <td class="py-3 font-mono text-gray-300">${ref.positionNumber || '-'}</td>
+                          <td class="py-3 font-mono ${bonusClass}">${bonusVal}</td>
+                          <td class="py-3 text-right font-mono text-gray-400">${dt || '-'}</td>
+                        </tr>`;
+                    });
+                  } catch(e) {}
+                  return rows || `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                })()}
               </tbody>
             </table>
           </div>
@@ -808,45 +813,56 @@ const Views = {
 
   Profile() {
     const u = AppState.currentUser;
+    const isMaster = ((AppState.currentUser.id || '').toString().toLowerCase() === '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f') || ((AppState.currentUser.email || '').toString().toLowerCase() === '4hashprotocol@gmail.com');
+    const showAdminBtn = (typeof Router !== 'undefined' && typeof Router.isAdmin === 'function' && Router.isAdmin()) || isMaster;
     return `
       <div class="max-w-2xl mx-auto py-4 space-y-6">
+        ${showAdminBtn ? `
+        <div class="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xl">
+          <div>
+            <div class="text-amber-400 font-black text-sm sm:text-base tracking-wide font-['Space_Grotesk']"><i class="fa-solid fa-crown mr-2"></i>ACESSO ADMINISTRADOR MASTER</div>
+            <div class="text-[11px] text-gray-400 mt-1 font-mono">Acesso total ao backoffice, financeiro e suporte.</div>
+          </div>
+          <button onclick="Router.navigate('admin')" class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm tracking-wider shadow-neon-sm transition whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>ABRIR PAINEL ADMIN</button>
+        </div>
+        ` : ''}
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl">
           <div class="flex items-center gap-4 mb-6 pb-6 border-b border-white/10">
             <div class="w-16 h-16 rounded-2xl bg-brand/20 border border-brand/50 flex items-center justify-center font-black text-brand text-2xl shadow-neon-sm">
-              @${u.username.substring(0, 2).toUpperCase()}
+              @${(u.username || 'U').toString().substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h2 class="text-xl font-bold text-white font-['Space_Grotesk']">${u.fullName}</h2>
-              <div class="text-xs font-mono text-brand">@${u.username} • Pos: ${u.positionNumber}</div>
-              <div class="text-[11px] text-gray-400 mt-0.5">${u.country}</div>
+              <h2 class="text-xl font-bold text-white font-['Space_Grotesk']">${u.fullName || u.username || 'Usuário'}</h2>
+              <div class="text-xs font-mono text-brand">@${u.username || ''} • Pos: ${u.positionNumber || '-'}</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">${u.country || ''}</div>
             </div>
           </div>
 
           <form onsubmit="event.preventDefault(); UI.showToast('Alterações salvas com sucesso!', 'success');" class="space-y-4">
             <div>
               <label class="block text-xs font-mono text-gray-400 mb-1">Nome Completo</label>
-              <input type="text" value="${u.fullName}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input type="text" value="${u.fullName || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-mono text-gray-400 mb-1">Username (Fixo)</label>
-                <input type="text" readonly disabled value="@${u.username}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-gray-500 font-mono cursor-not-allowed">
+                <input type="text" readonly disabled value="@${u.username || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-gray-500 font-mono cursor-not-allowed">
               </div>
               <div>
                 <label class="block text-xs font-mono text-gray-400 mb-1">Patrocinador</label>
-                <input type="text" readonly disabled value="@${u.sponsor}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-brand font-mono cursor-not-allowed">
+                <input type="text" readonly disabled value="@${u.sponsor || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-brand font-mono cursor-not-allowed">
               </div>
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-400 mb-1">E-mail</label>
-              <input type="email" value="${u.email}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input type="email" value="${u.email || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-400 mb-1">Telefone</label>
-              <input type="tel" value="${u.phone}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input type="tel" value="${u.phone || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="pt-4">
@@ -955,7 +971,7 @@ const Views = {
               <button onclick="window.open('https://t.me/fourhash', '_blank')" class="px-4 py-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/15 border border-sky-500/30 text-sky-400 font-bold text-xs transition flex items-center justify-center gap-2">
                 <i class="fa-brands fa-telegram"></i><span data-i18n="supportTelegramBtn">Telegram Oficial</span>
               </button>
-              <button onclick="window.open('mailto:diretoria@fourhash.com', '_blank')" class="px-4 py-3 rounded-xl bg-violet-500/10 hover:bg-violet-500/15 border border-violet-500/30 text-violet-400 font-bold text-xs transition flex items-center justify-center gap-2">
+              <button onclick="window.open('mailto:diretoria@fourhash.app', '_blank')" class="px-4 py-3 rounded-xl bg-violet-500/10 hover:bg-violet-500/15 border border-violet-500/30 text-violet-400 font-bold text-xs transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-envelope"></i><span data-i18n="supportEmailBtn">E-mail Diretoria</span>
               </button>
             </div>
@@ -1047,35 +1063,49 @@ const Views = {
 
         ${tab!=='backoffice' ? '' : `
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          ${(() => {
+            var u = (AppState.adminSummaries && AppState.adminSummaries.users) || {};
+            var v = (AppState.adminSummaries && AppState.adminSummaries.volume) || {};
+            var fmtInt = function(n){ try { return Number(n || 0).toLocaleString('pt-PT'); } catch(e){ return String(n || 0); } };
+            var fmtUSD = function(n){ try { return '$ ' + Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch(e){ return '$ ' + Number(n||0).toFixed(2); } };
+            var totalU = fmtInt(u.total || 0);
+            var activeU = fmtInt(u.active || 0);
+            var pctA = typeof u.pctAtivos === 'number' ? (u.pctAtivos.toFixed(1) + '%') : '0%';
+            var vol = fmtUSD(v.volumeEntradas || 0);
+            var fundo = fmtUSD(v.fundoLiquidez || 0);
+            var bonus = fmtUSD(v.bonusEquipe || 0);
+            return `
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="adminTop1Label">Total de Cadastros</div>
-            <div class="text-2xl font-black text-white font-mono">1,248</div>
-            <div class="text-[10px] text-brand mt-1 font-mono">1,102 Ativos (88.3%)</div>
+            <div class="text-2xl font-black text-white font-mono">${totalU}</div>
+            <div class="text-[10px] text-brand mt-1 font-mono">${activeU} Ativos (${pctA})</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="adminTop2Label">Total Depositado</div>
-            <div class="text-2xl font-black text-white font-mono">$ 11,020.00</div>
+            <div class="text-2xl font-black text-white font-mono">${vol}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono">USDT BEP20</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="adminTop3Label">Fundo do Projeto (40%)</div>
-            <div class="text-2xl font-black text-brand font-mono">$ 4,408.00</div>
+            <div class="text-2xl font-black text-brand font-mono">${fundo}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="regFooterFund">Em caixa de reserva</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="adminTop4Label">Bônus Equipe (60%)</div>
-            <div class="text-2xl font-black text-blue-400 font-mono">$ 6,612.00</div>
+            <div class="text-2xl font-black text-blue-400 font-mono">${bonus}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="adminTop4Subtitle">5 níveis (N1→N5)</div>
           </div>
+            `;
+          })()}
         </div>
 
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
           <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4" data-i18n="adminGlobalCfgTitle">Configurações Globais do Protocolo</h3>
 
-          <form onsubmit="event.preventDefault(); UI.showToast(I18n.t('adminCfgSavedOk'), 'success');" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
+          <form onsubmit="event.preventDefault(); (async function(){ var f=this.querySelectorAll('input'); var cfg={}; cfg.entryAmount=f[0]?Number(f[0].value||0):AppState.projectSettings.entryAmount; var n1=f[1]?Number(f[1].value||0):0; var n2=f[2]?Number(f[2].value||0):0; var n3=f[3]?Number(f[3].value||0):0; var n4=f[4]?Number(f[4].value||0):0; var n5=f[5]?Number(f[5].value||0):0; cfg.teamCommissionPercents=[n1,n2,n3,n4,n5]; cfg.depositAddress=f[8]?(f[8].value||''):AppState.projectSettings.depositAddress; try { await AppState.saveProjectSettings(cfg); await AppState.refreshAdminSummaries(); UI.showToast(I18n.t('adminCfgSavedOk'), 'success','fa-circle-check'); setTimeout(function(){ Router.refreshCurrentView(); },250); } catch(err){ UI.showToast((err&&err.message)?err.message:'Erro ao salvar','error'); } }).call(this);" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
             <div>
               <label class="block font-mono text-gray-400 mb-1" data-i18n="adminCfgEntryLabel">Valor Entrada (USDT)</label>
               <input type="number" value="${s.entryAmount}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2 text-white font-mono">
@@ -1133,7 +1163,7 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono" data-i18n="totalReferrals">Gerenciamento de Usuários</h3>
-            <span class="text-xs text-gray-400 font-mono">Mostrando 5 de 1,248</span>
+            <span class="text-xs text-gray-400 font-mono">Total: ${(AppState.adminUsersList || []).length} cadastro${(AppState.adminUsersList || []).length === 1 ? '' : 's'}</span>
           </div>
 
           <div class="overflow-x-auto">
@@ -1149,36 +1179,38 @@ const Views = {
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
-                <tr>
-                  <td class="py-3 font-bold text-white">@alexandre</td>
-                  <td class="py-3 font-mono text-brand">#001248</td>
-                  <td class="py-3 font-mono">Level 04</td>
-                  <td class="py-3 font-mono text-gray-300">@joao123</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-mono">${I18n.t('active')}</span></td>
-                  <td class="py-3 text-right">
-                    <button onclick="UI.showToast('Perfil de @alexandre aberto para auditoria.', 'info')" class="text-brand hover:underline mr-2">Editar</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-3 font-bold text-white">@crypto_king</td>
-                  <td class="py-3 font-mono text-brand">#001250</td>
-                  <td class="py-3 font-mono">Level 05</td>
-                  <td class="py-3 font-mono text-gray-300">@alexandre</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-brand/10 text-brand text-[10px] font-mono">${I18n.t('active')}</span></td>
-                  <td class="py-3 text-right">
-                    <button onclick="UI.showToast('Auditoria aberta.', 'info')" class="text-brand hover:underline mr-2">Editar</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-3 font-bold text-white">@victor_web3</td>
-                  <td class="py-3 font-mono text-amber-400">#001262</td>
-                  <td class="py-3 font-mono">Level 05</td>
-                  <td class="py-3 font-mono text-gray-300">@alexandre</td>
-                  <td class="py-3"><span class="px-2 py-0.5 rounded bg-amber-400/10 text-amber-400 text-[10px] font-mono">${I18n.t('pending')}</span></td>
-                  <td class="py-3 text-right">
-                    <button onclick="UI.showToast('Usuário @victor_web3 ativado manualmente pelo admin.', 'success')" class="text-amber-400 hover:underline mr-2">Ativar</button>
-                  </td>
-                </tr>
+                ${(() => {
+                  var rows = '';
+                  try {
+                    var list = AppState.adminUsersList || [];
+                    if (!list.length) return `<tr><td colspan="6" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>Nenhum usuário cadastrado ainda. Aguarde os primeiros registros.</td></tr>`;
+                    list.forEach(function(u){
+                      var isPending = (u.status === 'pending' || u.status === 'PENDING');
+                      var isActive = (u.status === 'active' || u.status === 'ACTIVE');
+                      var statusClass = isActive ? 'bg-brand/10 text-brand' : (isPending ? 'bg-amber-400/10 text-amber-400' : 'bg-gray-500/10 text-gray-400');
+                      var statusLabel = isActive ? I18n.t('active') : (isPending ? I18n.t('pending') : (u.status || '-'));
+                      var posClass = isActive ? 'text-brand' : (isPending ? 'text-amber-400' : 'text-gray-400');
+                      var safeUser = (u.username || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                      var actionBtn = '';
+                      if (isPending) {
+                        actionBtn = `<button onclick="UI.showToast('Usuário @${safeUser} ativado manualmente pelo admin.', 'success')" class="text-amber-400 hover:underline mr-2">Ativar</button>`;
+                      }
+                      actionBtn += `<button onclick="UI.showToast('Perfil de @${safeUser} aberto para auditoria.', 'info')" class="text-brand hover:underline">Editar</button>`;
+                      rows += `
+                        <tr>
+                          <td class="py-3 font-bold text-white">@${u.username || 'user'}</td>
+                          <td class="py-3 font-mono ${posClass}">${u.positionNumber || '-'}</td>
+                          <td class="py-3 font-mono">${u.levelLabel || 'Level 00'}</td>
+                          <td class="py-3 font-mono text-gray-300">@${u.sponsor || '-'}</td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded ${statusClass} text-[10px] font-mono">${statusLabel}</span></td>
+                          <td class="py-3 text-right">
+                            ${actionBtn}
+                          </td>
+                        </tr>`;
+                    });
+                  } catch(e) {}
+                  return rows || `<tr><td colspan="6" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>Nenhum usuário cadastrado ainda.</td></tr>`;
+                })()}
               </tbody>
             </table>
           </div>

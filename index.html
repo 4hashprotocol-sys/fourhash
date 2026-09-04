@@ -8,6 +8,8 @@
 
   <!-- Tailwind CSS (CDN com config inline) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS SDK v2 (carrega ANTES do client.js local) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -178,8 +180,8 @@
         <button onclick="Router.navigate('landing')" class="hover:text-brand transition" data-i18n="navHome">Início</button>
         <button onclick="Router.navigate('deposit')" class="hover:text-brand transition" data-i18n="navDeposit">Depositar</button>
         <button onclick="Router.navigate('support')" class="hover:text-brand transition" data-i18n="navSupport">Suporte & FAQ</button>
-        <button onclick="AppState.toggleAdminDemo()" class="text-brand hover:underline font-mono" title="Alternar Role de Administrador">
-          <i class="fa-solid fa-shield-halved mr-1"></i><span id="admin-toggle-label" data-i18n="userMode">Modo: Usuário</span>
+        <button id="footer-admin-link" onclick="Router.navigate('admin')" class="hidden text-amber-400 hover:text-amber-300 font-bold font-mono" title="Painel de Administração">
+          <i class="fa-solid fa-crown mr-1"></i>Painel Admin
         </button>
       </div>
     </div>
@@ -196,10 +198,17 @@
   <!-- JAVASCRIPT: ARQUITETURA MODULAR (ORDEM IMPORTANTE) -->
   <!-- ================================================== -->
 
-  <!-- 1. Traduções (dados puros) -->
+  <!-- 1. Dados estáticos globais (países, flags, DDI, traduções nomes países 8 línguas) -->
+  <script src="js/data/countries.js"></script>
+  <script src="js/data/countries_i18n.js"></script>
+
+  <!-- 2. Traduções (dados puros) -->
   <script src="js/i18n/translations.js"></script>
 
-  <!-- 2. Estado Global da Aplicação -->
+  <!-- 2b. Supabase Client (CDN SDK + credenciais) -->
+  <script src="js/supabase/client.js"></script>
+
+  <!-- 3. Estado Global da Aplicação -->
   <script src="js/state/AppState.js"></script>
 
   <!-- 3. Utilitários de Interface (Toasts, Modais, Clipboard...) -->
