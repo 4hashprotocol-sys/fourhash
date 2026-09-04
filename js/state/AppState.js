@@ -144,41 +144,94 @@ const AppState = {
       if (!sb) return false;
       if (sessionAuth) this.sbSession = sessionAuth;
       this.sbAuth = userAuth;
-      var p = await sb.from('profiles').select('*').eq('id', userAuth.id).limit(1).maybeSingle();
-      this.sbProfile = (p && p.data) ? p.data : null;
-      if (this.sbProfile) {
-        this.currentUser.id = this.sbProfile.id;
-        var full = (this.sbProfile.full_name || '').toString().trim();
-        this.currentUser.fullName = full || this.sbProfile.username || this.currentUser.fullName;
-        this.currentUser.username = this.sbProfile.username || this.currentUser.username;
-        this.currentUser.email = this.sbProfile.email || userAuth.email || this.currentUser.email;
-        this.currentUser.country = this.sbProfile.country || this.currentUser.country;
-        this.currentUser.phone = this.sbProfile.phone || this.currentUser.phone;
-        this.currentUser.sponsor = this.sbProfile.upline_username || this.sbProfile.sponsor_code || this.currentUser.sponsor;
+
+      var tokenMeta = (userAuth && userAuth.user_metadata && typeof userAuth.user_metadata === 'object') ? userAuth.user_metadata : {};
+      var t_username = (tokenMeta.username || '').toString().trim();
+      var t_fn = (tokenMeta.first_name || '').toString().trim();
+      var t_ln = (tokenMeta.last_name || '').toString().trim();
+      var t_full = (tokenMeta.full_name || '').toString().trim();
+      if (!t_full) t_full = ((t_fn + ' ' + t_ln).trim() || '');
+      var t_email = (tokenMeta.email || userAuth.email || '').toString().trim();
+      var t_country = (tokenMeta.country || '').toString().trim();
+      var t_phone = (tokenMeta.phone || '').toString().trim();
+      var t_upline = (tokenMeta.upline_code || tokenMeta.upline_username || tokenMeta.sponsor_code || '').toString().trim();
+      var t_role = (tokenMeta.role || '').toString().trim();
+      var t_status = (tokenMeta.status || '').toString().trim();
+      var t_level = Number(tokenMeta.level_number || tokenMeta.level || 0);
+      var t_posNum = (tokenMeta.position_index || tokenMeta.position_code || '').toString();
+
+      var p = null;
+      try {
+        var qP = await sb.from('profiles').select('*').eq('id', userAuth.id).limit(1).maybeSingle();
+        if (qP && qP.data) { p = qP.data; }
+      } catch(ee) { p = null; }
+      this.sbProfile = p;
+
+      if (p) {
+        this.currentUser.id = p.id;
+        var fn = (p.full_name || '').toString().trim();
+        this.currentUser.fullName = fn || t_full || p.username || this.currentUser.fullName;
+        this.currentUser.username = (p.username || t_username || this.currentUser.username || '').toString().trim();
+        this.currentUser.email = (p.email || t_email || userAuth.email || this.currentUser.email).toString().trim();
+        this.currentUser.country = (p.country || t_country || this.currentUser.country).toString().trim();
+        this.currentUser.phone = (p.phone || t_phone || this.currentUser.phone).toString().trim();
+        this.currentUser.sponsor = (p.upline_username || p.sponsor_code || t_upline || this.currentUser.sponsor).toString().trim();
         var pos = '';
-        if (this.sbProfile.position_index) pos = '#' + this.sbProfile.position_index;
-        else if (this.sbProfile.line_row && this.sbProfile.line_seat) pos = '#' + this.sbProfile.line_row + '-' + this.sbProfile.line_seat;
+        if (p.position_index) pos = '#' + p.position_index;
+        else if (p.line_row && p.line_seat) pos = '#' + p.line_row + '-' + p.line_seat;
+        else if (t_posNum) pos = '#' + t_posNum;
         else pos = '#' + (userAuth.id || '').toString().slice(0, 6);
         this.currentUser.positionNumber = pos;
-        this.currentUser.level = Number(this.sbProfile.level_number || 0);
-        if (this.sbProfile.created_at) {
+        this.currentUser.level = Number(p.level_number || t_level || 0);
+        if (p.created_at) {
           try {
-            var d = new Date(this.sbProfile.created_at);
+            var d = new Date(p.created_at);
             this.currentUser.entryDate = d.toLocaleDateString('pt-PT');
           } catch(e) {}
         }
-        if (this.sbProfile.role) this.userRole = (this.sbProfile.role === 'superadmin' || this.sbProfile.role === 'admin') ? 'admin' : 'user';
-        if (this.sbProfile.status === 'active') this.currentUser.status = 'ACTIVE';
-        if (this.sbProfile.preferred_lang) this.currentLang = this.sbProfile.preferred_lang;
-        if (this.sbProfile.theme) this.currentTheme = this.sbProfile.theme;
+        if (p.role) this.userRole = (p.role === 'superadmin' || p.role === 'admin') ? 'admin' : 'user';
+        else if (t_role) this.userRole = (t_role === 'superadmin' || t_role === 'admin') ? 'admin' : 'user';
+        if (p.status === 'active' || t_status === 'active' || t_status === 'ACTIVE') this.currentUser.status = 'ACTIVE';
+        if (p.preferred_lang) this.currentLang = p.preferred_lang;
+        else if (tokenMeta.lang) this.currentLang = tokenMeta.lang;
+        if (p.theme) this.currentTheme = p.theme;
         this.isAuthenticated = true;
       } else {
         this.currentUser.id = userAuth.id;
-        this.currentUser.email = userAuth.email || this.currentUser.email;
-        this.currentUser.username = (userAuth.email || 'user').split('@')[0].toLowerCase();
-        this.currentUser.fullName = this.currentUser.username;
+        this.currentUser.fullName = t_full || this.currentUser.fullName;
+        this.currentUser.username = (t_username || this.currentUser.username || '').toString().trim();
+        this.currentUser.email = (t_email || userAuth.email || this.currentUser.email).toString().trim();
+        this.currentUser.country = t_country || this.currentUser.country;
+        this.currentUser.phone = t_phone || this.currentUser.phone;
+        this.currentUser.sponsor = t_upline || this.currentUser.sponsor;
+        var pos2 = '';
+        if (t_posNum) pos2 = '#' + t_posNum;
+        else pos2 = '#' + (userAuth.id || '').toString().slice(0, 6);
+        this.currentUser.positionNumber = pos2;
+        this.currentUser.level = Number(t_level || 0);
+        if (t_role) this.userRole = (t_role === 'superadmin' || t_role === 'admin') ? 'admin' : 'user';
+        if (t_status === 'active' || t_status === 'ACTIVE') this.currentUser.status = 'ACTIVE';
+        if (tokenMeta.lang) this.currentLang = tokenMeta.lang;
         this.isAuthenticated = true;
       }
+
+      var FORBIDDEN = ['guest','register','login','logout','signin','signup','sign-up','sign_in','sign-up','admin','administrator','adm','root','owner','staff','team','profile','user','users','account','accounts','support','ticket','tickets','wallet','wallets','deposit','deposits','withdraw','withdrawal','withdrawals','dashboard','dash','home','landing','index','referral','referrals','ref','sponsor','sponsors','tree','matrix','network','plan','plans','system','sys','config','settings','setup','app','4h','fourhash','four-hash','four_hash','protocol','official','oficial','ceo','founder','supabase','resend','support-team','financeiro','backoffice','painel','painel-admin'];
+      var RESERVED_PREFIX = ['admin','adm','staff','root','official','fourhash','4h','support']
+      var u = (this.currentUser.username || '').toString().trim();
+      if (!u) u = (this.currentUser.email || 'user').split('@')[0].toLowerCase();
+      u = u.replace(/[^a-zA-Z0-9_]/g,'_').toLowerCase();
+      if (u.length > 20) u = u.substr(0, 20);
+      var low = u.toLowerCase();
+      if (FORBIDDEN.indexOf(low) >= 0) u = 'u' + (userAuth.id || '').toString().replace(/-/g,'').substr(0, 10);
+      for (var i = 0; i < RESERVED_PREFIX.length; i++) {
+        if (low === RESERVED_PREFIX[i] || low.indexOf(RESERVED_PREFIX[i] + '_') === 0) {
+          u = 'u' + (userAuth.id || '').toString().replace(/-/g,'').substr(0, 10);
+          break;
+        }
+      }
+      this.currentUser.username = u;
+      if (!this.currentUser.fullName) this.currentUser.fullName = this.currentUser.username;
+
       var ADMIN_MASTER_UUID = '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f';
       var ADMIN_MASTER_EMAIL = '4hashprotocol@gmail.com';
       var uid = (this.currentUser.id || userAuth.id || '').toString().toLowerCase();
@@ -187,18 +240,29 @@ const AppState = {
       if (ehMaster) {
         this.userRole = 'admin';
         this.currentUser.status = 'ACTIVE';
+        this.currentUser.username = '4hashprotocol';
+        this.currentUser.fullName = 'Four Hash';
         if (!this.currentUser.level || this.currentUser.level <= 0) this.currentUser.level = 1;
         if (!this.currentUser.positionNumber || this.currentUser.positionNumber === '-' || this.currentUser.positionNumber === '') this.currentUser.positionNumber = '#1';
+        this.currentUser.sponsor = '';
       }
-      var w = await sb.from('wallets').select('*').eq('profile_id', userAuth.id).limit(1).maybeSingle();
-      if (w && w.data) {
-        this.currentUser.availableBalance = Number(w.data.available_balance || 0);
-        this.currentUser.pendingBalance   = Number(w.data.pending_balance   || 0);
-        var dep = Number(w.data.total_deposited || 0);
-        var bT = Number(w.data.total_bonus_team || 0);
-        var bM = Number(w.data.total_bonus_matrix || 0);
-        this.currentUser.totalReceived    = dep + bT + bM;
-      }
+
+      try {
+        var w = await sb.from('wallets').select('*').eq('profile_id', userAuth.id).limit(1).maybeSingle();
+        if (w && w.data) {
+          this.currentUser.availableBalance = Number(w.data.available_balance || 0);
+          this.currentUser.pendingBalance   = Number(w.data.pending_balance   || 0);
+          var dep = Number(w.data.total_deposited || 0);
+          var bT = Number(w.data.total_bonus_team || 0);
+          var bM = Number(w.data.total_bonus_matrix || 0);
+          this.currentUser.totalReceived    = dep + bT + bM;
+        } else {
+          this.currentUser.availableBalance = this.currentUser.availableBalance || 0;
+          this.currentUser.pendingBalance   = this.currentUser.pendingBalance || 0;
+          this.currentUser.totalReceived    = this.currentUser.totalReceived || 0;
+        }
+      } catch(eWallet) {}
+
       return true;
     } catch(e) {
       this.sbError = (e && e.message) ? e.message : String(e);

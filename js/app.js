@@ -131,8 +131,13 @@ function handleRegisterSubmit() {
   var phone    = phoneEl    ? phoneEl.value.trim() : '';
 
   if (!fullname || !username || !email || !pass || !pass2) { UI.showToast('Preencha todos os campos.', 'warning', 'fa-triangle-exclamation'); return; }
-  if (username.length < 3 || username.length > 32) { UI.showToast('Username precisa ter 3-32 caracteres.', 'warning'); return; }
+  if (username.length < 3 || username.length > 20) { UI.showToast('Username precisa ter 3–20 caracteres.', 'warning'); return; }
   if (!/^[a-zA-Z0-9_]+$/.test(username)) { UI.showToast('Username: apenas letras, números e underline.', 'warning'); return; }
+  var FORBIDDEN_UN = ['guest','register','login','logout','signin','signup','sign-in','sign_up','sign-up','admin','administrator','adm','root','owner','staff','team','profile','user','users','account','accounts','support','ticket','tickets','wallet','wallets','deposit','deposits','withdraw','withdrawal','withdrawals','dashboard','dash','home','landing','index','referral','referrals','ref','sponsor','sponsors','tree','matrix','network','plan','plans','system','sys','config','settings','setup','app','4h','fourhash','four-hash','four_hash','protocol','official','oficial','ceo','founder','supabase','resend','support-team','financeiro','backoffice','painel','painel-admin'];
+  var lowUn = username.toLowerCase();
+  for (var ifb = 0; ifb < FORBIDDEN_UN.length; ifb++) { if (lowUn === FORBIDDEN_UN[ifb]) { UI.showToast('Username "'+username+'" reservado. Escolha outro.', 'warning'); return; } }
+  var PREFIX = ['admin','adm_','staff_','root_','official_','fourhash','4h','support_'];
+  for (var ip = 0; ip < PREFIX.length; ip++) { if (lowUn.indexOf(PREFIX[ip]) === 0) { UI.showToast('Prefixo de username reservado. Tente outro.', 'warning'); return; } }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { UI.showToast('E-mail inválido.', 'warning'); return; }
   if (pass.length < 6) { UI.showToast('Senha mínima de 6 dígitos.', 'warning'); return; }
   if (pass !== pass2) { UI.showToast('Senhas não correspondem.', 'warning'); return; }
@@ -150,10 +155,13 @@ function handleRegisterSubmit() {
   var meta = {
     username: username,
     upline_code: (sponsorRef || '4hashprotocol').replace(/^@/,''),
+    sponsor_code: (sponsorRef || '4hashprotocol').replace(/^@/,''),
     first_name: first_name,
     last_name: last_name,
+    full_name: fullname,
     country: country,
-    phone: phone
+    phone: phone,
+    lang: (I18n && I18n.currentLang) ? I18n.currentLang : 'pt'
   };
 
   if (window.SupabaseOK && window.SupabaseOK() && typeof AppState !== 'undefined' && typeof AppState.sbSignUp === 'function') {
