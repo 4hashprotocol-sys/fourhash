@@ -20,6 +20,13 @@ const Router = {
     return localRole || bancoRole;
   },
 
+  isActivated() {
+    if (this.isAdmin()) return true;
+    if (!this.isAuthenticated()) return false;
+    const s = (AppState.currentUser && AppState.currentUser.status) ? String(AppState.currentUser.status).toUpperCase() : '';
+    return s === 'ACTIVE' || s === 'TRUE';
+  },
+
   navigate(route, params = {}) {
     if (this._guestOnlyRoutes.includes(route) && this.isAuthenticated()) {
       UI.showToast('Já se encontra com sessão iniciada.', 'info');
@@ -35,6 +42,13 @@ const Router = {
       UI.showToast('Acesso Negado. Apenas administradores.', 'error', 'fa-shield-halved');
       if (this.isAuthenticated()) { this.navigate('dashboard'); return; }
       this.navigate('landing');
+      return;
+    }
+
+    const ONLY_PENDING_ALLOWED = ['deposit', 'profile', 'security', 'admin'];
+    if (this.isAuthenticated() && !this.isAdmin() && !this.isActivated() && ONLY_PENDING_ALLOWED.indexOf(route) < 0) {
+      UI.showToast('Ative sua conta com $10 USDT para desbloquear o acesso completo.', 'warning', 'fa-lock');
+      this.navigate('deposit');
       return;
     }
 
@@ -59,12 +73,19 @@ const Router = {
     if (this.isAuthenticated()) {
       notifWrappers.forEach(el => el.classList.remove('hidden'));
 
+      const activated = this.isActivated();
+      const lock = (activated ? '' : ' opacity-40 pointer-events-none grayscale cursor-not-allowed');
+      const lockedMsg = (activated ? '' : ' onclick=\"event.stopPropagation(); event.preventDefault(); UI.showToast(\\\'Ative sua conta primeiro para desbloquear.\\\',\\\'warning\\\',\\\'fa-lock\\\'); return false;\"');
+      const statusBadge = activated
+        ? `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand/10 border border-brand/40 text-brand text-[10px] font-black font-mono uppercase tracking-wider shadow-neon-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>ATIVO</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] font-black font-mono uppercase tracking-wider"><i class="fa-solid fa-clock text-[10px]"></i>AGUARDA ATIVAÇÃO</span>`;
+
       let links = `
-        <button onclick="Router.navigate('dashboard')" class="hover:text-brand transition ${this.currentRoute === 'dashboard' ? 'text-brand font-bold' : ''}">${I18n.t('navDashboard')}</button>
-        <button onclick="Router.navigate('position')" class="hover:text-brand transition ${this.currentRoute === 'position' ? 'text-brand font-bold' : ''}">${I18n.t('navPosition')}</button>
-        <button onclick="Router.navigate('wallet')" class="hover:text-brand transition ${this.currentRoute === 'wallet' ? 'text-brand font-bold' : ''}">${I18n.t('navWallet')}</button>
-        <button onclick="Router.navigate('deposit')" class="hover:text-brand transition ${this.currentRoute === 'deposit' ? 'text-brand font-bold' : ''}">${I18n.t('navDeposit')}</button>
-        <button onclick="Router.navigate('referrals')" class="hover:text-brand transition ${this.currentRoute === 'referrals' ? 'text-brand font-bold' : ''}">${I18n.t('navReferrals')}</button>
+        <button onclick="Router.navigate('dashboard')" class="hover:text-brand transition${lock}${this.currentRoute === 'dashboard' ? ' text-brand font-bold' : ''}">${I18n.t('navDashboard')}</button>
+        <button onclick="Router.navigate('position')" class="hover:text-brand transition${lock}${this.currentRoute === 'position' ? ' text-brand font-bold' : ''}">${I18n.t('navPosition')}</button>
+        <button onclick="Router.navigate('wallet')" class="hover:text-brand transition${lock}${this.currentRoute === 'wallet' ? ' text-brand font-bold' : ''}">${I18n.t('navWallet')}</button>
+        <button onclick="Router.navigate('deposit')" class="hover:text-brand transition${activated ? '' : ' text-amber-400 font-extrabold animate-pulse'}${this.currentRoute === 'deposit' ? ' text-brand font-bold' : ''}">${I18n.t('navDeposit')}</button>
+        <button onclick="Router.navigate('referrals')" class="hover:text-brand transition${lock}${this.currentRoute === 'referrals' ? ' text-brand font-bold' : ''}">${I18n.t('navReferrals')}</button>
       `;
 
       if (this.isAdmin()) {
@@ -73,14 +94,18 @@ const Router = {
 
       nav.innerHTML = links;
 
+      const mLock = activated ? '' : ' opacity-40 grayscale cursor-not-allowed';
+      const mDisabled = activated ? '' : ' onclick=\"event.preventDefault(); event.stopPropagation(); UI.showToast(\\\'Ative sua conta primeiro.\\\',\\\'warning\\\',\\\'fa-lock\\\'); return false;\"';
+
       mobileNav.innerHTML = `
         <div class="flex items-center gap-3 p-3 bg-brand-surface rounded-xl border border-white/10 mb-4">
           <div class="w-10 h-10 rounded-full bg-brand/20 border border-brand/50 flex items-center justify-center font-bold text-brand">
             @${(AppState.currentUser.username || 'U').substring(0, 2).toUpperCase()}
           </div>
-          <div>
+          <div class="flex-1">
             <div class="font-bold text-sm text-white">@${AppState.currentUser.username}</div>
             <div class="text-[10px] text-brand font-mono">Nível ${AppState.currentUser.level} • ${AppState.currentUser.positionNumber}</div>
+            <div class="mt-1.5">${statusBadge}</div>
           </div>
         </div>
 
@@ -95,11 +120,11 @@ const Router = {
         </div>
 
         <div class="grid grid-cols-2 gap-2">
-          <button onclick="Router.navigate('dashboard')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-chart-pie mr-2 text-brand"></i>${I18n.t('navDashboard')}</button>
-          <button onclick="Router.navigate('position')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-sitemap mr-2 text-brand"></i>${I18n.t('navPosition')}</button>
-          <button onclick="Router.navigate('wallet')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-wallet mr-2 text-brand"></i>${I18n.t('navWallet')}</button>
-          <button onclick="Router.navigate('deposit')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-arrow-down-to-bracket mr-2 text-brand"></i>${I18n.t('navDeposit')}</button>
-          <button onclick="Router.navigate('referrals')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-users mr-2 text-brand"></i>${I18n.t('navReferrals')}</button>
+          <button onclick="Router.navigate('dashboard')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5${mLock}"${mDisabled}><i class="fa-solid fa-chart-pie mr-2 text-brand"></i>${I18n.t('navDashboard')}</button>
+          <button onclick="Router.navigate('position')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5${mLock}"${mDisabled}><i class="fa-solid fa-sitemap mr-2 text-brand"></i>${I18n.t('navPosition')}</button>
+          <button onclick="Router.navigate('wallet')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5${mLock}"${mDisabled}><i class="fa-solid fa-wallet mr-2 text-brand"></i>${I18n.t('navWallet')}</button>
+          <button onclick="Router.navigate('deposit')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-amber-500/30 bg-amber-500/5 text-amber-400 font-extrabold ${activated ? '' : 'animate-pulse'}"><i class="fa-solid fa-arrow-down-to-bracket mr-2 text-amber-400"></i>${I18n.t('navDeposit')}</button>
+          <button onclick="Router.navigate('referrals')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5${mLock}"${mDisabled}><i class="fa-solid fa-users mr-2 text-brand"></i>${I18n.t('navReferrals')}</button>
           <button onclick="Router.navigate('security')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-shield-halved mr-2 text-brand"></i>${I18n.t('navSecurity')}</button>
         </div>
         ${this.isAdmin() ? `<button onclick="Router.navigate('admin')" class="w-full mt-2 py-2 text-center text-xs font-bold text-amber-400 border border-amber-500/30 rounded-lg bg-amber-500/5 hover:bg-amber-500/10"><i class="fa-solid fa-crown mr-1"></i>Painel Admin</button>` : ''}
@@ -108,8 +133,9 @@ const Router = {
 
       authAction.innerHTML = `
         <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          ${statusBadge}
           <button onclick="Router.navigate('profile')" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-brand-border bg-brand-card hover:border-brand/40 text-xs transition">
-            <span class="w-2 h-2 rounded-full bg-brand animate-ping"></span>
+            <span class="w-2 h-2 rounded-full ${activated ? 'bg-brand animate-pulse' : 'bg-amber-400 animate-ping'}"></span>
             <span class="font-mono text-gray-200">@${AppState.currentUser.username}</span>
           </button>
           <button onclick="Router.logout()" title="${I18n.t('logout')}" class="hidden sm:flex w-9 h-9 items-center justify-center rounded-lg border border-white/10 hover:border-red-500/40 bg-brand-card hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition flex-shrink-0">

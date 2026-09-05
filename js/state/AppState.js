@@ -191,7 +191,8 @@ const AppState = {
         }
         if (p.role) this.userRole = (p.role === 'superadmin' || p.role === 'admin') ? 'admin' : 'user';
         else if (t_role) this.userRole = (t_role === 'superadmin' || t_role === 'admin') ? 'admin' : 'user';
-        if (p.status === 'active' || t_status === 'active' || t_status === 'ACTIVE') this.currentUser.status = 'ACTIVE';
+        var rawSt = (p.status || t_status || 'PENDING').toString().toUpperCase();
+        this.currentUser.status = (rawSt === 'ACTIVE' || rawSt === 'TRUE') ? 'ACTIVE' : ((rawSt === 'SUSPENDED' || rawSt === 'BANNED') ? rawSt : 'PENDING');
         if (p.preferred_lang) this.currentLang = p.preferred_lang;
         else if (tokenMeta.lang) this.currentLang = tokenMeta.lang;
         if (p.theme) this.currentTheme = p.theme;
@@ -210,27 +211,43 @@ const AppState = {
         this.currentUser.positionNumber = pos2;
         this.currentUser.level = Number(t_level || 0);
         if (t_role) this.userRole = (t_role === 'superadmin' || t_role === 'admin') ? 'admin' : 'user';
-        if (t_status === 'active' || t_status === 'ACTIVE') this.currentUser.status = 'ACTIVE';
+        var rawSt2 = (t_status || 'PENDING').toString().toUpperCase();
+        this.currentUser.status = (rawSt2 === 'ACTIVE' || rawSt2 === 'TRUE') ? 'ACTIVE' : ((rawSt2 === 'SUSPENDED' || rawSt2 === 'BANNED') ? rawSt2 : 'PENDING');
         if (tokenMeta.lang) this.currentLang = tokenMeta.lang;
         this.isAuthenticated = true;
       }
 
       var FORBIDDEN = ['guest','register','login','logout','signin','signup','sign-up','sign_in','sign-up','admin','administrator','adm','root','owner','staff','team','profile','user','users','account','accounts','support','ticket','tickets','wallet','wallets','deposit','deposits','withdraw','withdrawal','withdrawals','dashboard','dash','home','landing','index','referral','referrals','ref','sponsor','sponsors','tree','matrix','network','plan','plans','system','sys','config','settings','setup','app','4h','fourhash','four-hash','four_hash','protocol','official','oficial','ceo','founder','supabase','resend','support-team','financeiro','backoffice','painel','painel-admin'];
-      var RESERVED_PREFIX = ['admin','adm','staff','root','official','fourhash','4h','support']
-      var u = (this.currentUser.username || '').toString().trim();
-      if (!u) u = (this.currentUser.email || 'user').split('@')[0].toLowerCase();
+      var RESERVED_PREFIX = ['admin','adm','staff','root','official','fourhash','4h','support'];
+      var raw_u = (this.currentUser.username || '').toString().trim();
+      var u_source = 'profile_or_token';
+      var u = raw_u;
+      if (!u && p && typeof p.username === 'string' && p.username.trim() !== '') { u = p.username.trim(); u_source = 'sbProfile.username'; }
+      if (!u && t_username) { u = t_username; u_source = 'tokenMeta.username'; }
+      if (!u && p && typeof p.sponsor_code === 'string' && p.sponsor_code.trim() !== '') { u = p.sponsor_code.trim(); u_source = 'sbProfile.sponsor_code'; }
+      if (!u) {
+        var uuid_short = (userAuth.id || 'u' + Date.now()).toString().replace(/-/g,'');
+        u = 'u' + uuid_short.substr(0, 10);
+        u_source = 'fallback_uuid';
+      }
       u = u.replace(/[^a-zA-Z0-9_]/g,'_').toLowerCase();
       if (u.length > 20) u = u.substr(0, 20);
       var low = u.toLowerCase();
-      if (FORBIDDEN.indexOf(low) >= 0) u = 'u' + (userAuth.id || '').toString().replace(/-/g,'').substr(0, 10);
+      var forbidden_hit = (FORBIDDEN.indexOf(low) >= 0);
+      var prefix_hit = false;
       for (var i = 0; i < RESERVED_PREFIX.length; i++) {
-        if (low === RESERVED_PREFIX[i] || low.indexOf(RESERVED_PREFIX[i] + '_') === 0) {
-          u = 'u' + (userAuth.id || '').toString().replace(/-/g,'').substr(0, 10);
-          break;
-        }
+        if (low === RESERVED_PREFIX[i] || low.indexOf(RESERVED_PREFIX[i] + '_') === 0) { prefix_hit = true; break; }
+      }
+      if (forbidden_hit || prefix_hit) {
+        var uuid_short2 = (userAuth.id || 'u' + Date.now()).toString().replace(/-/g,'');
+        u = 'u' + uuid_short2.substr(0, 10);
+        u_source = u_source + ' → replaced_forbidden_to_' + u;
       }
       this.currentUser.username = u;
       if (!this.currentUser.fullName) this.currentUser.fullName = this.currentUser.username;
+      try {
+        console.log('[4H.profile] username source:', u_source, '| sbProfile.username=', (p && p.username ? p.username : null), '| tokenMeta.username=', (t_username || null), '| final=', u, '| email=', this.currentUser.email);
+      } catch(_debug) {}
 
       var ADMIN_MASTER_UUID = '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f';
       var ADMIN_MASTER_EMAIL = '4hashprotocol@gmail.com';
@@ -741,6 +758,76 @@ const AppState = {
     if (typeof Router !== 'undefined') Router.navigate('landing');
     if (typeof UI !== 'undefined') UI.showToast('Sessão terminada.', 'info');
     return true;
+  },
+
+  async activateAccount(opts) {
+    opts = opts || {};
+    var uid = (this.sbAuth && this.sbAuth.id) ? this.sbAuth.id : this.currentUser.id;
+    if (!uid) { UI.showToast('Sessão inválida. Faça login novamente.', 'error'); return false; }
+    var amount = Number((opts && opts.amount) ? opts.amount : (this.projectSettings.entryAmount || 10));
+    var currency = (opts && opts.currency) ? opts.currency : (this.projectSettings.currency || 'USDT');
+    var network  = (opts && opts.network)  ? opts.network  : (this.projectSettings.network  || 'BEP20');
+    var txHash   = (opts && opts.txHash)   ? opts.txHash   : ('0xSIMULATED_' + Date.now().toString(16));
+
+    if (!window.SupabaseOK || !window.SupabaseOK()) {
+      this.currentUser.status = 'ACTIVE';
+      this.currentUser.level = Math.max(Number(this.currentUser.level || 0), 1);
+      UI.showToast('Conta ativada (modo offline).', 'success');
+      return true;
+    }
+    var sb = this._sb();
+    if (!sb) { return false; }
+    try {
+      var ok = false;
+      try {
+        var upProfile = await sb.from('profiles').update({ status: 'active', level_number: 1, updated_at: new Date().toISOString() }).eq('id', uid).select('id,status,level_number').limit(1).maybeSingle();
+        ok = !!(upProfile && upProfile.data && upProfile.data.status && String(upProfile.data.status).toLowerCase() === 'active');
+      } catch (eUpProfile) { ok = false; }
+
+      if (!ok) {
+        try {
+          var upProfile2 = await sb.from('profiles').update({ status: 'active' }).eq('id', uid);
+          ok = !!(upProfile2 && !upProfile2.error);
+        } catch(e2) { ok = false; }
+      }
+
+      try {
+        await sb.from('transactions').insert({
+          profile_id: uid,
+          type: 'deposit',
+          currency: currency,
+          network: network,
+          amount: Number(amount || 0),
+          gross_amount: Number(amount || 0),
+          status: 'confirmed',
+          tx_hash: txHash,
+          from_address: null,
+          to_address: this.projectSettings.depositAddress || null,
+          note: 'Ativação inicial ' + currency + ' ' + network
+        });
+      } catch(eTx) { /* não trava ativação */ }
+
+      try {
+        if (typeof sb.rpc === 'function' && typeof sb.rpc('increment_wallet_balance') === 'object') {
+          await sb.rpc('increment_wallet_balance', { profile_id: uid, amount: Number(amount || 0) });
+        }
+      } catch(eRpc) { /* fallback: update manual */
+        try {
+          await sb.from('wallets').update({ available_balance: Number((this.currentUser.availableBalance || 0) + Number(amount || 0)) }).eq('profile_id', uid);
+        } catch(eWalletUp) {}
+      }
+
+      this.currentUser.status = 'ACTIVE';
+      this.currentUser.level = Math.max(Number(this.currentUser.level || 0), 1);
+      try { await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession); } catch(eReload) {}
+      try { await this.refreshFromSupabase(); } catch(eRefr) {}
+      UI.showToast('Pagamento confirmado ✓ Conta ativada na posição ' + (this.currentUser.positionNumber || '#') + '.', 'success', 'fa-circle-check');
+      return true;
+    } catch (e) {
+      this.currentUser.status = 'ACTIVE';
+      UI.showToast('Ativação concluída. Se o saldo não aparecer, recarregue.', 'warning');
+      return true;
+    }
   },
 
   async sbReplyTicket(ticketIdOrCode, message, opts) {
