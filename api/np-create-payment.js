@@ -144,7 +144,7 @@ module.exports = async (req, res) => {
       }
     };
     try {
-      const note = `[${new Date().toISOString().slice(0,16)}] Pagamento ${kind} criado via NowPayments #${paymentId || orderId} US$${amount}.`;
+      const note = `[${new Date().toISOString().slice(0,16)}] Pagamento ${kind} criado via Gateway #${paymentId || orderId} US$${amount}.`;
       await sbUpdateProfile(profileId, { internal_note: note, updated_at: new Date().toISOString() });
       try {
         await sbInsertTransaction({

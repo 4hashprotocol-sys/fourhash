@@ -492,42 +492,15 @@ const Views = {
                     </div>
 
                     <div class="space-y-3">
-                      <div class="rounded-xl bg-black/50 border border-white/10 p-3">
-                        <div class="flex items-center justify-between mb-1">
-                          <span class="text-[10px] font-mono text-gray-500 uppercase tracking-wider">Rede</span>
-                          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[10px] font-bold"><i class="fa-solid fa-link"></i> BEP20 • BNB Smart Chain</span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-2">
-                          <div class="w-24 h-24 bg-white p-1.5 rounded-lg flex-shrink-0 shadow-lg">
-                            <svg class="w-full h-full" viewBox="0 0 100 100" fill="none">
-                              <rect width="100" height="100" fill="white"/>
-                              <rect x="10" y="10" width="25" height="25" fill="black"/>
-                              <rect x="15" y="15" width="15" height="15" fill="white"/>
-                              <rect x="18" y="18" width="9" height="9" fill="black"/>
-                              <rect x="65" y="10" width="25" height="25" fill="black"/>
-                              <rect x="70" y="15" width="15" height="15" fill="white"/>
-                              <rect x="73" y="18" width="9" height="9" fill="black"/>
-                              <rect x="10" y="65" width="25" height="25" fill="black"/>
-                              <rect x="15" y="70" width="15" height="15" fill="white"/>
-                              <rect x="18" y="73" width="9" height="9" fill="black"/>
-                              <rect x="42" y="12" width="6" height="6" fill="#000"/>
-                              <rect x="50" y="20" width="6" height="6" fill="#000"/>
-                              <rect x="42" y="32" width="6" height="6" fill="#000"/>
-                              <rect x="52" y="42" width="8" height="8" fill="#00B849"/>
-                              <rect x="40" y="65" width="8" height="8" fill="#000"/>
-                              <rect x="68" y="55" width="6" height="6" fill="#000"/>
-                              <rect x="75" y="75" width="10" height="10" fill="#000"/>
-                            </svg>
+                      <div class="rounded-2xl border border-white/5 bg-gradient-to-br from-brand/[0.08] via-transparent to-brand/[0.04] p-4 sm:p-5">
+                        <div class="flex items-start gap-3">
+                          <div class="w-10 h-10 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand shrink-0 shadow-neon-sm">
+                            <i class="fa-solid fa-shield-halved"></i>
                           </div>
-                          <div class="flex-1 min-w-0">
-                            <label class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-1 block">Endereço Vault do Protocolo</label>
-                            <div class="flex items-center gap-1.5">
-                              <input id="deposit-addr" type="text" readonly value="${addr}" class="w-full bg-black/60 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] sm:text-xs font-mono text-gray-300 focus:outline-none">
-                              <button onclick="UI.copyToClipboard('${addr}'); UI.showToast('Endereço copiado ✓', 'success');" class="px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-xs flex-shrink-0">
-                                <i class="fa-solid fa-copy"></i>
-                              </button>
-                            </div>
-                            <div class="text-[10px] text-amber-400/80 mt-1.5"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Envie <strong>apenas</strong> USDT pela rede <strong>BEP20 (BNB Chain)</strong>. Envios por outras redes são perdidos.</div>
+                          <div class="space-y-1 min-w-0 flex-1">
+                            <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Endereço de Pagamento</div>
+                            <div class="text-[11px] text-gray-300 leading-relaxed">O endereço <span class="font-mono text-brand font-bold">exclusivo do seu pedido</span> é gerado automaticamente no botão abaixo. Após clicar, será exibido QR Code e valor exato em criptomoeda (com cotação do momento). Validade: 15 minutos.</div>
+                            <div class="text-[10px] text-amber-400/80 leading-relaxed mt-2 flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>Envie o valor exato indicado no checkout (cotação pode variar ligeiramente conforme a moeda escolhida — exibido no QR). Confirme SEMPRE a rede (BEP20/TRC20/ERC20 etc) antes de enviar.</div>
                           </div>
                         </div>
                       </div>
@@ -547,12 +520,13 @@ const Views = {
                           if (NP && typeof NP.createPayment === 'function') {
                             try {
                               var pay = await Promise.resolve(NP.createPayment({ amount: ${entryAmount}, kind: 'activation', pay_currency: 'usdtbep20,usdttrc20,usdterc20,btc,eth,xrp,ltc,doge,trx,matic' }));
-                              if (pay && pay.ok && pay.payment_id) {
-                                if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-shield-check mr-2\\'></i>Simular Confirmação On-Chain (Fase 1)'; }
+                              if (pay && pay.ok && pay.payment_id && pay.pay_address) {
+                                if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-shield-check mr-2\\'></i>Modo Simulação (Forçar Ativação)'; }
                                 (function(_pay){
                                   var amount = Number(_pay.pay_amount || 0);
                                   var currency = String(_pay.pay_currency || '').toUpperCase();
                                   var addr = _pay.pay_address || '';
+                                  if (!addr) { throw new Error('Endereço de pagamento não gerado. Tente novamente em 30 segundos.'); }
                                   var extra = _pay.payin_extra_id ? (_pay.payin_extra_id) : '';
                                   var qrData = addr;
                                   var qrSrc = NP.qrUrl(qrData, 300);
@@ -561,7 +535,7 @@ const Views = {
                                   var statusIcon = 'fa-clock-rotate-left animate-pulse';
                                   var html = '<div class=\\'space-y-5\\'>'
                                     +'<div class=\\'text-center\\'>'
-                                    +'<div class=\\'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[11px] font-black font-mono uppercase tracking-widest mb-3\\'><i class=\\'fa-solid fa-rocket\\'></i>Pagamento NowPayments Criado</div>'
+                                    +'<div class=\\'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[11px] font-black font-mono uppercase tracking-widest mb-3\\'><i class=\\'fa-solid fa-rocket\\'></i>Pagamento Criado ✓</div>'
                                     +'<h3 class=\\'text-xl sm:text-2xl font-black font-[\\'Space_Grotesk\\'] text-white mb-1\\'>Ative a sua Posição com Pagamento Real</h3>'
                                     +'<div class=\\'text-xs text-gray-400\\'>Pedido <span class=\\'font-mono text-brand\\'>#'+(_pay.order_id || _pay.payment_id)+'</span> • Valor <span class=\\'font-black\\'>US$ '+Number(_pay.price_amount || ${entryAmount}).toFixed(2)+'</span></div>'
                                     +'</div>'
@@ -577,18 +551,18 @@ const Views = {
                                     +(extra ? '<div><label class=\\'text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-1 block\\'>Tag / Memo (obrigatório)</label><div class=\\'flex items-center gap-1.5\\'><input readonly type=\\'text\\' value=\\''+extra+'\\' class=\\'flex-1 bg-black/60 border border-amber-500/40 rounded-lg px-2 py-1.5 text-[11px] font-mono text-amber-300 focus:outline-none truncate\\'/><button onclick=\\'UI.copyToClipboard(\"'+extra+'\")\\' class=\\'px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex-shrink-0\\'><i class=\\'fa-solid fa-copy\\'></i></button></div></div>' : '')
                                     +'</div>'
                                     +'<div class=\\'grid grid-cols-3 gap-2 mt-4 w-full\\'>'
-                                    +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Rede</div><div class=\\'text-xs font-bold text-white truncate\\'>'+(String(_pay.network || currency || 'NowPayments')).substring(0,10)+'</div></div>'
+                                    +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Rede</div><div class=\\'text-xs font-bold text-white truncate\\'>'+(String(_pay.network || currency || 'BEP20')).substring(0,10)+'</div></div>'
                                     +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Cotação</div><div class=\\'text-xs font-bold text-white truncate\\'>US$ '+Number(_pay.price_amount || ${entryAmount}).toFixed(2)+'</div></div>'
                                     +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Expira</div><div class=\\'text-xs font-bold text-white truncate\\'>15 min</div></div>'
                                     +'</div>'
                                     +'</div>'
                                     +'<div class=\\'flex flex-col sm:flex-row gap-2\\'>'
-                                    +(_pay.payment_url ? '<a href=\\''+_pay.payment_url+'\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' class=\\'flex-1 py-3 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-xs sm:text-sm tracking-wider shadow-neon text-center transition\\'><i class=\\'fa-solid fa-up-right-from-square mr-2\\'></i>Abrir Checkout NowPayments</a>' : '')
-                                    +'<button id=\\'np-simulate-btn\\' onclick=\\'(async function(){var b=document.getElementById(\\\'np-simulate-btn\\\');if(b){b.disabled=true;b.style.opacity=\\\'0.6\\\';b.innerHTML=\\\'<i class=&quot;fa-solid fa-circle-notch fa-spin mr-2&quot;></i>Ativando…\\\';}try{if(typeof AppState!==\\\'undefined\\\'&&typeof AppState.activateAccount===\\\'function\\\'){var ok=await Promise.resolve(AppState.activateAccount({amount:'+${entryAmount}+',currency:\\\'USDT\\\',network:\\\'NowPayments-Sim\\\',payment_id:\\\''+_pay.payment_id+'\\\',order_id:\\\''+(_pay.order_id||'')+'\\\'}));if(ok!==false){window.NowPayments&&NowPayments.stopPolling();setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);return;}}AppState.currentUser.status=\\\'ACTIVE\\\';window.NowPayments&&NowPayments.stopPolling();UI.showToast(\\\'Conta ativada manualmente ✓\\\',\\\'success\\\');setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);}catch(err){if(b){b.disabled=false;b.style.opacity=\\\'1\\\';b.innerHTML=\\\'Ativar manualmente (Modo Simulação)\\\';}UI.showToast((err&&err.message)||\\\'Erro ao ativar.\\\',\\\'error\\\');}})();\\' class=\\'flex-1 py-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 font-bold text-xs sm:text-sm tracking-wider text-center transition\\'><i class=\\'fa-solid fa-flask mr-2\\'></i>Ativar manualmente (Modo Simulação)</button>'
+                                    +(_pay.payment_url ? '<a href=\\''+_pay.payment_url+'\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' class=\\'flex-1 py-3 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-xs sm:text-sm tracking-wider shadow-neon text-center transition\\'><i class=\\'fa-solid fa-up-right-from-square mr-2\\'></i>Abrir Checkout Seguro</a>' : '')
+                                    +'<button id=\\'np-simulate-btn\\' onclick=\\'(async function(){var b=document.getElementById(\\\'np-simulate-btn\\\');if(b){b.disabled=true;b.style.opacity=\\\'0.6\\\';b.innerHTML=\\\'<i class=&quot;fa-solid fa-circle-notch fa-spin mr-2&quot;></i>Ativando…\\\';}try{if(typeof AppState!==\\\'undefined\\\'&&typeof AppState.activateAccount===\\\'function\\\'){var ok=await Promise.resolve(AppState.activateAccount({amount:'+${entryAmount}+',currency:\\\'USDT\\\',network:\\\'Gateway-Sim\\\',payment_id:\\\''+_pay.payment_id+'\\\',order_id:\\\''+(_pay.order_id||'')+'\\\'}));if(ok!==false){window.NowPayments&&NowPayments.stopPolling();setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);return;}}AppState.currentUser.status=\\\'ACTIVE\\\';window.NowPayments&&NowPayments.stopPolling();UI.showToast(\\\'Conta ativada manualmente ✓\\\',\\\'success\\\');setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);}catch(err){if(b){b.disabled=false;b.style.opacity=\\\'1\\\';b.innerHTML=\\\'Ativar manualmente (Modo Simulação)\\\';}UI.showToast((err&&err.message)||\\\'Erro ao ativar.\\\',\\\'error\\\');}})();\\' class=\\'flex-1 py-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 font-bold text-xs sm:text-sm tracking-wider text-center transition\\'><i class=\\'fa-solid fa-flask mr-2\\'></i>Ativar manualmente (Modo Simulação)</button>'
                                     +'</div>'
                                     +'<div class=\\'rounded-xl border border-white/10 bg-black/40 p-3 flex items-start gap-2.5\\'>'
                                     +'<i class=\\'fa-solid fa-circle-info text-brand text-sm mt-0.5\\'></i>'
-                                    +'<div class=\\'text-[11px] text-gray-400 leading-relaxed\\'>Assim que o pagamento for confirmado na rede (12 confirmações) o seu email receberá aviso e esta janela atualizará automaticamente para <span class=\\'text-brand font-bold\\'>ATIVO</span>. O IPN do NowPayments confirma no Supabase em ~60s.</div>'
+                                    +'<div class=\\'text-[11px] text-gray-400 leading-relaxed\\'>Assim que o pagamento for confirmado na rede (12 confirmações) o seu email receberá aviso e esta janela atualizará automaticamente para <span class=\\'text-brand font-bold\\'>ATIVO</span>. A confirmação automática processa em ~60s após a rede aprovar.</div>'
                                     +'</div>'
                                     +'</div>';
                                   UI.openModal(html);
@@ -620,7 +594,7 @@ const Views = {
                                         if (statusPill) statusPill.innerHTML='<i class=\\'fa-solid fa-circle-check\\'></i><span class=\\' text-brand font-black text-sm font-mono uppercase tracking-wider\\'>PAGAMENTO CONFIRMADO ✓ ATIVANDO POSIÇÃO…</span>';
                                         try {
                                           if (typeof AppState !== 'undefined' && typeof AppState.activateAccount === 'function') {
-                                            var ok = await Promise.resolve(AppState.activateAccount({ amount: Number(_pay.price_amount || ${entryAmount}), currency: 'USD', network: String(st.network || _pay.network || 'NowPayments'), payment_id: _pay.payment_id, order_id: _pay.order_id, tx_hash: st && st.payment_id }));
+                                            var ok = await Promise.resolve(AppState.activateAccount({ amount: Number(_pay.price_amount || ${entryAmount}), currency: 'USD', network: String(st.network || _pay.network || 'Gateway'), payment_id: _pay.payment_id, order_id: _pay.order_id, tx_hash: st && st.payment_id }));
                                             if (ok !== false) {
                                               setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
                                               return;
@@ -648,19 +622,15 @@ const Views = {
                                 return;
                               }
                             } catch(nperr){
-                              if (nperr && console) console.warn('[NP] create fallback simulate:', nperr && nperr.message);
-                            }
+                            if (nperr && console) console.warn('[NP] create erro:', nperr && nperr.message);
+                            UI.showToast((nperr && nperr.message) || 'Erro ao gerar pagamento. Verifique conexão e tente novamente.', 'error', 'fa-triangle-exclamation');
+                            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-bolt mr-2\\'></i>Ativar Conta com Pagamento — US$ '+${entryAmount}+'.00'; }
+                            return;
                           }
-                          if (typeof AppState !== 'undefined' && typeof AppState.activateAccount === 'function') {
-                            var ok2 = await Promise.resolve(AppState.activateAccount({ amount: ${entryAmount}, currency: 'USDT', network: 'BEP20' }));
-                            if (ok2 !== false) {
-                              setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
-                              return;
-                            }
-                          }
-                          AppState.currentUser.status = 'ACTIVE';
-                          UI.showToast('Conta ativada com sucesso ✓', 'success');
-                          setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
+                        }
+                        UI.showToast('Serviço de pagamento indisponível no momento. Tente novamente ou use o Modo Simulação abaixo.', 'warning', 'fa-triangle-exclamation');
+                        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-bolt mr-2\\'></i>Ativar Conta com Pagamento — US$ '+${entryAmount}+'.00'; }
+                        return;
                         } catch(err) {
                           if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-shield-check mr-2\\'></i>Simular Confirmação On-Chain'; }
                           UI.showToast((err && err.message) || 'Erro ao ativar.', 'error');
@@ -669,10 +639,10 @@ const Views = {
                         <span class="inline-flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
                           <i class="fa-solid fa-bolt"></i>
-                          Iniciar Pagamento Real — US$ ${entryAmount}.00 (NowPayments)
+                          Ativar Conta com Pagamento — US$ ${entryAmount}.00
                         </span>
                       </button>
-                      <div class="text-[10px] text-gray-500 text-center font-mono">Checkout processado via NowPayments. Recebemos 140+ criptomoedas e cartão.</div>
+                      <div class="text-[10px] text-gray-500 text-center font-mono">Checkout seguro · Recebemos 140+ criptomoedas, cartão e PIX · Sempre envie pela rede selecionada no pagamento.</div>
                       <div class="flex items-center justify-center pt-2">
                         <button onclick="(async function(){
                           var chk = document.getElementById('deposit-check');
@@ -1342,7 +1312,7 @@ const Views = {
     const finResolvidos = fin.filter(f=>f.status.includes('Resolvido')||f.status.includes('Fechado')).length;
     const finValorTotal = fin.reduce((s,f)=>s+(f.expected||f.amount||0),0);
     const finFilter = AppState.adminFinanceFilter || 'Todos';
-    const finCats = ['Todos','Depósito Atrasado','Hash Não Confirmado','Valor Incorreto','Rede Errada','Saque BEP20','Bônus N3','Processamento Lote 24h','Reembolso NowPayments'];
+    const finCats = ['Todos','Depósito Atrasado','Hash Não Confirmado','Valor Incorreto','Rede Errada','Saque BEP20','Bônus N3','Processamento Lote 24h','Reembolso'];
     const finFiltered = (finFilter==='Todos') ? fin : fin.filter(f=>f.category===finFilter || f.type===finFilter);
 
     const tkAbertos = tks.filter(t=>t.status==='Aberto'||t.status==='Open').length;
@@ -1390,7 +1360,7 @@ const Views = {
             <i class="fa-solid fa-gauge-high"></i>BACKOFFICE
           </button>
           <button onclick="AppState.adminActiveTab='finance'; Router.navigate('admin');" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
-            <i class="fa-solid fa-sack-dollar"></i>FINANCEIRO · NowPayments
+            <i class="fa-solid fa-sack-dollar"></i>FINANCEIRO · PAGAMENTOS
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='finance'?'bg-black/20 text-black':'bg-red-500/15 text-red-300 border border-red-500/20'} text-[10px] font-bold border">${finPendentes>0?finPendentes+' PEND':'0'}</span>
           </button>
           <button onclick="AppState.adminActiveTab='support'; Router.navigate('admin');" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='support'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
@@ -1588,7 +1558,7 @@ const Views = {
               <h3 class="text-sm font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
                 <span class="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400"><i class="fa-solid fa-file-invoice-dollar"></i></span>
                 FILA DE RESOLUÇÕES FINANCEIRAS
-                <span class="ml-2 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold font-mono">Integração NowPayments</span>
+                <span class="ml-2 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold font-mono">Integração Automática</span>
               </h3>
               <p class="text-[11px] text-gray-400 mt-1 font-mono">Trate depósitos atrasados, saques não recebidos, valores incorretos, rede errada e ajustes manuais. Tudo fica registrado em histórico interno.</p>
             </div>
@@ -1605,7 +1575,7 @@ const Views = {
             <div class="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5"><i class="fa-solid fa-circle-info"></i></div>
             <div class="space-y-0.5 text-[11px]">
               <div class="text-amber-200/90 font-bold font-mono">Antes de qualquer ajuste — confirme 3 pontos:</div>
-              <div class="text-gray-400 font-mono leading-relaxed">① Provedor NowPayments confirma a hash · ② Carteira BEP20/TRC20 destino corresponde ao usuário · ③ Valor enviado >= entrada mínima e rede correta (exceto ajuste manual aprovado).</div>
+              <div class="text-gray-400 font-mono leading-relaxed">① Provedor confirma a hash · ② Carteira BEP20/TRC20 destino corresponde ao usuário · ③ Valor enviado >= entrada mínima e rede correta (exceto ajuste manual aprovado).</div>
             </div>
           </div>
 
@@ -1692,7 +1662,7 @@ const Views = {
             <div class="text-[10px] text-gray-500 font-mono">
               Mostrando <span class="text-white font-bold">${finFiltered.length}</span> de <span class="text-white font-bold">${fin.length}</span> problemas. Filtro actual: 「<span class="text-amber-300 font-bold">${finFilter}</span>」
             </div>
-            <button onclick="AppState.adminFinanceFilter='Todos'; AppState.adminActiveTab='finance'; Router.navigate('admin'); UI._toast('Fila NowPayments — pronto para resolver depósitos e saques.','info','fa-circle-check');" class="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-brand/30 bg-brand/10 hover:bg-brand/20 text-brand text-[11px] font-black font-mono transition">
+            <button onclick="AppState.adminFinanceFilter='Todos'; AppState.adminActiveTab='finance'; Router.navigate('admin'); UI._toast('Fila de Pagamentos — pronto para resolver depósitos e saques.','info','fa-circle-check');" class="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-brand/30 bg-brand/10 hover:bg-brand/20 text-brand text-[11px] font-black font-mono transition">
               <i class="fa-solid fa-bell-concierge"></i>+ Abrir Resolução Manual
             </button>
           </div>

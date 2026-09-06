@@ -119,7 +119,7 @@ module.exports = async (req, res) => {
         const patchTx = {
           status: isPaid ? 'confirmed' : (isFailed ? 'failed' : 'pending'),
           confirmed_at: isPaid ? new Date().toISOString() : null,
-          error_message: isFailed ? `NowPayments status=${payStatus}` : null
+          error_message: isFailed ? `status_pagamento=${payStatus}` : null
         };
         const q = (orderId && paymentId)
           ? `or=(order_id.eq.${encodeURIComponent(orderId)},tx_hash.eq.${encodeURIComponent(paymentId)})`
@@ -130,7 +130,7 @@ module.exports = async (req, res) => {
       if (isPaid) {
         const amount = amountPaid || amountQs || 10;
         try {
-          const note = `[${new Date().toISOString().slice(0,16)}] Conta ativada via NowPayments #${paymentId || orderId} US$${amount}.`;
+          const note = `[${new Date().toISOString().slice(0,16)}] Conta ativada via Gateway #${paymentId || orderId} US$${amount}.`;
           const okUp = await sbUpdateProfile(profileId, {
             status: 'active',
             level_number: 1,

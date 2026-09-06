@@ -466,7 +466,7 @@ const UI = {
                 <i class="fa-solid fa-sack-dollar"></i>
               </div>
               <div>
-                <h3 class="text-lg font-black text-white font-['Space_Grotesk']">Resolução Financeira · NowPayments</h3>
+                <h3 class="text-lg font-black text-white font-['Space_Grotesk']">Resolução Financeira</h3>
                 <p class="text-[11px] text-gray-400 mt-0.5 font-mono">Protocolo <span class="text-amber-300 font-black">${p.code}</span> · aberto em ${p.opened}</p>
               </div>
             </div>
@@ -524,8 +524,8 @@ const UI = {
                 <option value="aprovado_parcial">🟡 Aprovado Parcial · Valor Ajustado abaixo</option>
                 <option value="rejeitado">❌ Rejeitado · Agir conforme política</option>
                 <option value="credito_manual">⚙️ Crédito Manual · Forçar entrada agora</option>
-                <option value="reembolso">💸 Reembolso via NowPayments</option>
-                <option value="aguardar">⏳ Aguardar NowPayments · manter Em Análise</option>
+                <option value="reembolso">💸 Reembolso ao Utilizador</option>
+                <option value="aguardar">⏳ Aguardar confirmação · manter Em Análise</option>
               </select>
             </div>
             <div>
@@ -545,7 +545,7 @@ const UI = {
 
           <div>
             <label class="block text-[11px] font-mono text-gray-300 mb-1.5">Observação / Nota Interna * (ficará no histórico)</label>
-            <textarea id="fin_obs" required rows="3" placeholder="Ex: Hash confirmada na BscScan block 38.820.455. NowPayments validou pagamento. Creditar a diferença de $0.50 e marcar activação." class="w-full px-3 py-2.5 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-gray-200 text-xs leading-relaxed transition resize-none"></textarea>
+            <textarea id="fin_obs" required rows="3" placeholder="Ex: Hash confirmada na BscScan block 38.820.455. Pagamento validado. Creditar a diferença de $0.50 e marcar activação." class="w-full px-3 py-2.5 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-gray-200 text-xs leading-relaxed transition resize-none"></textarea>
           </div>
 
           <div class="flex flex-col-reverse sm:flex-row gap-2.5 pt-1">

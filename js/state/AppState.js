@@ -424,7 +424,7 @@ const AppState = {
     return {
       id: row.code || ('fin_' + row.id),
       fin_id: row.id,
-      type: row.type || 'Depósito NowPayments',
+      type: row.type || 'Depósito',
       category: row.category || row.type || '',
       username: (row.username_cache || row.profile_id || '').toString(),
       email: (row.email_cache || '').toString(),
@@ -872,7 +872,7 @@ const AppState = {
   async sbCreateFinanceProblem(data) {
     data = data || {};
     var def = {
-      type: 'Depósito NowPayments', category: 'Depósito NowPayments',
+      type: 'Depósito', category: 'Depósito',
       amount: 10.00, expected: 10.00, currency: 'USDT', network: 'BEP20',
       status: 'Pendente Revisão', opened: new Date().toISOString().slice(0,16).replace('T',' ').slice(0,16),
       profile_id: null, tx_hash: '', nowpayments_id: '', internal_tags: [], private_note: ''
