@@ -408,7 +408,7 @@ const Views = {
 
     if (!activated) {
       return `
-      <div class="max-w-3xl mx-auto py-4 sm:py-6 space-y-6">
+      <div class="max-w-6xl mx-auto py-4 sm:py-6 space-y-6">
 
         <div class="relative rounded-3xl border border-amber-500/30 overflow-hidden shadow-[0_0_60px_-15px_rgba(245,158,11,0.35)]">
           <div class="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-brand/10 pointer-events-none"></div>
@@ -425,9 +425,9 @@ const Views = {
               </span>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-10 items-center">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
 
-              <div class="lg:col-span-3 space-y-4 sm:space-y-5">
+              <div class="lg:col-span-7 space-y-4 sm:space-y-5">
                 <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] text-gray-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                   Utilizador: <span class="text-brand font-bold">@${u.username || ''}</span>
@@ -476,192 +476,112 @@ const Views = {
                 </div>
               </div>
 
-              <div class="lg:col-span-2">
+              <div class="lg:col-span-5 lg:sticky lg:top-24">
                 <div class="relative rounded-3xl border border-brand-border bg-brand-card/80 backdrop-blur-2xl p-5 sm:p-6 shadow-2xl overflow-hidden">
                   <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-brand/20 blur-3xl pointer-events-none"></div>
 
-                  <div class="relative">
-                    <div class="flex items-center justify-between mb-4">
+                  <div class="relative space-y-4">
+                    <div class="flex items-center justify-between">
                       <div>
                         <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor de Ativação</div>
-                        <div class="text-3xl sm:text-4xl font-black font-mono text-brand neon-text-glow">US$ ${entryAmount}<span class="text-base text-gray-400 ml-1 font-bold">USDT</span></div>
+                        <div class="text-3xl sm:text-4xl font-black font-mono text-brand neon-text-glow">US$ ${entryAmount}<span class="text-base text-gray-400 ml-1 font-bold">USD</span></div>
                       </div>
                       <div class="w-12 h-12 rounded-2xl bg-brand/15 border border-brand/40 flex items-center justify-center shadow-neon-sm">
-                        <i class="fa-brands fa-btc text-brand text-xl"></i>
+                        <i class="fa-solid fa-t-sign text-brand text-xl"></i>
                       </div>
                     </div>
 
-                    <div class="space-y-3">
-                      <div class="rounded-2xl border border-white/5 bg-gradient-to-br from-brand/[0.08] via-transparent to-brand/[0.04] p-4 sm:p-5">
-                        <div class="flex items-start gap-3">
-                          <div class="w-10 h-10 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand shrink-0 shadow-neon-sm">
-                            <i class="fa-solid fa-shield-halved"></i>
-                          </div>
-                          <div class="space-y-1 min-w-0 flex-1">
-                            <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Endereço de Pagamento</div>
-                            <div class="text-[11px] text-gray-300 leading-relaxed">O endereço <span class="font-mono text-brand font-bold">exclusivo do seu pedido</span> é gerado automaticamente no botão abaixo. Após clicar, será exibido QR Code e valor exato em criptomoeda (com cotação do momento). Validade: 15 minutos.</div>
-                            <div class="text-[10px] text-amber-400/80 leading-relaxed mt-2 flex items-start gap-1.5"><i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>Envie o valor exato indicado no checkout (cotação pode variar ligeiramente conforme a moeda escolhida — exibido no QR). Confirme SEMPRE a rede (BEP20/TRC20/ERC20 etc) antes de enviar.</div>
-                          </div>
+                    <div class="rounded-2xl border border-white/5 bg-gradient-to-br from-brand/[0.08] via-transparent to-brand/[0.04] p-4">
+                      <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand shrink-0 shadow-neon-sm">
+                          <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <div class="space-y-1.5 min-w-0 flex-1">
+                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">Recebimento reservado e processado apenas em USDT estável. Escolha uma das 3 redes abaixo. O QR Code e o endereço do vault do protocolo são exibidos logo após clicar em "Ativar Conta". Confirme SEMPRE a rede antes de enviar.</div>
                         </div>
                       </div>
 
-                      <div class="flex items-start gap-2">
-                        <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
-                        <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none">Confirmo que estou enviando <strong class="text-white">USDT ${entryAmount}.00</strong> pela rede <strong class="text-white">BNB Smart Chain (BEP20)</strong>.</label>
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        ${[
+                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:true, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.15)] hover:border-yellow-500/30'},
+                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Quase 0', checked:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.15)] hover:border-red-500/30'},
+                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:border-blue-500/30'}
+                        ].map(function(n){
+                          return '<label class="group cursor-pointer relative">'+
+                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
+                            '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
+                              '<div class="flex items-center justify-between gap-2">'+
+                                '<div class="flex items-center gap-2 min-w-0">'+
+                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 peer-checked:text-brand transition '+n.icon+'"></div>'+
+                                  '<div class="min-w-0">'+
+                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
+                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
+                                  '</div>'+
+                                '</div>'+
+                                '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
+                              '</div>'+
+                            '</div>'+
+                          '</label>';
+                        }).join('')}
                       </div>
+                    </div>
 
-                      <button id="deposit-activate-btn" onclick="(async function(){
-                        var chk = document.getElementById('deposit-check');
-                        if (!chk || !chk.checked) { UI.showToast('Confirme a rede BEP20 antes de continuar.', 'warning'); return; }
-                        var btn = document.getElementById('deposit-activate-btn');
-                        if (btn) { btn.disabled = true; btn.style.opacity = '0.55'; btn.innerHTML = '<i class=\\'fa-solid fa-circle-notch fa-spin mr-2\\'></i>Criando pagamento…'; }
-                        try {
-                          var NP = window.NowPayments;
-                          if (NP && typeof NP.createPayment === 'function') {
-                            try {
-                              var pay = await Promise.resolve(NP.createPayment({ amount: ${entryAmount}, kind: 'activation', pay_currency: 'usdtbep20,usdttrc20,usdterc20,btc,eth,xrp,ltc,doge,trx,matic' }));
-                              if (pay && pay.ok && pay.payment_id && pay.pay_address) {
-                                if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-shield-check mr-2\\'></i>Modo Simulação (Forçar Ativação)'; }
-                                (function(_pay){
-                                  var amount = Number(_pay.pay_amount || 0);
-                                  var currency = String(_pay.pay_currency || '').toUpperCase();
-                                  var addr = _pay.pay_address || '';
-                                  if (!addr) { throw new Error('Endereço de pagamento não gerado. Tente novamente em 30 segundos.'); }
-                                  var extra = _pay.payin_extra_id ? (_pay.payin_extra_id) : '';
-                                  var qrData = addr;
-                                  var qrSrc = NP.qrUrl(qrData, 300);
-                                  var statusLabel = 'Aguardando pagamento';
-                                  var statusColor = 'text-amber-400';
-                                  var statusIcon = 'fa-clock-rotate-left animate-pulse';
-                                  var html = '<div class=\\'space-y-5\\'>'
-                                    +'<div class=\\'text-center\\'>'
-                                    +'<div class=\\'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[11px] font-black font-mono uppercase tracking-widest mb-3\\'><i class=\\'fa-solid fa-rocket\\'></i>Pagamento Criado ✓</div>'
-                                    +'<h3 class=\\'text-xl sm:text-2xl font-black font-[\\'Space_Grotesk\\'] text-white mb-1\\'>Ative a sua Posição com Pagamento Real</h3>'
-                                    +'<div class=\\'text-xs text-gray-400\\'>Pedido <span class=\\'font-mono text-brand\\'>#'+(_pay.order_id || _pay.payment_id)+'</span> • Valor <span class=\\'font-black\\'>US$ '+Number(_pay.price_amount || ${entryAmount}).toFixed(2)+'</span></div>'
-                                    +'</div>'
-                                    +'<div id=\\'np-status-pill\\' class=\\'flex items-center justify-center gap-2 py-2 rounded-xl border border-amber-500/30 bg-amber-500/5\\'><i class=\\'fa-solid '+statusIcon+'\\'></i><span class=\\'+statusColor+' font-bold text-sm font-mono uppercase tracking-wider\\'>'+statusLabel+'</span></div>'
-                                    +'<div class=\\'rounded-2xl border border-white/10 bg-black/40 p-5 flex flex-col items-center\\'>'
-                                    +'<div class=\\'bg-white p-2 rounded-xl shadow-2xl mb-3\\'><img id=\\'np-qr-img\\' src=\\''+qrSrc+'\\' alt=\\'QR Pagamento\\' class=\\'w-48 h-48 object-contain\\'/></div>'
-                                    +'<div class=\\'w-full text-center mb-3\\'>'
-                                    +'<div class=\\'text-[10px] font-mono text-gray-500 uppercase tracking-wider\\'>Valor a pagar (Estimativa)</div>'
-                                    +'<div class=\\'text-2xl font-black font-mono text-brand\\'>'+(amount?amount.toFixed(6)+' <span class=\\'text-base text-gray-400\\'>'+currency+'</span>':'A confirmar…')+'</div>'
-                                    +'</div>'
-                                    +'<div class=\\'w-full space-y-2\\'>'
-                                    +'<div><label class=\\'text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-1 block\\'>Endereço de Pagamento</label><div class=\\'flex items-center gap-1.5\\'><input id=\\'np-addr-input\\' readonly type=\\'text\\' value=\\''+addr+'\\' class=\\'flex-1 bg-black/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono text-gray-300 focus:outline-none truncate\\'/><button onclick=\\'UI.copyToClipboard(\"'+addr+'\")\\' class=\\'px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-xs flex-shrink-0\\'><i class=\\'fa-solid fa-copy\\'></i></button></div></div>'
-                                    +(extra ? '<div><label class=\\'text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-1 block\\'>Tag / Memo (obrigatório)</label><div class=\\'flex items-center gap-1.5\\'><input readonly type=\\'text\\' value=\\''+extra+'\\' class=\\'flex-1 bg-black/60 border border-amber-500/40 rounded-lg px-2 py-1.5 text-[11px] font-mono text-amber-300 focus:outline-none truncate\\'/><button onclick=\\'UI.copyToClipboard(\"'+extra+'\")\\' class=\\'px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex-shrink-0\\'><i class=\\'fa-solid fa-copy\\'></i></button></div></div>' : '')
-                                    +'</div>'
-                                    +'<div class=\\'grid grid-cols-3 gap-2 mt-4 w-full\\'>'
-                                    +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Rede</div><div class=\\'text-xs font-bold text-white truncate\\'>'+(String(_pay.network || currency || 'BEP20')).substring(0,10)+'</div></div>'
-                                    +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Cotação</div><div class=\\'text-xs font-bold text-white truncate\\'>US$ '+Number(_pay.price_amount || ${entryAmount}).toFixed(2)+'</div></div>'
-                                    +'<div class=\\'rounded-lg border border-white/5 bg-black/40 p-2 text-center\\'><div class=\\'text-[9px] font-mono text-gray-500 uppercase tracking-wider\\'>Expira</div><div class=\\'text-xs font-bold text-white truncate\\'>15 min</div></div>'
-                                    +'</div>'
-                                    +'</div>'
-                                    +'<div class=\\'flex flex-col sm:flex-row gap-2\\'>'
-                                    +(_pay.payment_url ? '<a href=\\''+_pay.payment_url+'\\' target=\\'_blank\\' rel=\\'noopener noreferrer\\' class=\\'flex-1 py-3 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-xs sm:text-sm tracking-wider shadow-neon text-center transition\\'><i class=\\'fa-solid fa-up-right-from-square mr-2\\'></i>Abrir Checkout Seguro</a>' : '')
-                                    +'<button id=\\'np-simulate-btn\\' onclick=\\'(async function(){var b=document.getElementById(\\\'np-simulate-btn\\\');if(b){b.disabled=true;b.style.opacity=\\\'0.6\\\';b.innerHTML=\\\'<i class=&quot;fa-solid fa-circle-notch fa-spin mr-2&quot;></i>Ativando…\\\';}try{if(typeof AppState!==\\\'undefined\\\'&&typeof AppState.activateAccount===\\\'function\\\'){var ok=await Promise.resolve(AppState.activateAccount({amount:'+${entryAmount}+',currency:\\\'USDT\\\',network:\\\'Gateway-Sim\\\',payment_id:\\\''+_pay.payment_id+'\\\',order_id:\\\''+(_pay.order_id||'')+'\\\'}));if(ok!==false){window.NowPayments&&NowPayments.stopPolling();setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);return;}}AppState.currentUser.status=\\\'ACTIVE\\\';window.NowPayments&&NowPayments.stopPolling();UI.showToast(\\\'Conta ativada manualmente ✓\\\',\\\'success\\\');setTimeout(function(){Router.navigate(\\\'dashboard\\\');},1200);}catch(err){if(b){b.disabled=false;b.style.opacity=\\\'1\\\';b.innerHTML=\\\'Ativar manualmente (Modo Simulação)\\\';}UI.showToast((err&&err.message)||\\\'Erro ao ativar.\\\',\\\'error\\\');}})();\\' class=\\'flex-1 py-3 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 font-bold text-xs sm:text-sm tracking-wider text-center transition\\'><i class=\\'fa-solid fa-flask mr-2\\'></i>Ativar manualmente (Modo Simulação)</button>'
-                                    +'</div>'
-                                    +'<div class=\\'rounded-xl border border-white/10 bg-black/40 p-3 flex items-start gap-2.5\\'>'
-                                    +'<i class=\\'fa-solid fa-circle-info text-brand text-sm mt-0.5\\'></i>'
-                                    +'<div class=\\'text-[11px] text-gray-400 leading-relaxed\\'>Assim que o pagamento for confirmado na rede (12 confirmações) o seu email receberá aviso e esta janela atualizará automaticamente para <span class=\\'text-brand font-bold\\'>ATIVO</span>. A confirmação automática processa em ~60s após a rede aprovar.</div>'
-                                    +'</div>'
-                                    +'</div>';
-                                  UI.openModal(html);
-                                  var statusPill = document.getElementById('np-status-pill');
-                                  var qrImg = document.getElementById('np-qr-img');
-                                  var addrInput = document.getElementById('np-addr-input');
-                                  NP.startPolling(_pay.payment_id, {
-                                    intervalMs: 6000,
-                                    timeoutMs: 1000*60*40,
-                                    onUpdate: function(st){
-                                      var s = String((st && st.payment_status) || 'waiting').toLowerCase();
-                                      var label, color, ico;
-                                      if (['waiting','pending','created'].indexOf(s)>=0){ label='Aguardando pagamento'; color='text-amber-400'; ico='fa-clock-rotate-left animate-pulse'; }
-                                      else if (['confirming','sending','partially_paid'].indexOf(s)>=0){ label='Confirmando na rede…'; color='text-blue-400'; ico='fa-spinner fa-spin'; }
-                                      else if (['finished','confirmed','completed','success'].indexOf(s)>=0){ label='Pagamento confirmado ✓'; color='text-brand'; ico='fa-circle-check'; }
-                                      else if (['failed','rejected'].indexOf(s)>=0){ label='Pagamento falhou ou rejeitado'; color='text-red-400'; ico='fa-circle-xmark'; }
-                                      else if (s==='expired' || s==='refunded'){ label=s==='expired'?'Pagamento expirado':'Reembolsado'; color='text-gray-400'; ico='fa-clock'; }
-                                      else { label='Status: '+s; color='text-gray-300'; ico='fa-circle-info'; }
-                                      if (statusPill) statusPill.innerHTML='<i class=\\\'fa-solid '+ico+'\\'></i><span class=\\' '+color+' font-bold text-sm font-mono uppercase tracking-wider\\'>'+label+'</span>';
-                                      if (st && st.pay_address && addrInput && !addrInput.value) addrInput.value = st.pay_address;
-                                      if (st && st.pay_amount && qrImg && !_pay.pay_amount) {
-                                        _pay.pay_amount = st.pay_amount;
-                                        _pay.pay_currency = st.pay_currency || _pay.pay_currency;
-                                      }
-                                    },
-                                    onFinal: async function(st, success){
-                                      NP.stopPolling();
-                                      if (success){
-                                        if (statusPill) statusPill.innerHTML='<i class=\\'fa-solid fa-circle-check\\'></i><span class=\\' text-brand font-black text-sm font-mono uppercase tracking-wider\\'>PAGAMENTO CONFIRMADO ✓ ATIVANDO POSIÇÃO…</span>';
-                                        try {
-                                          if (typeof AppState !== 'undefined' && typeof AppState.activateAccount === 'function') {
-                                            var ok = await Promise.resolve(AppState.activateAccount({ amount: Number(_pay.price_amount || ${entryAmount}), currency: 'USD', network: String(st.network || _pay.network || 'Gateway'), payment_id: _pay.payment_id, order_id: _pay.order_id, tx_hash: st && st.payment_id }));
-                                            if (ok !== false) {
-                                              setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
-                                              return;
-                                            }
-                                          }
-                                          AppState.currentUser.status = 'ACTIVE';
-                                          UI.showToast('Conta ativada ✓', 'success');
-                                          setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
-                                        } catch(err){
-                                          AppState.currentUser.status = 'ACTIVE';
-                                          setTimeout(function(){ Router.navigate('dashboard'); }, 900);
-                                        }
-                                      } else {
-                                        var s = String((st && st.payment_status) || 'failed').toLowerCase();
-                                        var msg = 'Pagamento não concluído. Tente novamente ou use o modo simulação.';
-                                        if (s === 'expired') msg = 'Pagamento expirou. Clique em "Iniciar Pagamento Real" novamente.';
-                                        if (s === 'failed' || s === 'rejected') msg = 'Pagamento rejeitado/falhou. Tente outra moeda no próximo pagamento.';
-                                        UI.showToast(msg, 'warning', 'fa-triangle-exclamation');
-                                      }
-                                    }
-                                  });
-                                  var closeBtn = document.querySelector('#modal-backdrop, [id=\\\"modal-backdrop\\\"]');
-                                  return;
-                                })(pay);
-                                return;
-                              }
-                            } catch(nperr){
-                            if (nperr && console) console.warn('[NP] create erro:', nperr && nperr.message);
-                            UI.showToast((nperr && nperr.message) || 'Erro ao gerar pagamento. Verifique conexão e tente novamente.', 'error', 'fa-triangle-exclamation');
-                            if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-bolt mr-2\\'></i>Ativar Conta com Pagamento — US$ '+${entryAmount}+'.00'; }
-                            return;
-                          }
-                        }
-                        UI.showToast('Serviço de pagamento indisponível no momento. Tente novamente ou use o Modo Simulação abaixo.', 'warning', 'fa-triangle-exclamation');
-                        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-bolt mr-2\\'></i>Ativar Conta com Pagamento — US$ '+${entryAmount}+'.00'; }
-                        return;
-                        } catch(err) {
-                          if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<i class=\\'fa-solid fa-shield-check mr-2\\'></i>Simular Confirmação On-Chain'; }
-                          UI.showToast((err && err.message) || 'Erro ao ativar.', 'error');
-                        }
-                      })();" class="w-full py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
-                        <span class="inline-flex items-center gap-2">
-                          <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
-                          <i class="fa-solid fa-bolt"></i>
-                          Ativar Conta com Pagamento — US$ ${entryAmount}.00
-                        </span>
-                      </button>
-                      <div class="text-[10px] text-gray-500 text-center font-mono">Checkout seguro · Recebemos 140+ criptomoedas, cartão e PIX · Sempre envie pela rede selecionada no pagamento.</div>
-                      <div class="flex items-center justify-center pt-2">
-                        <button onclick="(async function(){
-                          var chk = document.getElementById('deposit-check');
-                          if (!chk || !chk.checked) { UI.showToast('Confirme a rede BEP20 antes.', 'warning'); return; }
-                          try {
-                            UI.showToast('Modo simulação Fase 1 — ativando sem pagamento real…', 'info', 'fa-flask');
-                            if (typeof AppState !== 'undefined' && typeof AppState.activateAccount === 'function') {
-                              var ok = await Promise.resolve(AppState.activateAccount({ amount: ${entryAmount}, currency: 'USDT', network: 'BEP20-Sim-Fase1' }));
-                              if (ok !== false) { setTimeout(function(){ Router.navigate('dashboard'); }, 1200); return; }
-                            }
-                            AppState.currentUser.status = 'ACTIVE';
-                            UI.showToast('Conta ativada com sucesso (modo simulação) ✓', 'success');
-                            setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
-                          } catch(err){ UI.showToast((err && err.message) || 'Erro', 'error'); }
-                        })();" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-400 hover:text-white border border-white/10 hover:border-white/30 bg-white/0 hover:bg-white/5 transition font-medium">
-                          <i class="fa-solid fa-flask-vial"></i>
-                          Modo Simulação (Sem pagar real) — Fase 1
-                        </button>
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token Fixo</div>
+                        <div class="text-[12px] font-black font-mono text-white flex items-center gap-1.5">
+                          <i class="fa-solid fa-t-sign text-brand"></i>
+                          USDT (Tether)
+                        </div>
                       </div>
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Método Confirmação</div>
+                        <div class="text-[12px] font-black font-mono text-white">12 blocos on-chain</div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5">
+                      <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
+                      <div class="text-[10px] text-amber-200/80 leading-relaxed">
+                        <span class="font-black text-amber-200">Envie EXATAMENTE</span> <span class="font-black text-white">${entryAmount.toFixed(2)} USDT</span> pela rede selecionada acima.
+                        <span class="block mt-1">Envios em rede errada (ex: USDT TRC20 para BEP20) não podem ser recuperados e NÃO serão creditados. Não envie quaisquer outras criptomoedas para este endereço.</span>
+                      </div>
+                    </div>
+
+                    <div class="flex items-start gap-2">
+                      <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
+                      <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">
+                        Li e concordo com os <span class="text-brand font-bold hover:underline cursor-pointer" onclick="UI.showToast('Termos de Ativação FourHash: (1) depósito único vitalício de entrada, (2) sem reembolso após 12 confirmações on-chain irreversíveis, (3) valor de ativação permanece em cofre multi-sig do protocolo para garantia da estrutura linear e saques dos participantes, (4) confirmação on-chain é obrigatória para crédito automático.', 'info');">Termos de Ativação</span>
+                        e confirmo que compreendo a obrigação de enviar EXATAMENTE o valor e pela rede selecionada.
+                      </label>
+                    </div>
+
+                    <button id="deposit-activate-btn" onclick="PaymentVault.startActivationFlow(${entryAmount})" class="relative w-full overflow-hidden py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
+                      <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full pointer-events-none"></span>
+                      <span class="relative inline-flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
+                        <i class="fa-solid fa-qrcode"></i>
+                        Ativar Conta · Gerar QR Code & Endereço
+                      </span>
+                    </button>
+
+                    ${(u.role === 'admin' || AppState.isAdmin) ? `
+                    <div class="pt-1 border-t border-white/5">
+                      <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
+                        <i class="fa-solid fa-user-shield text-amber-400"></i>
+                        <span class="text-amber-400 font-black">ADMIN</span> · Simular Ativação (Sem confirmação on-chain)
+                      </button>
+                    </div>
+                    ` : ''}
+
+                    <div class="flex items-center justify-center gap-2 pt-1">
+                      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                      <span class="text-[9px] font-mono text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fa-solid fa-vault text-gray-600"></i>
+                        FourHash Vault Multi-Rede · Confirmação On-Chain · Sem Gateways Terceiros
+                      </span>
+                      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
                   </div>
                 </div>
@@ -712,82 +632,219 @@ const Views = {
     }
 
     return `
-      <div class="max-w-2xl mx-auto py-4 space-y-6">
-        <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-          <div class="text-center mb-6">
-            <div class="w-12 h-12 mx-auto rounded-xl bg-brand/10 border border-brand/40 flex items-center justify-center mb-2 shadow-neon-sm overflow-hidden">
-              <img src="/assets/logo/Logo_4h_solo.png" alt="4#" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
-            </div>
-            <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']">Depósito Adicional</h2>
-            <p class="text-xs text-gray-400 mt-1">Adicione mais capital para ampliar o seu posicionamento e bónus.</p>
-          </div>
+      <div class="max-w-6xl mx-auto py-4 sm:py-6 space-y-6">
 
-          <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-center gap-3 text-amber-300 text-xs">
-            <i class="fa-solid fa-triangle-exclamation text-base"></i>
-            <div>
-              <strong class="font-bold">ENVIE SOMENTE USDT PELA REDE BEP20</strong>
-              <div class="text-[11px] text-amber-200/80">Transferências por outras redes (TRC20, ERC20) ou outras moedas resultarão em perda irreversível.</div>
-            </div>
-          </div>
+        <div class="relative rounded-3xl border border-brand/40 overflow-hidden shadow-[0_0_60px_-15px_rgba(0,255,102,0.25)]">
+          <div class="absolute inset-0 bg-gradient-to-br from-brand/[0.06] via-transparent to-amber-500/[0.04] pointer-events-none"></div>
+          <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-brand/10 blur-3xl animate-pulse pointer-events-none"></div>
 
-          <div class="mt-6 flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl bg-brand-surface border border-white/5">
-            <div class="w-36 h-36 bg-white p-2 rounded-xl flex items-center justify-center shadow-lg">
-              <svg class="w-full h-full" viewBox="0 0 100 100" fill="none">
-                <rect width="100" height="100" fill="white"/>
-                <rect x="10" y="10" width="25" height="25" fill="black"/>
-                <rect x="15" y="15" width="15" height="15" fill="white"/>
-                <rect x="18" y="18" width="9" height="9" fill="black"/>
-                <rect x="65" y="10" width="25" height="25" fill="black"/>
-                <rect x="70" y="15" width="15" height="15" fill="white"/>
-                <rect x="73" y="18" width="9" height="9" fill="black"/>
-                <rect x="10" y="65" width="25" height="25" fill="black"/>
-                <rect x="15" y="70" width="15" height="15" fill="white"/>
-                <rect x="18" y="73" width="9" height="9" fill="black"/>
-                <rect x="42" y="12" width="6" height="6" fill="#000"/>
-                <rect x="50" y="20" width="6" height="6" fill="#000"/>
-                <rect x="42" y="32" width="6" height="6" fill="#000"/>
-                <rect x="52" y="42" width="8" height="8" fill="#00B849"/>
-                <rect x="40" y="65" width="8" height="8" fill="#000"/>
-                <rect x="68" y="55" width="6" height="6" fill="#000"/>
-                <rect x="75" y="75" width="10" height="10" fill="#000"/>
-              </svg>
+          <div class="relative p-5 sm:p-8 lg:p-10">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-6">
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono shadow-neon-sm">
+                <i class="fa-solid fa-wallet"></i> Conta Ativa · Depósito Adicional
+              </span>
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono">
+                <i class="fa-solid fa-arrow-trend-up"></i> Ampliar Posição Linear
+              </span>
             </div>
 
-            <div class="flex-1 w-full space-y-3">
-              <div>
-                <label class="text-[11px] font-mono text-gray-400">Valor:</label>
-                <div class="text-xl font-mono font-bold text-brand">US$ ${s.entryAmount}.00 <span class="text-xs text-gray-300">USDT</span></div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+
+              <div class="lg:col-span-5 space-y-4 sm:space-y-5">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] text-gray-300">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand animate-ping"></span>
+                  Utilizador: <span class="text-brand font-bold">@${u.username || ''}</span>
+                  <span class="text-gray-500">•</span>
+                  <span class="text-gray-400">Posição</span>
+                  <span class="text-white font-bold">${u.positionNumber || '-'}</span>
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-['Space_Grotesk'] leading-tight">
+                  Adicione Capital<br/>
+                  <span class="bg-gradient-to-r from-brand via-emerald-300 to-brand bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(0,255,102,0.3)]">Amplie os seus Bónus</span>
+                </h1>
+
+                <p class="text-sm sm:text-base text-gray-400 max-w-xl leading-relaxed">
+                  Conta ativada com sucesso. Realize depósitos adicionais para reforçar o seu posicionamento na estrutura linear,
+                  aumentar bónus de indicação direta e acelerar a sua progressão pelos 12 níveis do protocolo.
+                </p>
+
+                <div class="grid grid-cols-2 gap-2 sm:gap-3 max-w-lg">
+                  <div class="rounded-xl border border-white/10 bg-black/30 backdrop-blur p-2.5 sm:p-3 text-center">
+                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">Depósito Mínimo</div>
+                    <div class="text-lg sm:text-2xl font-black text-white font-mono">US$ ${entryAmount}</div>
+                    <div class="text-[9px] font-mono text-gray-500">Agora · Lançamento</div>
+                  </div>
+                  <div class="rounded-xl border border-brand/30 bg-brand/10 backdrop-blur p-2.5 sm:p-3 text-center shadow-neon-sm">
+                    <div class="text-[10px] font-mono text-brand uppercase tracking-wider mb-0.5">Retorno N1</div>
+                    <div class="text-lg sm:text-2xl font-black text-brand font-mono">50%</div>
+                    <div class="text-[9px] font-mono text-gray-500">Direto · Imediato</div>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-start gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 text-white/80">
+                    <i class="fa-solid fa-vault"></i>
+                  </div>
+                  <div class="space-y-1.5">
+                    <div class="font-black text-white text-sm uppercase tracking-wide">Endereço Manual BEP-20 (Alternativo)</div>
+                    <div class="text-[11px] text-gray-400 leading-relaxed">Recomendamos usar o fluxo principal no painel direito (QR por rede). Se preferir transferência manual, envie EXATAMENTE ${entryAmount.toFixed(2)} USDT pela rede BEP-20 para o endereço abaixo e cole o TXID em ticket de suporte.</div>
+                    <div class="flex items-center gap-2 mt-2">
+                      <input type="text" readonly value="${addr}" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-gray-300 focus:outline-none truncate">
+                      <button onclick="UI.copyToClipboard('${addr}')" class="px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-[11px] shrink-0">
+                        <i class="fa-solid fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="text-[11px] font-mono text-gray-400">Rede:</label>
-                <div class="text-xs font-mono text-white">USDT BEP20 (BNB Chain)</div>
+
+              <div class="lg:col-span-7 lg:sticky lg:top-24">
+                <div class="relative rounded-3xl border border-brand-border bg-brand-card/80 backdrop-blur-2xl p-5 sm:p-6 shadow-2xl overflow-hidden">
+                  <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-brand/20 blur-3xl pointer-events-none"></div>
+
+                  <div class="relative space-y-4">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor do Depósito</div>
+                        <div class="text-3xl sm:text-4xl font-black font-mono text-brand neon-text-glow">US$ ${entryAmount}<span class="text-base text-gray-400 ml-1 font-bold">USD</span></div>
+                      </div>
+                      <div class="w-12 h-12 rounded-2xl bg-brand/15 border border-brand/40 flex items-center justify-center shadow-neon-sm">
+                        <i class="fa-solid fa-t-sign text-brand text-xl"></i>
+                      </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-white/5 bg-gradient-to-br from-brand/[0.08] via-transparent to-brand/[0.04] p-4">
+                      <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand shrink-0 shadow-neon-sm">
+                          <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                        <div class="space-y-1.5 min-w-0 flex-1">
+                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">Depósitos adicionais reservados e creditados apenas em USDT. Clique em "Depósito On-Chain" para abrir o QR Code do vault da rede selecionada. A confirmação on-chain (12 blocos) credita automaticamente.</div>
+                        </div>
+                      </div>
+
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        ${[
+                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:true, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.15)] hover:border-yellow-500/30'},
+                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Quase 0', checked:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.15)] hover:border-red-500/30'},
+                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:border-blue-500/30'}
+                        ].map(function(n){
+                          return '<label class="group cursor-pointer relative">'+
+                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
+                            '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
+                              '<div class="flex items-center justify-between gap-2">'+
+                                '<div class="flex items-center gap-2 min-w-0">'+
+                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 peer-checked:text-brand transition '+n.icon+'"></div>'+
+                                  '<div class="min-w-0">'+
+                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
+                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
+                                  '</div>'+
+                                '</div>'+
+                                '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
+                              '</div>'+
+                            '</div>'+
+                          '</label>';
+                        }).join('')}
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token</div>
+                        <div class="text-[12px] font-black font-mono text-white flex items-center gap-1.5">
+                          <i class="fa-solid fa-t-sign text-brand"></i> USDT (Tether)
+                        </div>
+                      </div>
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Tipo Depósito</div>
+                        <div class="text-[12px] font-bold text-white">Adicional · Reforço Posição</div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5">
+                      <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
+                      <div class="text-[10px] text-amber-200/80 leading-relaxed">
+                        Envie <span class="font-black text-white">${entryAmount.toFixed(2)} USDT</span> pela rede escolhida acima.
+                        <span class="block mt-1">Envios por rede errada ou valores diferentes <span class="font-black text-red-300">NÃO são creditados</span>. Não envie BTC, ETH ou quaisquer outras tokens para o endereço.</span>
+                      </div>
+                    </div>
+
+                    <div class="flex items-start gap-2">
+                      <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
+                      <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">Li e concordo que depósitos adicionais serão creditados como reforço de posição linear, e confirmo que <span class="text-white font-bold">transações on-chain são irreversíveis</span> após 12 confirmações de bloco.</label>
+                    </div>
+
+                    <button onclick="PaymentVault.startAdditionalDepositFlow(${entryAmount})" class="relative w-full overflow-hidden py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
+                      <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full pointer-events-none"></span>
+                      <span class="relative inline-flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
+                        <i class="fa-solid fa-qrcode"></i>
+                        Depósito On-Chain · Gerar QR Code Vault
+                      </span>
+                    </button>
+
+                    ${(u.role === 'admin' || AppState.isAdmin) ? `
+                    <div class="pt-1 border-t border-white/5">
+                      <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
+                        <i class="fa-solid fa-user-shield text-amber-400"></i>
+                        <span class="text-amber-400 font-black">ADMIN</span> · Simular Crédito Manual
+                      </button>
+                    </div>
+                    ` : ''}
+
+                    <div class="flex items-center justify-center gap-2 pt-1">
+                      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                      <span class="text-[9px] font-mono text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fa-solid fa-vault text-gray-600"></i>
+                        FourHash Vault Multi-Rede · Confirmação On-Chain · Sem Gateways Terceiros
+                      </span>
+                      <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label class="text-[11px] font-mono text-gray-400">Endereço de Destino (Vault):</label>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <input type="text" readonly value="${s.depositAddress}" class="w-full bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-mono text-gray-300 focus:outline-none">
-                  <button onclick="UI.copyToClipboard('${s.depositAddress}')" class="px-3 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-xs">
-                    <i class="fa-solid fa-copy"></i>
-                  </button>
+
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div class="relative rounded-2xl border border-white/10 bg-brand-card/60 backdrop-blur p-4 overflow-hidden group hover:border-brand/40 transition">
+                <div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-brand/10 blur-2xl group-hover:bg-brand/20 transition"></div>
+                <div class="relative">
+                  <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
+                    <i class="fa-solid fa-network-wired"></i>
+                  </div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 01</div>
+                  <div class="font-bold text-white text-sm mb-1">Selecione Rede (USDT)</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Escolha uma das 3 redes suportadas: BEP-20 (BNB), TRC-20 (Tron) ou ERC-20 (Ethereum). O valor de depósito é fixo em US$ ${entryAmount.toFixed(2)} em USDT.</div>
+                </div>
+              </div>
+              <div class="relative rounded-2xl border border-white/10 bg-brand-card/60 backdrop-blur p-4 overflow-hidden group hover:border-brand/40 transition">
+                <div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-brand/10 blur-2xl group-hover:bg-brand/20 transition"></div>
+                <div class="relative">
+                  <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
+                    <i class="fa-solid fa-qrcode"></i>
+                  </div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
+                  <div class="font-bold text-white text-sm mb-1">Pague via QR / Endereço</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Abra o QR Code clicando no botão principal. Copie o endereço da rede selecionada e envie EXATAMENTE o valor indicado. Opcionalmente, informe o TXID para validação rápida.</div>
+                </div>
+              </div>
+              <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
+                <div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-brand/20 blur-2xl group-hover:bg-brand/30 transition"></div>
+                <div class="relative">
+                  <div class="w-9 h-9 rounded-xl bg-brand border border-white/20 flex items-center justify-center text-black mb-3 shadow-neon-sm">
+                    <i class="fa-solid fa-chart-line"></i>
+                  </div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 03</div>
+                  <div class="font-bold text-white text-sm mb-1">Crédito Automático ✓</div>
+                  <div class="text-[11px] text-gray-300 leading-relaxed">Após 12 confirmações on-chain, o sistema FourHash valida e credita automaticamente o saldo na sua carteira. O bónus de reforço de posição entra em vigor imediatamente.</div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="mt-4 flex items-start gap-2.5">
-            <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
-            <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer">
-              Confirmo que estou enviando USDT através da rede BNB Smart Chain (BEP20).
-            </label>
           </div>
-
-          <div class="mt-6 pt-6 border-t border-white/10 text-center">
-            <button onclick="var c=document.getElementById('deposit-check'); if(!c||!c.checked){UI.showToast('Confirme a rede BEP20 antes.','warning');return;} AppState.currentUser.status='ACTIVE'; UI.showToast('Pagamento confirmado ✓ Depósito adicional registado.', 'success'); setTimeout(()=>Router.navigate('wallet'), 1500);" class="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-sm tracking-wider shadow-neon transition">
-              Simular Confirmação On-Chain (Fase 1)
-            </button>
-            <span class="text-[10px] text-gray-500 mt-2 block font-mono">Na Fase 2, esta verificação será efetuada automaticamente via Supabase Edge Function e Gateway Web3.</span>
-          </div>
-
         </div>
       </div>
     `;

@@ -75,7 +75,7 @@ async function doPost(context) {
     const body = (await readJson(request)) || {};
     const amount = Number(body.amount || 10);
     const currency = String(body.price_currency || body.currency || 'usd').toUpperCase();
-    const payCurrency = String(body.pay_currency || 'usdtbep20,usdttrc20,usdterc20,btc,eth,ltc,xrp').toLowerCase();
+    const payCurrency = String((body.pay_currency || 'usdt').split(',')[0] || 'usdt').trim().toLowerCase();
     const profileId = String(body.profile_id || '').trim();
     const username = String(body.username || 'user').trim();
     const email = String(body.email || '').trim();
