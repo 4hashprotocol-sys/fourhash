@@ -84,8 +84,12 @@ function handleLoginSubmit() {
   var btnEl   = document.getElementById('login-submit');
   var email = emailEl ? (emailEl.value || '').trim() : '';
   var pass  = passEl  ? (passEl.value  || '') : '';
-  if (!email || !pass) { UI.showToast('Preencha e-mail/usuário e senha.', 'warning', 'fa-triangle-exclamation'); return; }
-  if (email.startsWith('@')) email = email.slice(1);
+  if (!email || !pass) { UI.showToast('Preencha o e-mail e a senha.', 'warning', 'fa-triangle-exclamation'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    UI.showToast('Acesso exclusivo por e-mail. Informe um e-mail válido.', 'warning', 'fa-envelope');
+    if (emailEl) try { emailEl.focus(); } catch(_) {}
+    return;
+  }
   if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
   var finalize = function(errMsg){
     if (btnEl) { btnEl.disabled = false; btnEl.style.opacity = '1'; }
@@ -93,7 +97,7 @@ function handleLoginSubmit() {
   };
   if (window.SupabaseOK && window.SupabaseOK() && typeof AppState !== 'undefined' && typeof AppState.sbSignIn === 'function') {
     Promise.resolve(AppState.sbSignIn(email, pass)).then(function(ok){
-      if (!ok) finalize('Login inválido. Verifique as credenciais.');
+      if (!ok) { /* sbSignIn já mostrou toast/modal */ try { finalize(); } catch(_) {} }
     }).catch(function(err){ finalize((err && err.message) || 'Erro no login.'); });
     return;
   }

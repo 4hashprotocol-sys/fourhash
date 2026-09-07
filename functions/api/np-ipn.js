@@ -164,9 +164,9 @@ async function doPost(context) {
       }
     }
 
-    const finalStates = ['finished','confirmed','completed','success'];
-    const isPaid = finalStates.indexOf(payStatus) >= 0;
-    const isFailed = ['failed','expired','refunded','partially_paid','rejected'].indexOf(payStatus) >= 0;
+    const finalStates = ['finished','confirmed','completed','success','partially_paid'];
+    const isPaid = finalStates.indexOf(payStatus) >= 0 || /paid|finished|confirmed|complete|success/i.test(payStatus);
+    const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
 
     let activation = false;
     try {
@@ -174,13 +174,28 @@ async function doPost(context) {
         if (orderId || paymentId) {
           const patchTx = {
             status: isPaid ? 'confirmed' : (isFailed ? 'failed' : 'pending'),
-            confirmed_at: isPaid ? new Date().toISOString() : null,
-            error_message: isFailed ? ('status_pagamento=' + payStatus) : null
+            confirmed_at: isPaid ? new Date().toISOString() : (isFailed ? new Date().toISOString() : null),
+            error_message: isFailed ? ('status_pagamento=' + payStatus) : null,
+            nowpayments_status: payStatus
           };
-          const q = (orderId && paymentId)
-            ? 'or=(order_id.eq.' + encodeURIComponent(orderId) + ',tx_hash.eq.' + encodeURIComponent(paymentId) + ')'
-            : (orderId ? ('order_id=eq.' + encodeURIComponent(orderId)) : ('tx_hash=eq.' + encodeURIComponent(paymentId)));
+          if (body && typeof body === 'object') {
+            try {
+              patchTx.metadata = JSON.stringify({ gateway: { provider: 'nowpayments', ipn: body, signature_validated: sigOk, processed_at: new Date().toISOString() } });
+            } catch(_) {}
+          }
+          const filters = [];
+          if (orderId)   filters.push('order_id.eq.' + encodeURIComponent(orderId));
+          if (paymentId) filters.push('nowpayments_id.eq.' + encodeURIComponent(paymentId));
+          if (paymentId) filters.push('gateway_payment_id.eq.' + encodeURIComponent(paymentId));
+          if (paymentId) filters.push('tx_hash.eq.' + encodeURIComponent(paymentId));
+          if (orderId && paymentId) filters.push('and=(profile_id.eq.' + encodeURIComponent(profileId) + ',or(order_id.eq.' + encodeURIComponent(orderId) + ',nowpayments_id.eq.' + encodeURIComponent(paymentId) + ',gateway_payment_id.eq.' + encodeURIComponent(paymentId) + ',tx_hash.eq.' + encodeURIComponent(paymentId) + '))');
+          let q = filters.slice(0, 3).join(',');
+          if (!q) q = 'id=is.null';
           try { await sbUpdateTransactions(context, q, patchTx); } catch(_) {}
+          try {
+            const qFallback = 'and=(profile_id.eq.' + encodeURIComponent(profileId) + ',kind=in.(deposit,adjustment_credit),status=in.(pending),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString()) + ')';
+            await sbUpdateTransactions(context, qFallback, patchTx);
+          } catch(_) {}
         }
 
         if (isPaid) {

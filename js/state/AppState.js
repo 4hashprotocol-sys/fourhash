@@ -689,15 +689,150 @@ const AppState = {
     return true;
   },
 
+  showEmailPendingModal(email) {
+    email = String(email || '').trim() || 'o seu e-mail cadastrado';
+    const safeEmail = email.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const html = `
+      <div class="space-y-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1.5 min-w-0">
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-300 font-mono text-[10px] uppercase tracking-[0.18em] font-black">
+              <i class="fa-solid fa-envelope-circle-check animate-pulse"></i>
+              <span>Confirmação de E-mail Pendente</span>
+            </div>
+            <h3 class="font-black text-white text-xl sm:text-2xl leading-tight font-['Space_Grotesk']">Valide a sua caixa de entrada</h3>
+            <div class="text-[11px] font-mono text-gray-500 mt-1">A conta FourHash exige verificação antes do primeiro acesso</div>
+          </div>
+          <button onclick="UI.closeModal()" class="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition flex items-center justify-center flex-shrink-0">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div class="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-brand-surface/60 to-amber-500/5 p-4 space-y-3">
+          <div class="flex items-start gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 flex-shrink-0 shadow-neon-sm">
+              <i class="fa-solid fa-inbox text-xl"></i>
+            </div>
+            <div class="space-y-1 min-w-0">
+              <div class="text-[11px] font-mono text-gray-500 uppercase tracking-widest">E-mail cadastrado</div>
+              <div class="font-black text-white font-mono text-sm break-all">${safeEmail}</div>
+              <div class="text-[11px] text-amber-200/90 leading-relaxed pt-1">
+                Enviamos um link de confirmação para este endereço. Abra a mensagem e clique em <span class="font-black text-white">CONFIRMAR E-MAIL</span> para ativar o acesso.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 text-[11px] text-gray-400 leading-relaxed px-1">
+          <div>• <span class="font-bold text-gray-300">Não recebeu?</span> Verifique a pasta <span class="font-mono text-white">Promoções</span>, <span class="font-mono text-white">Spam</span> ou <span class="font-mono text-white">Lixo Eletrónico</span>.</div>
+          <div>• O link de confirmação expira em 24 horas. Clique em "Reenviar E-mail" abaixo se necessário.</div>
+          <div>• Usou um e-mail errado no cadastro? <button onclick="UI.closeModal(); Router.navigate('register');" class="text-brand font-bold hover:underline">Clique aqui para se recadastrar</button>.</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <button onclick="UI.closeModal()" class="py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 hover:text-white font-bold text-xs tracking-wider transition inline-flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-left"></i>
+            Voltar ao Login
+          </button>
+          <button onclick="AppState.resendConfirmationEmail('${safeEmail}', this)" class="py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-xs tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 inline-flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            Reenviar E-mail
+          </button>
+        </div>
+      </div>
+    `;
+    try { UI.openModal(html); } catch(e) { UI.showToast('Verifique seu e-mail para confirmar o cadastro antes de acessar.', 'warning', 'fa-envelope'); }
+  },
+
+  async requestPasswordReset(linkEl) {
+    var emailEl = document.getElementById('login-email');
+    var email = emailEl ? String(emailEl.value || '').trim() : '';
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      UI.showToast('Informe primeiro o seu e-mail no campo acima.', 'warning', 'fa-envelope');
+      return;
+    }
+    if (linkEl) { try { linkEl.style.opacity = '0.6'; linkEl.style.pointerEvents = 'none'; } catch(_) {} }
+    try {
+      if (!window.SupabaseOK || !window.SupabaseOK()) {
+        UI.showToast('Modo offline: Link de recuperação simulado (e-mail real enviado apenas em produção).', 'info');
+        return;
+      }
+      var sb = this._sb();
+      var r = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: (globalThis.location && globalThis.location.origin ? globalThis.location.origin : 'https://fourhash.app') + '/#/security?reset=1'
+      });
+      if (r && r.error) {
+        UI.showToast(r.error.message || 'Erro ao enviar link de recuperação.', 'error');
+        return;
+      }
+      UI.showToast('Link de recuperação enviado! Verifique sua caixa de entrada (' + email + ').', 'success', 'fa-circle-check');
+    } catch (e) {
+      UI.showToast((e && e.message) || 'Erro ao enviar recuperação.', 'error');
+    } finally {
+      if (linkEl) { try { linkEl.style.opacity = ''; linkEl.style.pointerEvents = ''; } catch(_) {} }
+    }
+  },
+
+  async resendConfirmationEmail(email, btnEl) {
+    email = String(email || '').trim();
+    if (btnEl) { try { btnEl.disabled = true; btnEl.style.opacity = '0.6'; var orig = btnEl.innerHTML; btnEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> A reenviar…'; } catch(_) {} }
+    try {
+      if (!window.SupabaseOK || !window.SupabaseOK()) {
+        UI.showToast('Modo offline: confirmação simulada.', 'info');
+        return;
+      }
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        UI.showToast('E-mail inválido para reenvio.', 'warning'); return;
+      }
+      var sb = this._sb();
+      var r = await sb.auth.resend({ type: 'signup', email: email });
+      if (r && r.error) {
+        if (/already|confirmed|verified/i.test(String(r.error.message || ''))) {
+          UI.showToast('Este e-mail já está confirmado. Pode fazer login normalmente.', 'success', 'fa-circle-check');
+          try { UI.closeModal(); } catch(_) {}
+        } else {
+          UI.showToast(r.error.message || 'Erro ao reenviar e-mail.', 'error');
+        }
+        return;
+      }
+      UI.showToast('E-mail de confirmação reenviado para ' + email + '.', 'success', 'fa-envelope');
+    } catch (e) {
+      UI.showToast((e && e.message) || 'Erro ao reenviar.', 'error');
+    } finally {
+      if (btnEl) { try { btnEl.disabled = false; btnEl.style.opacity = ''; if (typeof orig !== 'undefined') btnEl.innerHTML = orig; } catch(_) {} }
+    }
+  },
+
   async sbSignIn(email, password) {
     if (!window.SupabaseOK || !window.SupabaseOK()) { UI.showToast('Modo offline: login demo ativado.', 'info'); this.isAuthenticated = true; return true; }
     var sb = this._sb();
     try {
+      email = String(email || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        UI.showToast('Informe um e-mail válido para acessar.', 'warning', 'fa-envelope'); return false;
+      }
       var r = await sb.auth.signInWithPassword({ email: email, password: password });
-      if (r && r.error) { UI.showToast(r.error.message || 'Erro de login', 'error'); return false; }
+      if (r && r.error) {
+        var msg = String((r.error.message || '') + '').toLowerCase();
+        if (/email.*not.*confirmed|email_not_confirm|verify.*email|signup.*incomplete|user.*pending/i.test(msg) || /otp|email.*confirm/i.test(String(r.error.code || ''))) {
+          this.showEmailPendingModal(email);
+          try { await sb.auth.signOut(); } catch(_) {}
+          return false;
+        }
+        if (/invalid.*credentials|invalid.*password|wrong.*password|invalid.*login|user.*not.*found/i.test(msg)) {
+          UI.showToast('Credenciais inválidas. Verifique o e-mail e a senha.', 'error'); return false;
+        }
+        UI.showToast(r.error.message || 'Erro de login', 'error'); return false;
+      }
       var userAuth = (r && r.data && r.data.user) ? r.data.user : null;
       var sessAuth = (r && r.data && r.data.session) ? r.data.session : null;
       if (!userAuth) { UI.showToast('Credenciais inválidas.', 'error'); return false; }
+      var confirmedAt = userAuth.email_confirmed_at || userAuth.confirmed_at || null;
+      if (!confirmedAt) {
+        this.showEmailPendingModal(userAuth.email || email);
+        try { await sb.auth.signOut(); } catch(_) {}
+        return false;
+      }
       await this._loadUserProfileFromSupabase(userAuth, sessAuth);
       try { await this.refreshFromSupabase(); } catch(err) {}
       if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
@@ -706,7 +841,16 @@ const AppState = {
       try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
       if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
       return true;
-    } catch (e) { UI.showToast((e && e.message) || 'Erro login', 'error'); return false; }
+    } catch (e) {
+      var errStr = String((e && e.message) || 'Erro login' + '').toLowerCase();
+      if (/email.*not.*confirm|email_not_confirm|verify|signup.*incomplete/i.test(errStr)) {
+        var le = document.getElementById('login-email');
+        this.showEmailPendingModal(le ? String(le.value || '').trim() : '');
+        try { var sb2 = this._sb(); if (sb2) await sb2.auth.signOut(); } catch(_) {}
+        return false;
+      }
+      UI.showToast((e && e.message) || 'Erro login', 'error'); return false;
+    }
   },
 
   async sbSignUp(email, password, meta) {
@@ -715,22 +859,23 @@ const AppState = {
     try {
       var r = await sb.auth.signUp({
         email: email, password: password,
-        options: { data: meta || {} }
+        options: {
+          data: meta || {},
+          emailRedirectTo: (globalThis.location && globalThis.location.origin ? globalThis.location.origin : 'https://fourhash.app') + '/#/login?confirmed=1'
+        }
       });
       if (r && r.error) { UI.showToast(r.error.message || 'Erro registo', 'error'); return false; }
       var userAuth = (r && r.data && r.data.user) ? r.data.user : null;
       var sessAuth = (r && r.data && r.data.session) ? r.data.session : null;
-      if (userAuth && sessAuth) {
-        await this._loadUserProfileFromSupabase(userAuth, sessAuth);
-        try { await this.refreshFromSupabase(); } catch(err) {}
-        if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
-        UI.showToast(`Conta criada com sucesso! Bem-vindo(a) ${this.currentUser.fullName || 'usuário'}.`, 'success', 'fa-circle-check');
-        var route = 'dashboard';
-        if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
-      } else {
-        UI.showToast('Conta criada! Verifique seu email para confirmar a ativação.', 'success');
-        if (typeof Router !== 'undefined') try { Router.navigate('landing'); } catch(e) {}
+      var identLen = (r && r.data && Array.isArray(r.data.user && r.data.user.identities)) ? r.data.user.identities.length : 0;
+      var weakConf = userAuth && userAuth.email_confirmed_at;
+      if (weakConf || (sessAuth && identLen > 0)) {
+        UI.showToast('Conta criada! Confirme o link no seu e-mail (' + (userAuth.email || email) + ') para ativar o acesso.', 'info', 'fa-envelope');
+        if (typeof Router !== 'undefined') try { Router.navigate('login'); } catch(e) {}
+        return true;
       }
+      UI.showToast('Conta criada com sucesso! Enviamos um link para ' + (userAuth.email || email) + ' — clique em CONFIRMAR para ativar.', 'success', 'fa-envelope');
+      if (typeof Router !== 'undefined') try { Router.navigate('login'); } catch(e) {}
       return true;
     } catch (e) { UI.showToast((e && e.message) || 'Erro registo', 'error'); return false; }
   },

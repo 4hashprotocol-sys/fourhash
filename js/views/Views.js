@@ -83,22 +83,22 @@ const Views = {
               <img src="/assets/logo/Logo_4h_solo.png" alt="4#" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
             </div>
             <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="login">Acessar FourHash</h2>
-            <p class="text-xs text-gray-400 mt-1">Insira suas credenciais para visualizar sua rede</p>
+            <p class="text-xs text-gray-400 mt-1">Acesso exclusivo por e-mail cadastrado</p>
           </div>
 
           <form id="login-form" class="space-y-4">
             <div>
-              <label class="block text-xs font-mono text-gray-300 mb-1">E-mail ou Username</label>
+              <label class="block text-xs font-mono text-gray-300 mb-1">E-mail</label>
               <div class="relative">
-                <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
-                <input id="login-email" type="text" required value="" placeholder="seu@email.com ou @username" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
+                <input id="login-email" type="email" required value="" placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
             </div>
 
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="text-xs font-mono text-gray-300">Senha</label>
-                <a href="#" onclick="UI.showToast('Link de recuperação enviado para seu e-mail.', 'info')" class="text-[11px] text-brand hover:underline">Esqueci minha senha</a>
+                <a href="#" onclick="AppState.requestPasswordReset(this); return false;" class="text-[11px] text-brand hover:underline">Esqueci minha senha</a>
               </div>
               <div class="relative">
                 <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
@@ -776,7 +776,7 @@ const Views = {
                       <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">Li e concordo que depósitos adicionais serão creditados como reforço de posição linear, e confirmo que <span class="text-white font-bold">transações on-chain são irreversíveis</span> após 12 confirmações de bloco.</label>
                     </div>
 
-                    <button onclick="PaymentVault.startAdditionalDepositFlow(${entryAmount})" class="relative w-full overflow-hidden py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
+                    <button id="deposit-activate-btn" onclick="PaymentVault.startAdditionalDepositFlow(${entryAmount})" class="relative w-full overflow-hidden py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
                       <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full pointer-events-none"></span>
                       <span class="relative inline-flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
