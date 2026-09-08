@@ -69,11 +69,23 @@
     networkToPayCode(uiCode) {
       const code = String(uiCode || 'erc20').trim().toLowerCase();
       const map = {
-        bep20: 'usdterc20',
-        trc20: 'usdterc20',
-        erc20: 'usdterc20'
+        bep20: 'usdtbsc',
+        usdtbep20: 'usdtbsc',
+        trc20: 'usdttrc20',
+        usdttrc20: 'usdttrc20',
+        erc20: 'usdterc20',
+        usdterc20: 'usdterc20',
+        usdt: 'usdterc20'
       };
       return map[code] || 'usdterc20';
+    },
+
+    minAmountForNetwork(uiCode) {
+      const code = String(uiCode || 'erc20').trim().toLowerCase();
+      if (code === 'trc20' || code === 'usdttrc20') return 15;
+      if (code === 'erc20' || code === 'usdterc20') return 9.5;
+      if (code === 'bep20' || code === 'usdtbsc') return 9;
+      return 9.5;
     },
 
     _setButtonLoading(loading) {

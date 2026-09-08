@@ -89,18 +89,23 @@ async function doPost(context) {
   const { request } = context;
   try {
     const body = (await readJson(request)) || {};
-    const amount = Number(body.amount || 10);
+    const rawAmount = Number(body.amount || 10);
     const currency = String(body.price_currency || body.currency || 'usd').toUpperCase();
-    const rawPayCurrency = String((body.pay_currency || 'usdt').split(',')[0] || 'usdt').trim().toLowerCase();
-    const LEGACY_PAY_MAP = {
-      usdtbep20: 'usdterc20',
-      usdttrc20: 'usdterc20',
-      usdt: 'usdterc20',
-      bep20: 'usdterc20',
-      trc20: 'usdterc20',
-      erc20: 'usdterc20'
+    const rawPayCurrency = String((body.pay_currency || 'erc20').split(',')[0] || 'erc20').trim().toLowerCase();
+    const PAY_MAP = {
+      usdterc20: 'usdterc20',
+      usdtbep20: 'usdtbsc',
+      usdtbsc: 'usdtbsc',
+      bep20: 'usdtbsc',
+      usdttrc20: 'usdttrc20',
+      trc20: 'usdttrc20',
+      erc20: 'usdterc20',
+      usdt: 'usdterc20'
     };
-    const payCurrency = LEGACY_PAY_MAP[rawPayCurrency] || rawPayCurrency;
+    const payCurrency = PAY_MAP[rawPayCurrency] || (Object.values(PAY_MAP).includes(rawPayCurrency) ? rawPayCurrency : 'usdterc20');
+    const MIN_AMOUNT_BY_NETWORK = { usdtbsc: 9, usdttrc20: 15, usdterc20: 9.5 };
+    const minAmt = MIN_AMOUNT_BY_NETWORK[payCurrency] || 10;
+    const amount = Math.max(minAmt, (Number.isFinite(rawAmount) && rawAmount > 0) ? rawAmount : minAmt);
     const profileId = String(body.profile_id || '').trim();
     const username = String(body.username || 'user').trim();
     const email = String(body.email || '').trim();
@@ -123,8 +128,6 @@ async function doPost(context) {
     })();
     const successUrl = `${origin}/#/deposit?np_success=1&order_id=${encodeURIComponent(orderId)}`;
     const cancelUrl = `${origin}/#/deposit?np_cancel=1&order_id=${encodeURIComponent(orderId)}`;
-    const NP_CALLBACK = getEnv(context, 'NOWPAYMENTS_CALLBACK_URL') || `${origin}/api/np-ipn`;
-    const ipnCallback = NP_CALLBACK + (NP_CALLBACK.includes('?') ? '&' : '?') + `profile_id=${encodeURIComponent(safeProfileId)}&kind=${encodeURIComponent(kind)}&amount=${amount}`;
 
     const NP_API_URL = getEnv(context, 'NOWPAYMENTS_API_URL', 'https://api.nowpayments.io/v1');
     const NP_API_KEY = getEnv(context, 'NOWPAYMENTS_API_KEY', '');
@@ -133,10 +136,12 @@ async function doPost(context) {
     if (NP_API_KEY) {
       try {
         const payload = {
-          price_amount: amount, price_currency: currency, pay_currency: payCurrency,
-          order_id: orderId, order_description: orderDesc,
-          is_fixed_rate: true, ipn_callback_url: ipnCallback,
-          success_url: successUrl, cancel_url: cancelUrl
+          price_amount: Number(amount),
+          price_currency: currency.toLowerCase(),
+          pay_currency: payCurrency,
+          order_id: orderId,
+          order_description: orderDesc,
+          fixed_rate: (payCurrency === 'usdterc20')
         };
         if (email) payload.customer_email = email;
         const u = NP_API_URL.endsWith('/') ? (NP_API_URL + 'payment') : (NP_API_URL + '/payment');
@@ -164,12 +169,12 @@ async function doPost(context) {
         order_id: orderId, profile_id: safeProfileId,
         payment_id: 'sim-' + orderId,
         payment_status: 'waiting',
-        price_amount: amount, price_currency: currency,
-        pay_amount: amount, pay_currency: 'USDT',
+        price_amount: Number(amount), price_currency: currency,
+        pay_amount: Number(amount), pay_currency: payCurrency,
         pay_address: null,
-        network: null, payment_url: null,
-        order_description: orderDesc, created_at: new Date().toISOString(),
-        ipn_callback_url: ipnCallback, success_url: successUrl, cancel_url: cancelUrl
+        network: (payCurrency === 'usdtbsc' ? 'bsc' : (payCurrency === 'usdttrc20' ? 'trx' : 'eth')),
+        payment_url: null,
+        order_description: orderDesc, created_at: new Date().toISOString()
       });
     }
 
@@ -187,13 +192,14 @@ async function doPost(context) {
     }
 
     const paymentId = np.payment_id || null;
+    const finalNetwork = String(np.network || (payCurrency === 'usdtbsc' ? 'bsc' : (payCurrency === 'usdttrc20' ? 'trx' : 'eth'))).toLowerCase();
     const metaPayload = {
       gateway: {
         provider: 'nowpayments',
         payment_id: paymentId, order_id: orderId,
         amount, currency, kind,
         pay_currency: np.pay_currency || null,
-        network: np.network || null,
+        network: finalNetwork,
         pay_address: np.pay_address || null,
         payin_extra_id: np.payin_extra_id || null,
         status: np.payment_status || 'created',
@@ -204,7 +210,7 @@ async function doPost(context) {
     };
     try {
       if (!/^anon-/.test(safeProfileId)) {
-        const note = '[' + new Date().toISOString().slice(0,16) + '] Pagamento ' + kind + ' criado via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (rede=' + (np.network || 'n/a') + ').';
+        const note = '[' + new Date().toISOString().slice(0,16) + '] Pagamento ' + kind + ' criado via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (rede=' + finalNetwork + ').';
         await sbUpdateProfile(context, safeProfileId, { internal_note: note, updated_at: new Date().toISOString() });
         try {
           await sbInsertTransaction(context, {
@@ -219,7 +225,7 @@ async function doPost(context) {
             nowpayments_status: np.payment_status || 'created',
             gateway_provider: 'nowpayments',
             gateway_payment_id: paymentId || null,
-            network: np.network || 'nowpayments',
+            network: finalNetwork,
             from_address: np.pay_address || null,
             to_address: np.payin_extra_id || null,
             status: 'pending',
@@ -239,15 +245,15 @@ async function doPost(context) {
       price_amount: Number(np.price_amount || amount),
       price_currency: String(np.price_currency || currency),
       pay_amount: Number(np.pay_amount || 0),
-      pay_currency: String(np.pay_currency || ''),
+      pay_currency: String(np.pay_currency || payCurrency),
       pay_address: np.pay_address || null,
       payin_extra_id: np.payin_extra_id || null,
-      network: np.network || null,
+      network: finalNetwork,
       amount_received: Number(np.amount_received || 0),
       payment_url: np.payment_url || (paymentId ? ('https://nowpayments.io/payment/' + paymentId) : null),
       order_description: orderDesc,
       created_at: np.created_at || new Date().toISOString(),
-      ipn_callback_url: ipnCallback, success_url: successUrl, cancel_url: cancelUrl
+      requested_amount: Number(amount)
     });
   } catch(err) {
     return json(500, { ok: false, error: 'internal_error', message: (err && (err.message || String(err))) || String(err) });

@@ -498,30 +498,29 @@ const Views = {
                         </div>
                         <div class="space-y-1.5 min-w-0 flex-1">
                           <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
-                          <div class="text-[10px] text-gray-400 leading-relaxed">Recebimento reservado e processado apenas em USDT estável. <span class="text-amber-300 font-bold">Por razões de estabilidade da operadora, apenas USDT · Ethereum (ERC-20) está temporariamente disponível para ativação.</span> O QR Code e o endereço do vault do protocolo são exibidos logo após clicar em "Ativar Conta". Confirme SEMPRE a rede antes de enviar.</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">Recebimento reservado e processado apenas em USDT estável. <span class="text-brand font-bold">3 redes disponíveis neste lançamento</span>. O QR Code e o endereço do vault do protocolo são exibidos logo após clicar em "Ativar Conta". Confirme SEMPRE a rede antes de enviar. <span class="text-amber-300 font-bold">⚠ TRC-20 (Tron): valor mínimo operacional US$ 15.</span></div>
                         </div>
                       </div>
 
                       <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         ${[
-                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Indisponível · Manutenção', checked:false, disabled:true, tagColor:'bg-gray-500/10 text-gray-400 border-gray-500/20', border:'border-gray-500/10 bg-gray-500/5 opacity-60 grayscale cursor-not-allowed hover:border-gray-500/10'},
-                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Indisponível · Manutenção', checked:false, disabled:true, tagColor:'bg-gray-500/10 text-gray-400 border-gray-500/20', border:'border-gray-500/10 bg-gray-500/5 opacity-60 grayscale cursor-not-allowed hover:border-gray-500/10'},
-                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média · DISPONÍVEL', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
+                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30'},
+                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Min. US$ 15', checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30'},
+                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
                         ].map(function(n){
-                          return '<label class="group '+ (n.disabled?'cursor-not-allowed':'cursor-pointer') +' relative">'+
-                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' '+(n.disabled?'disabled':'')+' class="peer sr-only">'+
+                          return '<label class="group cursor-pointer relative">'+
+                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
                             '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
                               '<div class="flex items-center justify-between gap-2">'+
                                 '<div class="flex items-center gap-2 min-w-0">'+
-                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center '+(n.disabled?'text-gray-500':'text-gray-300')+' '+(n.checked && !n.disabled?'peer-checked:text-blue-400 transition':'transition')+' '+n.icon+'"></div>'+
+                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 '+(n.code==='bep20'?'peer-checked:text-yellow-400':(n.code==='trc20'?'peer-checked:text-red-400':'peer-checked:text-blue-400'))+' transition '+n.icon+'"></div>'+
                                   '<div class="min-w-0">'+
-                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider '+(n.disabled?'text-gray-500':'text-white')+' leading-tight">'+n.name+'</div>'+
-                                    '<div class="text-[9px] font-mono mt-0.5 '+(n.disabled?'text-gray-600':'text-gray-500')+'">'+n.desc+'</div>'+
+                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
+                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
                                   '</div>'+
                                 '</div>'+
                                 '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
                               '</div>'+
-                              (n.disabled ? '<div class="mt-1.5 text-[8px] font-black font-mono uppercase tracking-wider text-gray-600 flex items-center gap-1"><i class="fa-solid fa-ban"></i> Temporariamente indisponível</div>' : '') +
                             '</div>'+
                           '</label>';
                         }).join('')}
@@ -542,19 +541,21 @@ const Views = {
                       </div>
                     </div>
 
-                    <div class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-start gap-2.5">
-                      <i class="fa-solid fa-circle-info text-blue-400 mt-0.5 shrink-0 text-sm"></i>
-                      <div class="text-[10px] text-blue-200/80 leading-relaxed">
-                        <span class="font-black text-blue-200">Rede recomendada:</span> <span class="font-black text-white">Ethereum (ERC-20) · USDT</span>
-                        <span class="block mt-1">Por razões de estabilidade da operadora de pagamento, <span class="font-black text-white">os endereços de ativação são gerados exclusivamente em Ethereum ERC-20</span> durante esta janela de lançamento. As redes BEP-20 (BNB) e TRC-20 (Tron) serão reativadas em breve.</span>
+                    <div class="rounded-2xl border border-brand/20 bg-brand/5 p-3 flex items-start gap-2.5">
+                      <i class="fa-solid fa-network-wired text-brand mt-0.5 shrink-0 text-sm"></i>
+                      <div class="text-[10px] text-brand-200/90 leading-relaxed">
+                        <span class="font-black">3 Redes Operacionais:</span>
+                        <span class="block mt-0.5">• <span class="font-black text-yellow-300">BEP-20 (BNB Chain)</span> · US$ 10 (minimo) · Taxa baixa</span>
+                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span> · US$ 15 (mínimo operador, ajuste automático) · Taxa quase zero</span>
+                        <span class="block mt-0.5">• <span class="font-black text-blue-300">ERC-20 (Ethereum)</span> · US$ 10 · Segura</span>
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5 mt-3">
                       <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-amber-200/80 leading-relaxed">
-                        <span class="font-black text-amber-200">Envie EXATAMENTE</span> <span class="font-black text-white">10.68 USDT (valor exato da operadora)</span> <span class="font-black text-white">pela rede Ethereum (ERC-20)</span>.
-                        <span class="block mt-1">Se tu tiveres USDT apenas em BEP-20 ou TRC-20, faz primeiro swap para USDT ERC-20 na tua exchange (Binance, Kucoin, etc.) ou usa uma bridge (ex: Multichain) para converter antes de enviar. <span class="font-black text-red-300">Enviar USDT BEP-20 para um endereço Ethereum = perda PERMANENTE e irreversível dos fundos.</span></span>
+                        Confirme sempre a <span class="font-black text-white">rede selecionada</span> antes de concluir. O QR e endereço gerados são exclusivos da rede que escolheste.
+                        <span class="block mt-1"><span class="font-black text-red-300">⚠ Aviso Crítico:</span> enviar USDT por rede incorreta (ex: enviar BEP-20 para contrato ERC-20) resulta em <span class="font-black text-red-300">perda TOTAL e IRREVERSÍVEL dos fundos, sem possibilidade de recuperação.</span></span>
                       </div>
                     </div>
 
@@ -730,30 +731,29 @@ const Views = {
                         </div>
                         <div class="space-y-1.5 min-w-0 flex-1">
                           <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
-                          <div class="text-[10px] text-gray-400 leading-relaxed">Depósitos adicionais reservados e creditados apenas em USDT. <span class="text-amber-300 font-bold">Apenas USDT · Ethereum (ERC-20) está temporariamente disponível neste lançamento.</span> Clique em "Depósito On-Chain" para abrir o QR Code do vault da rede selecionada. A confirmação on-chain (12 blocos) credita automaticamente.</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">Depósitos adicionais reservados e creditados apenas em USDT. <span class="text-brand font-bold">3 redes disponíveis</span>. Clique em "Depósito On-Chain" para abrir o QR Code do vault da rede selecionada. A confirmação on-chain (12 blocos) credita automaticamente. <span class="text-amber-300 font-bold">⚠ TRC-20: valor mínimo US$ 15.</span></div>
                         </div>
                       </div>
 
                       <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         ${[
-                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Indisponível · Manutenção', checked:false, disabled:true, tagColor:'bg-gray-500/10 text-gray-400 border-gray-500/20', border:'border-gray-500/10 bg-gray-500/5 opacity-60 grayscale cursor-not-allowed hover:border-gray-500/10'},
-                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Indisponível · Manutenção', checked:false, disabled:true, tagColor:'bg-gray-500/10 text-gray-400 border-gray-500/20', border:'border-gray-500/10 bg-gray-500/5 opacity-60 grayscale cursor-not-allowed hover:border-gray-500/10'},
-                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média · DISPONÍVEL', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
+                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30'},
+                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Min. US$ 15', checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30'},
+                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
                         ].map(function(n){
-                          return '<label class="group '+ (n.disabled?'cursor-not-allowed':'cursor-pointer') +' relative">'+
-                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' '+(n.disabled?'disabled':'')+' class="peer sr-only">'+
+                          return '<label class="group cursor-pointer relative">'+
+                            '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
                             '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
                               '<div class="flex items-center justify-between gap-2">'+
                                 '<div class="flex items-center gap-2 min-w-0">'+
-                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center '+(n.disabled?'text-gray-500':'text-gray-300')+' '+(n.checked && !n.disabled?'peer-checked:text-blue-400 transition':'transition')+' '+n.icon+'"></div>'+
+                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 '+(n.code==='bep20'?'peer-checked:text-yellow-400':(n.code==='trc20'?'peer-checked:text-red-400':'peer-checked:text-blue-400'))+' transition '+n.icon+'"></div>'+
                                   '<div class="min-w-0">'+
-                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider '+(n.disabled?'text-gray-500':'text-white')+' leading-tight">'+n.name+'</div>'+
-                                    '<div class="text-[9px] font-mono mt-0.5 '+(n.disabled?'text-gray-600':'text-gray-500')+'">'+n.desc+'</div>'+
+                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
+                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
                                   '</div>'+
                                 '</div>'+
                                 '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
                               '</div>'+
-                              (n.disabled ? '<div class="mt-1.5 text-[8px] font-black font-mono uppercase tracking-wider text-gray-600 flex items-center gap-1"><i class="fa-solid fa-ban"></i> Temporariamente indisponível</div>' : '') +
                             '</div>'+
                           '</label>';
                         }).join('')}
@@ -773,19 +773,21 @@ const Views = {
                       </div>
                     </div>
 
-                    <div class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-start gap-2.5 mt-3">
-                      <i class="fa-solid fa-circle-info text-blue-400 mt-0.5 shrink-0 text-sm"></i>
-                      <div class="text-[10px] text-blue-200/80 leading-relaxed">
-                        <span class="font-black text-blue-200">Rede recomendada:</span> <span class="font-black text-white">Ethereum (ERC-20) · USDT</span>
-                        <span class="block mt-1">Os endereços de depósito adicional são gerados exclusivamente em Ethereum ERC-20 durante esta janela de lançamento para maior segurança e confirmação on-chain.</span>
+                    <div class="rounded-2xl border border-brand/20 bg-brand/5 p-3 flex items-start gap-2.5 mt-3">
+                      <i class="fa-solid fa-network-wired text-brand mt-0.5 shrink-0 text-sm"></i>
+                      <div class="text-[10px] text-brand-200/90 leading-relaxed">
+                        <span class="font-black">Mínimos por rede:</span>
+                        <span class="block mt-0.5">• <span class="font-black text-yellow-300">BEP-20 (BNB)</span>: US$ 9</span>
+                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span>: US$ 15 (operador)</span>
+                        <span class="block mt-0.5">• <span class="font-black text-blue-300">ERC-20 (ETH)</span>: US$ 9.5</span>
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5 mt-3">
                       <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-amber-200/80 leading-relaxed">
-                        Envie <span class="font-black text-white">o valor EXATO mostrado no modal</span> <span class="font-black text-white">pela rede Ethereum (ERC-20)</span>.
-                        <span class="block mt-1">Se só tiveres USDT em BEP-20/TRC-20, faz primeiro swap para ERC-20 na exchange ou bridge. <span class="font-black text-red-300">Enviar USDT em rede errada = perda PERMANENTE dos fundos.</span></span>
+                        Envie <span class="font-black text-white">o valor EXATO mostrado no modal</span> <span class="font-black text-white">pela rede que selecionaste</span>.
+                        <span class="block mt-1">Se introduzires um valor abaixo do mínimo para TRC-20, o pedido é automaticamente ajustado para US$ 15. <span class="font-black text-red-300">Rede errada = perda PERMANENTE.</span></span>
                       </div>
                     </div>
 
