@@ -67,10 +67,10 @@
     },
 
     networkToPayCode(uiCode) {
-      const code = String(uiCode || 'bep20').trim().toLowerCase();
+      const code = String(uiCode || 'erc20').trim().toLowerCase();
       const map = {
-        bep20: 'usdtbep20',
-        trc20: 'usdttrc20',
+        bep20: 'usdterc20',
+        trc20: 'usdterc20',
         erc20: 'usdterc20'
       };
       return map[code] || 'usdterc20';

@@ -91,7 +91,16 @@ async function doPost(context) {
     const body = (await readJson(request)) || {};
     const amount = Number(body.amount || 10);
     const currency = String(body.price_currency || body.currency || 'usd').toUpperCase();
-    const payCurrency = String((body.pay_currency || 'usdt').split(',')[0] || 'usdt').trim().toLowerCase();
+    const rawPayCurrency = String((body.pay_currency || 'usdt').split(',')[0] || 'usdt').trim().toLowerCase();
+    const LEGACY_PAY_MAP = {
+      usdtbep20: 'usdterc20',
+      usdttrc20: 'usdterc20',
+      usdt: 'usdterc20',
+      bep20: 'usdterc20',
+      trc20: 'usdterc20',
+      erc20: 'usdterc20'
+    };
+    const payCurrency = LEGACY_PAY_MAP[rawPayCurrency] || rawPayCurrency;
     const profileId = String(body.profile_id || '').trim();
     const username = String(body.username || 'user').trim();
     const email = String(body.email || '').trim();
