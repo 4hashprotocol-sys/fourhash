@@ -1192,7 +1192,7 @@ const Views = {
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-white/10 text-gray-400 font-mono">
-                  <th class="py-3">${I18n.t('myUsername')}</th>
+                  <th class="py-3">${I18n.t('referralRowUsername')}</th>
                   <th class="py-3" data-i18n="myStatus">STATUS</th>
                   <th class="py-3" data-i18n="myPosition">POSIÇÃO</th>
                   <th class="py-3" data-i18n="bonusDirect">BÔNUS GERADO</th>

@@ -234,6 +234,19 @@ const Router = {
       case 'position':
         app.innerHTML = Views.Position();
         TreeEngine.init();
+        (function(){
+          var tries = 0;
+          var fn = function(){
+            try {
+              if (window.AppState && window.AppState.treeLevels && window.AppState.treeLevels.length) {
+                TreeEngine.render();
+              }
+            } catch(_){}
+            tries++;
+            if (tries < 6) setTimeout(fn, tries === 1 ? 800 : 1200);
+          };
+          setTimeout(fn, 400);
+        })();
         break;
       case 'wallet':
         app.innerHTML = Views.Wallet();

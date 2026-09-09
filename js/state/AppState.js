@@ -113,7 +113,113 @@ const AppState = {
   },
 
   generateTreeData() {
-    this.treeLevels = [];
+    try {
+      if (!this.treeLevels || !this.treeLevels.length) {
+        try { this.refreshTreeNetwork(); } catch(_) {}
+      }
+    } catch(e) {
+      this.treeLevels = [];
+    }
+  },
+
+  async refreshTreeNetwork() {
+    try {
+      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) {
+        this.treeLevels = [];
+        this.treeNodes = [];
+        return false;
+      }
+      var me = String(this.currentUser.id || '').toLowerCase();
+      var sb = this._sb();
+      if (!sb) { this.treeLevels = []; return false; }
+
+      var allRows = [];
+      try {
+        var rAll = await sb.from('profiles')
+          .select('id, username, full_name, status, level_number, created_at, position_index, line_row, line_seat, upline_id')
+          .not('upline_id', 'is', null)
+          .order('created_at', { ascending: true });
+        if (rAll && Array.isArray(rAll.data)) allRows = rAll.data;
+      } catch(_eTr) { allRows = []; }
+
+      var byParent = {};
+      for (var i = 0; i < allRows.length; i++) {
+        var r = allRows[i];
+        var pid = String(r.upline_id || '').toLowerCase();
+        if (!pid) continue;
+        if (!byParent[pid]) byParent[pid] = [];
+        byParent[pid].push(r);
+      }
+
+      var levels = [];
+      for (var ln = 2; ln <= 12; ln++) {
+        levels.push({
+          level: ln,
+          name: 'Nível ' + (ln < 10 ? '0' + ln : String(ln)),
+          expanded: (ln <= 4),
+          positions: []
+        });
+      }
+
+      function pushNode(profile, relLevel) {
+        if (relLevel < 2 || relLevel > 12) return;
+        var lvl = levels[relLevel - 2];
+        if (!lvl) return;
+        var posNum = '-';
+        try {
+          if (profile.position_index) posNum = '#' + profile.position_index;
+          else if (profile.line_row && profile.line_seat) posNum = '#' + profile.line_row + '-' + profile.line_seat;
+        } catch(_) {}
+        var dt = '';
+        try {
+          if (profile.created_at) dt = new Date(profile.created_at).toLocaleDateString('pt-PT');
+        } catch(_) {}
+        var st = String(profile.status || 'PENDING').toUpperCase();
+        if (st === 'ACTIVE' || st === 'PENDING' || st === 'BANNED' || st === 'SUSPENDED') {} else st = 'PENDING';
+        lvl.positions.push({
+          username: profile.username || 'user',
+          status: st,
+          level: relLevel,
+          positionNumber: posNum,
+          entryDate: dt || '-',
+          isSelf: false
+        });
+      }
+
+      var currentIds = [me];
+      for (var depth = 1; depth <= 11; depth++) {
+        var relLevel = depth + 1;
+        var nextIds = [];
+        for (var j = 0; j < currentIds.length; j++) {
+          var cid = currentIds[j];
+          var children = byParent[cid] || [];
+          for (var k = 0; k < children.length; k++) {
+            var ch = children[k];
+            var chid = String(ch.id || '').toLowerCase();
+            if (chid === me) continue;
+            pushNode(ch, relLevel);
+            nextIds.push(chid);
+          }
+        }
+        currentIds = nextIds;
+        if (!currentIds.length) break;
+      }
+
+      this.treeLevels = levels;
+      this.treeNodes = allRows;
+      try {
+        if (typeof window !== 'undefined' && window.TreeEngine && typeof window.TreeEngine.render === 'function') {
+          var viewport = document.getElementById('tree-viewport');
+          if (viewport) window.TreeEngine.render();
+        }
+      } catch(_eRd) {}
+      return true;
+    } catch(e) {
+      try { console.log('[tree] erro:', e && e.message ? e.message : String(e)); } catch(_) {}
+      this.treeLevels = [];
+      this.treeNodes = [];
+      return false;
+    }
   },
 
   toggleAdminDemo() {
@@ -470,7 +576,8 @@ const AppState = {
         this.refreshFinanceProblems(),
         this.refreshAdminSummaries(),
         this.refreshAdminUsersList(),
-        this.refreshReferrals()
+        this.refreshReferrals(),
+        this.refreshTreeNetwork()
       ]);
       return true;
     } catch (e) {
@@ -1377,6 +1484,43 @@ const AppState = {
         } catch (_eFb) {}
       }
 
+      var _meStr = String(me || '').toLowerCase();
+      list = (list || []).filter(function(x){ return x && String(x.id || '').toLowerCase() !== _meStr; });
+
+      var normalized = [];
+      for (var _nr = 0; _nr < list.length; _nr++) {
+        var _p = list[_nr];
+        if (!_p) continue;
+        var _bonusRaw = Number(_p.bonus_earned != null ? _p.bonus_earned : (_p.bonus != null ? _p.bonus : 0));
+        var _posRaw = _p.positionNumber || _p.position_code;
+        if (!_posRaw) {
+          if (_p.position_index) _posRaw = '#' + _p.position_index;
+          else if (_p.line_row && _p.line_seat) _posRaw = '#' + _p.line_row + '-' + _p.line_seat;
+          else _posRaw = '-';
+        }
+        var _statusRaw = String(_p.status || 'PENDING').toUpperCase();
+        if (_statusRaw !== 'ACTIVE' && _statusRaw !== 'PENDING' && _statusRaw !== 'BANNED' && _statusRaw !== 'SUSPENDED') _statusRaw = 'PENDING';
+        var _dt = '';
+        try {
+          if (_p.date) _dt = _p.date;
+          else if (_p.created_at) _dt = new Date(_p.created_at).toLocaleDateString('pt-PT');
+          else if (_p.createdAt) _dt = new Date(_p.createdAt).toLocaleDateString('pt-PT');
+        } catch(_eDt){}
+        normalized.push({
+          id: _p.id,
+          username: _p.username || 'user',
+          status: _statusRaw,
+          level_number: Number(_p.level_number || 0),
+          positionNumber: _posRaw,
+          bonus: Number(_bonusRaw),
+          bonus_earned: Number(_bonusRaw),
+          date: _dt,
+          createdAt: _p.created_at || _p.createdAt || null,
+          full_name: _p.full_name || ''
+        });
+      }
+      list = normalized;
+
       if (!this.referrals) this.referrals = { direct: [], indirect: [] };
       this.referrals.direct = list || [];
       this.referrals.indirect = [];
@@ -1384,7 +1528,7 @@ const AppState = {
       var activeCount = 0;
       for (var i = 0; i < total; i++) {
         var ref = this.referrals.direct[i];
-        if (ref && String(ref.status || '').toLowerCase() === 'active') activeCount++;
+        if (ref && String(ref.status || '').toUpperCase() === 'ACTIVE') activeCount++;
       }
       this.currentUser.directReferralsCount = total;
       this.currentUser.activeReferralsCount = activeCount;
