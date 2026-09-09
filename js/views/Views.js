@@ -404,7 +404,9 @@ const Views = {
     const u = AppState.currentUser;
     const activated = (typeof Router !== 'undefined' && Router.isActivated) ? Router.isActivated() : (String(u.status || '').toUpperCase() === 'ACTIVE');
     const entryAmount = Number(s.entryAmount || 10);
-    const addr = s.depositAddress || '0x71C4HashBEP20ProtocolVault99F4A810d7E8';
+    const addrRaw = s.depositAddress || '';
+    const addrValid = AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(addrRaw) : false;
+    const addr = addrValid ? addrRaw : '';
 
     if (!activated) {
       return `
@@ -692,21 +694,41 @@ const Views = {
                   </div>
                 </div>
 
+                ${ !addrValid ? `
+                <div class="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 flex items-start gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0 text-red-400">
+                    <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+                  </div>
+                  <div class="space-y-1.5">
+                    <div class="font-black text-red-400 text-sm uppercase tracking-wide">Endereço da Tesouraria Indisponível</div>
+                    <div class="text-[11px] text-red-300/80 leading-relaxed">⚠️ O endereço de carteira BEP-20 do protocolo ainda não foi configurado pelo administrador. <b>NÃO envie quaisquer fundos</b> para endereços antigos ou placeholders — risco de perda PERMANENTE. Use apenas o fluxo principal (painel direito · QR por rede) ou volte mais tarde.</div>
+                  </div>
+                </div>
+                ` : `
                 <div class="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-start gap-3">
                   <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 text-white/80">
                     <i class="fa-solid fa-vault"></i>
                   </div>
-                  <div class="space-y-1.5">
-                    <div class="font-black text-white text-sm uppercase tracking-wide">Endereço Manual BEP-20 (Alternativo)</div>
-                    <div class="text-[11px] text-gray-400 leading-relaxed">Recomendamos usar o fluxo principal no painel direito (QR por rede). Se preferir transferência manual, envie EXATAMENTE ${entryAmount.toFixed(2)} USDT pela rede BEP-20 para o endereço abaixo e cole o TXID em ticket de suporte.</div>
-                    <div class="flex items-center gap-2 mt-2">
-                      <input type="text" readonly value="${addr}" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-gray-300 focus:outline-none truncate">
-                      <button onclick="UI.copyToClipboard('${addr}')" class="px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-[11px] shrink-0">
+                  <div class="space-y-1.5 w-full">
+                    <div class="font-black text-white text-sm uppercase tracking-wide">Endereço Manual BEP-20 (Alternativo · Fallback)</div>
+                    <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-1">
+                      <div class="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-circle-exclamation"></i> Aviso Crítico de Rede</div>
+                      <div class="text-[10.5px] text-amber-200/90 leading-relaxed">REDE OBRIGATÓRIA: <b class="text-amber-300">BEP-20 · BNB Smart Chain</b>. Envio por TRC-20, ERC-20, Solana, BTC ou outra rede = <b>PERDA PERMANENTE SEM REEMBOLSO.</b> Envie EXATAMENTE <b class="text-white">${entryAmount.toFixed(2)} USDT</b>.</div>
+                    </div>
+                    <div class="text-[11px] text-gray-400 leading-relaxed">Recomendamos o fluxo principal no painel direito (QR por rede · confirmação automática on-chain). Se preferir transferência manual direta para a tesouraria, use o endereço abaixo e <b>depois clique no botão verde</b> para submeter o TXID — o nosso sistema cria automaticamente um ticket de validação.</div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <input type="text" readonly value="${addr}" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-brand focus:outline-none truncate" title="Endereço carteira tesouraria BEP-20 válido">
+                      <button onclick="UI.copyToClipboard('${addr}')" class="px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-[11px] shrink-0" title="Copiar endereço">
                         <i class="fa-solid fa-copy"></i>
                       </button>
                     </div>
+                    <button onclick="PaymentVault.submitManualTxidBEP20()" class="w-full mt-2 px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[11px] tracking-wide uppercase inline-flex items-center justify-center gap-2 transition-all shadow-[0_0_40px_-10px_rgba(16,185,129,0.6)]">
+                      <i class="fa-solid fa-file-invoice-dollar"></i> Já enviei · Submeter TXID do Depósito para Validação
+                    </button>
+                    <div class="text-[9px] text-gray-500 leading-snug text-center">Validação manual pela equipa FourHash · Prazo máximo: 1 hora útil após submissão do TXID confirmado on-chain (12 blocos BSC ~ 36s).</div>
                   </div>
                 </div>
+                `}
               </div>
 
               <div class="lg:col-span-7 lg:sticky lg:top-24">

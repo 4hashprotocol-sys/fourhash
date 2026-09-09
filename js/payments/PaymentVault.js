@@ -12,7 +12,13 @@
 
     _vaults() {
       const s = (AppState && AppState.projectSettings) ? AppState.projectSettings : {};
-      const legacyBEP20 = s.depositAddress || '0x71C4HashBEP20ProtocolVault99F4A810d7E8';
+      const valid = {
+        bep20: AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(s.vaultAddressBEP20) : false,
+        trc20: AppState && typeof AppState.isValidTronAddress === 'function' ? AppState.isValidTronAddress(s.vaultAddressTRC20) : false,
+        erc20: AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(s.vaultAddressERC20) : false
+      };
+      const legacyOK = AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(s.depositAddress) : false;
+      const legacyBEP20 = legacyOK ? s.depositAddress : '';
       return {
         bep20: {
           code: 'bep20',
@@ -27,7 +33,7 @@
           icon: 'fa-brands fa-btc',
           icoFallback: 'fa-solid fa-hexagon',
           networkId: 56,
-          address: s.vaultAddressBEP20 || legacyBEP20
+          address: valid.bep20 ? s.vaultAddressBEP20 : legacyBEP20
         },
         trc20: {
           code: 'trc20',
@@ -41,7 +47,7 @@
           colorPill: 'bg-red-500/10 text-red-300 border-red-500/40',
           icon: 'fa-solid fa-bolt-lightning',
           networkId: 'tron',
-          address: s.vaultAddressTRC20 || 'TFourHashVaultTRC20ProtocolAddressXXXXXXXXa1b2c3'
+          address: valid.trc20 ? s.vaultAddressTRC20 : ''
         },
         erc20: {
           code: 'erc20',
@@ -55,7 +61,7 @@
           colorPill: 'bg-blue-500/10 text-blue-300 border-blue-500/40',
           icon: 'fa-brands fa-ethereum',
           networkId: 1,
-          address: s.vaultAddressERC20 || '0xFourHashVaultERC20ProtocolAddress000000000x1a2b3c'
+          address: valid.erc20 ? s.vaultAddressERC20 : ''
         }
       };
     },
@@ -589,6 +595,45 @@
         setTimeout(function(){ Router.navigate('dashboard'); }, 1200);
       } catch(err) {
         UI.showToast((err && err.message) || 'Erro', 'error');
+      }
+    },
+
+    async submitManualTxidBEP20() {
+      try {
+        const s = AppState && AppState.projectSettings ? AppState.projectSettings : {};
+        const entryAmt = Number(s.entryAmount || 10);
+        if (typeof prompt !== 'function') {
+          UI.showToast('Navegador não suporta janela de prompt. Use o ticket de suporte.', 'warning');
+          return;
+        }
+        const rawTx = prompt('Cole abaixo o TXID (hash) da transação BEP-20 que efetuou:\n(Após enviar, a equipa valida em até 1 hora e credita automaticamente.)');
+        if (rawTx === null) return;
+        const txHash = String(rawTx || '').trim();
+        if (txHash.length < 8) {
+          UI.showToast('TXID inválido (mínimo 8 caracteres). Copie o hash completo da sua carteira/blockchain.', 'error');
+          return;
+        }
+        const addrBEP20 = this.getNetwork('bep20').address;
+        if (AppState && typeof AppState.sbCreateFinanceProblem === 'function') {
+          const ok = await Promise.resolve(AppState.sbCreateFinanceProblem({
+            type: 'Depósito Atrasado',
+            category: 'Depósito Manual BEP-20',
+            amount: entryAmt,
+            expected: entryAmt,
+            currency: 'USDT',
+            network: 'BEP20',
+            tx_hash: txHash,
+            vault_to_address: addrBEP20 || '',
+            private_note: 'Submetido via botão Endereço Manual BEP-20 (Alternativo) · página Depósito/Ativação.'
+          }));
+          if (ok !== false) {
+            UI.showToast('Ticket de validação criado ✓ TXID registado. Equipa valida em até 1h. Se confirmado on-chain, saldo é creditado automaticamente.', 'success', 'fa-circle-check', 6000);
+            return;
+          }
+        }
+        UI.showToast('TXID registado localmente. Contacte suporte com este TXID: ' + txHash.substring(0, 16) + '…', 'info');
+      } catch (err) {
+        UI.showToast((err && err.message) || 'Erro ao submeter TXID. Use o suporte.', 'error');
       }
     }
   };

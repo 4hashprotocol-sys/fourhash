@@ -41,10 +41,21 @@ async function validSignature(IPN_SECRET, rawBody, sigHeader) {
     const enc = new TextEncoder();
     const w = globalThis.crypto && globalThis.crypto.subtle;
     if (!w) return false;
-    const key = await w.importKey('raw', enc.encode(IPN_SECRET), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
-    const buf = await w.sign('HMAC', key, enc.encode(sorted));
-    const hex = Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-    return hex.toLowerCase() === String(sigHeader || '').toLowerCase();
+    async function hmacHex(secret) {
+      const key = await w.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+      const buf = await w.sign('HMAC', key, enc.encode(sorted));
+      return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    }
+    const candidates = [IPN_SECRET];
+    const s = String(IPN_SECRET);
+    if (!s.startsWith('/')) candidates.push('/' + s);
+    if (s.startsWith('/')) candidates.push(s.slice(1));
+    const need = String(sigHeader || '').toLowerCase();
+    for (let i = 0; i < candidates.length; i++) {
+      const h = await hmacHex(candidates[i]);
+      if (h.toLowerCase() === need) return true;
+    }
+    return false;
   } catch(_e) { return false; }
 }
 
@@ -56,6 +67,71 @@ function sbHeaders(c) {
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
   };
+}
+
+async function sbInsertWebhook(c, row) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? (base + 'rest/v1/nowpayments_webhooks') : (base + '/rest/v1/nowpayments_webhooks'));
+    const r = await fetch(url, { method: 'POST', headers: sbHeaders(c), body: JSON.stringify(row || {}) });
+    return r.ok;
+  } catch(_e) { return false; }
+}
+
+async function sbGetTransactions(c, q) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? (base + 'rest/v1/transactions?' + q) : (base + '/rest/v1/transactions?' + q));
+    const r = await fetch(url, { method: 'GET', headers: sbHeaders(c) });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d : [];
+  } catch(_) { return []; }
+}
+
+async function sbInsertPositionIfMissing(c, profileId) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const H = sbHeaders(c);
+    const listUrl = base + '/rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&level_number=eq.1&select=id&limit=1';
+    const lr = await fetch(listUrl, { headers: H });
+    const ld = lr.ok ? await lr.json() : [];
+    if (Array.isArray(ld) && ld.length) return { already: true };
+    const now = new Date().toISOString();
+    let seat = 1;
+    try {
+      const seatUrl = base + '/rest/v1/linear_network?level_number=eq.1&select=seat_number&order=seat_number.desc&limit=1';
+      const sr = await fetch(seatUrl, { headers: H });
+      if (sr.ok) {
+        const sd = await sr.json();
+        if (Array.isArray(sd) && sd.length && Number(sd[0].seat_number) >= 1) seat = Number(sd[0].seat_number) + 1;
+      }
+    } catch(_) {}
+    const insertUrl = base + '/rest/v1/linear_network';
+    const ir = await fetch(insertUrl, {
+      method: 'POST', headers: H,
+      body: JSON.stringify({
+        profile_id: profileId,
+        level_number: 1,
+        seat_number: seat,
+        row_number: 1,
+        filled_at: now,
+        filled_by: null,
+        commission_paid: false,
+        commission_tx: null
+      })
+    });
+    if (ir.ok) return true;
+    try {
+      const t = await ir.text();
+      if (/42703|column .* of relation.*linear_network.*does not exist|unique constraint.*linear_network/i.test(t)) {
+        const mini = { profile_id: profileId, level_number: 1, seat_number: seat };
+        const ir2 = await fetch(insertUrl, { method: 'POST', headers: H, body: JSON.stringify(mini) });
+        return ir2.ok;
+      }
+    } catch(_) {}
+    return false;
+  } catch(_) { return false; }
 }
 
 async function sbRpc(c, name, params) {
@@ -71,73 +147,198 @@ async function sbUpdateProfile(c, profileId, patch) {
   try {
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
     const url = (base.endsWith('/') ? (base + 'rest/v1/profiles?id=eq.' + encodeURIComponent(profileId)) : (base + '/rest/v1/profiles?id=eq.' + encodeURIComponent(profileId)));
-    const r = await fetch(url, { method: 'PATCH', headers: sbHeaders(c), body: JSON.stringify(patch || {}) });
-    return r.ok;
+    const H = sbHeaders(c);
+    const BASE_KEYS = ['status','updated_at','username','email','full_name','avatar_url','bio','country','phone','last_active_at','raw_user_meta_data','activated_at','level_number'];
+    const tryUpd = async (p) => {
+      try {
+        const r = await fetch(url, { method: 'PATCH', headers: H, body: JSON.stringify(p || {}) });
+        if (r.ok) return true;
+        try {
+          const t = await r.text();
+          if (/42703|column .* of relation (\"|')?profiles(\"|')? does not exist/i.test(t)) return { error: 'missing', text: t };
+        } catch(_) {}
+        return false;
+      } catch(_e) { return false; }
+    };
+    const full = {}; Object.keys(patch || {}).forEach(k => { full[k] = patch[k]; });
+    const a = await tryUpd(full);
+    if (a === true) return true;
+    const mini = {};
+    Object.keys(full).forEach(k => {
+      const key = String(k).toLowerCase();
+      if (BASE_KEYS.indexOf(key) >= 0) mini[k] = full[k];
+    });
+    if (!mini.status) mini.status = full.status || 'active';
+    if (!mini.updated_at) mini.updated_at = full.updated_at || new Date().toISOString();
+    const b = await tryUpd(mini);
+    if (b === true) return true;
+    const c2 = await tryUpd({ status: mini.status, updated_at: mini.updated_at });
+    if (c2 === true) return true;
+    return false;
   } catch(_e) { return false; }
+}
+
+async function sbGetProfileByPartialId(c, partial8) {
+  try {
+    if (!partial8 || partial8.length < 6) return null;
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const q = 'id=like.' + encodeURIComponent(partial8 + '%') + '&select=id,username,status,activated_at,level_number&limit=10';
+    const url = (base.endsWith('/') ? (base + 'rest/v1/profiles?' + q) : (base + '/rest/v1/profiles?' + q));
+    const r = await fetch(url, { headers: sbHeaders(c) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (Array.isArray(d) && d.length === 1) return d[0];
+    return null;
+  } catch(_) { return null; }
 }
 
 async function sbUpdateTransactions(c, q, patch) {
   try {
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
     const url = (base.endsWith('/') ? (base + 'rest/v1/transactions?' + q) : (base + '/rest/v1/transactions?' + q));
-    const r = await fetch(url, { method: 'PATCH', headers: sbHeaders(c), body: JSON.stringify(patch || {}) });
-    return r.ok;
+    const H = sbHeaders(c);
+    const tryPatch = async (p) => {
+      try {
+        const r = await fetch(url, { method: 'PATCH', headers: H, body: JSON.stringify(p || {}) });
+        if (r.ok) return { ok: true, retry: false };
+        try {
+          const t = await r.text();
+          if (txMissingField(t)) return { ok: false, retry: true, text: t };
+        } catch(_) {}
+        return { ok: false, retry: false };
+      } catch(_e) { return { ok: false, retry: false }; }
+    };
+    const cleanPatch = {};
+    for (const k of Object.keys(patch || {})) cleanPatch[k] = patch[k];
+    let a = await tryPatch(cleanPatch);
+    if (a.ok) return true;
+    if (a.retry) {
+      const tryHard = { ...cleanPatch };
+      delete tryHard.error_message;
+      delete tryHard.order_id;
+      delete tryHard.gateway_payment_id;
+      delete tryHard.gateway_provider;
+      delete tryHard.method;
+      delete tryHard.description;
+      if (updatedAtFieldError(a.text)) delete tryHard.updated_at;
+      try { await rpcEnsureTxColumns(c, a.text); } catch(_) {}
+      const b = await tryPatch(tryHard);
+      if (b.ok) return true;
+    }
+    return false;
   } catch(_e) { return false; }
+}
+
+function txMissingField(msg) { return /42703|column (error_message|order_id|gateway_payment_id|gateway_provider|method|description|updated_at|network|from_address|to_address|note) of relation "transactions" does not exist/i.test(msg || ''); }
+function updatedAtFieldError(msg) { return /42703:.*updated_at|column.*updated_at.*does not exist/i.test(msg || ''); }
+async function rpcEnsureTxColumns(c, text) {
+  try { return false; } catch(_) { return false; }
 }
 
 async function sbWalletFallback(c, profileId, amount) {
   try {
     const H = sbHeaders(c);
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
-    const listUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=*&limit=1') : (base + '/rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=*&limit=1'));
-    const list = await fetch(listUrl, { headers: H });
-    const data = list.ok ? await list.json() : [];
-    if (Array.isArray(data) && data.length) {
-      const w = data[0];
-      const updUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets?id=eq.' + encodeURIComponent(w.id)) : (base + '/rest/v1/wallets?id=eq.' + encodeURIComponent(w.id)));
-      const r = await fetch(updUrl, {
-        method: 'PATCH', headers: H, body: JSON.stringify({
-          balance_usd: Number(w.balance_usd || 0) + amount,
-          total_deposits_usd: Number(w.total_deposits_usd || 0) + amount,
-          updated_at: new Date().toISOString()
-        })
-      });
-      return r.ok;
-    } else {
-      const insUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets') : (base + '/rest/v1/wallets'));
-      const r = await fetch(insUrl, {
-        method: 'POST', headers: H, body: JSON.stringify({
-          profile_id: profileId, balance_usd: amount,
-          total_deposits_usd: amount, currency: 'USD',
-          updated_at: new Date().toISOString()
-        })
-      });
-      return r.ok;
-    }
+    const add = Number(amount) || 0;
+    const tryWallet = async (minimal) => {
+      try {
+        const listUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=*&limit=1') : (base + '/rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=*&limit=1'));
+        const list = await fetch(listUrl, { headers: H });
+        const data = list.ok ? await list.json() : [];
+        if (Array.isArray(data) && data.length) {
+          const w = data[0];
+          const patch = {};
+          if (!minimal) patch.updated_at = new Date().toISOString();
+          if (typeof w.available_balance === 'number' || (w.available_balance !== null && w.available_balance !== undefined))
+            patch.available_balance = Number(w.available_balance || 0) + add;
+          if (typeof w.total_deposited === 'number' || (w.total_deposited !== null && w.total_deposited !== undefined))
+            patch.total_deposited = Number(w.total_deposited || 0) + add;
+          if (typeof w.balance_usd === 'number' || (w.balance_usd !== null && w.balance_usd !== undefined))
+            patch.balance_usd = Number(w.balance_usd || 0) + add;
+          if (typeof w.total_deposits_usd === 'number' || (w.total_deposits_usd !== null && w.total_deposits_usd !== undefined))
+            patch.total_deposits_usd = Number(w.total_deposits_usd || 0) + add;
+          if (typeof w.total_balance === 'number' || (w.total_balance !== null && w.total_balance !== undefined))
+            patch.total_balance = Number(w.total_balance || 0) + add;
+          if (typeof w.pending_balance === 'number' || (w.pending_balance !== null && w.pending_balance !== undefined))
+            patch.pending_balance = Number(w.pending_balance || 0);
+          if (typeof w.frozen_balance === 'number' || (w.frozen_balance !== null && w.frozen_balance !== undefined))
+            patch.frozen_balance = Number(w.frozen_balance || 0);
+          if (minimal) { delete patch.updated_at; delete patch.pending_balance; delete patch.frozen_balance; delete patch.total_balance; delete patch.total_deposits_usd; delete patch.balance_usd; delete patch.currency; }
+          const updUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets?id=eq.' + encodeURIComponent(w.id)) : (base + '/rest/v1/wallets?id=eq.' + encodeURIComponent(w.id)));
+          let r = await fetch(updUrl, { method: 'PATCH', headers: H, body: JSON.stringify(patch) });
+          if (r.ok) return true;
+          try {
+            const t = await r.text();
+            if (walletMissingField(t)) {
+              const mini = {};
+              if (typeof w.available_balance !== 'undefined') mini.available_balance = Number(w.available_balance || 0) + add;
+              if (typeof w.total_deposited !== 'undefined') mini.total_deposited = Number(w.total_deposited || 0) + add;
+              if (typeof w.balance_usd !== 'undefined') mini.balance_usd = Number(w.balance_usd || 0) + add;
+              r = await fetch(updUrl, { method: 'PATCH', headers: H, body: JSON.stringify(mini) });
+              if (r.ok) return true;
+            }
+          } catch(_) {}
+          return false;
+        } else {
+          const insUrl = (base.endsWith('/') ? (base + 'rest/v1/wallets') : (base + '/rest/v1/wallets'));
+          const now = new Date().toISOString();
+          const fullInsert = {
+            profile_id: profileId,
+            available_balance: add,
+            pending_balance: 0,
+            frozen_balance: 0,
+            total_deposited: add,
+            total_withdrawn: 0,
+            total_bonus_team: 0,
+            total_bonus_matrix: 0,
+            created_at: now,
+            updated_at: now
+          };
+          let r = await fetch(insUrl, { method: 'POST', headers: H, body: JSON.stringify(fullInsert) });
+          if (r.ok) return true;
+          try {
+            const t = await r.text();
+            if (walletMissingField(t)) {
+              const mini = { profile_id: profileId, available_balance: add, total_deposited: add, created_at: now };
+              r = await fetch(insUrl, { method: 'POST', headers: H, body: JSON.stringify(mini) });
+              if (r.ok) return true;
+            }
+          } catch(_) {}
+          return false;
+        }
+      } catch(_e) { return false; }
+    };
+    const a = await tryWallet(false);
+    if (a) return true;
+    return await tryWallet(true);
   } catch(_e) { return false; }
 }
 
-export async function onRequest(context) {
-  const m = (context.request.method || 'GET').toUpperCase();
-  if (m === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
-  if (m === 'GET') return json(405, { ok: false, error: 'method_not_allowed' });
-  if (m !== 'POST') return json(405, { ok: false, error: 'method_not_allowed', method: m });
-  return doPost(context);
-}
+function walletMissingField(msg) { return /42703|column (updated_at|total_balance|pending_balance|frozen_balance|total_deposits_usd|available_balance|balance_usd|total_deposited|currency|bep20_address|trc20_address|erc20_address|btc_address|total_withdrawn|total_bonus_team|total_bonus_matrix) of relation "wallets" does not exist/i.test(msg || ''); }
 
-export async function onRequestOptions(context) {
-  return new Response(null, { status: 204, headers: corsHeaders() });
+function extractProfileIdFromOrderId(orderId) {
+  try {
+    const s = String(orderId || '').trim();
+    if (!s) return '';
+    const parts = s.split('-');
+    if (parts.length >= 3) {
+      const candidate = parts.slice(2).join('-');
+      if (/^[0-9a-fA-F]{8}/.test(candidate)) return candidate;
+    }
+    const m = s.match(/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+    if (m) return m[1];
+    const m8 = s.match(/4H-[a-zA-Z]+-([0-9a-fA-F]{8})-/);
+    if (m8) return m8[1];
+  } catch(_) {}
+  return '';
 }
-
-export async function onRequestGet(context) { return json(405, { ok: false, error: 'method_not_allowed' }); }
-export async function onRequestPost(context) { return doPost(context); }
 
 async function doPost(context) {
   const { request } = context;
   try {
     const url = new URL(request.url);
-    const profileId = String(url.searchParams.get('profile_id') || '').trim();
-    const kind = String(url.searchParams.get('kind') || 'activation').toLowerCase();
+    let profileId = String(url.searchParams.get('profile_id') || '').trim();
+    let kind = String(url.searchParams.get('kind') || '').toLowerCase() || 'activation';
     const amountQs = Number(url.searchParams.get('amount') || 0);
 
     let sigHeader = '';
@@ -152,67 +353,168 @@ async function doPost(context) {
     const orderId = String(body.order_id || '').trim();
     const payStatus = String(body.payment_status || body.status || '').toLowerCase();
     const amountPaid = Number(body.price_amount || body.amount || amountQs || 0);
+    if (!kind) {
+      if (orderId) {
+        const k = String(orderId.split('-')[1] || '').toLowerCase();
+        if (k === 'activation' || k === 'deposit' || k === 'withdraw' || k === 'adjustment' || k === 'bonus') kind = k;
+      }
+    }
 
-    if (!paymentId && !orderId) return json(400, { ok: false, error: 'missing_identifiers' });
+    if (!paymentId && !orderId) {
+      try {
+        await sbInsertWebhook(context, {
+          payment_id: paymentId || null, order_id: orderId || null,
+          payment_status: payStatus || null,
+          request_ip: null, sig_header: sigHeader || null, sig_validated: false,
+          order_description: (body && body.order_description) ? String(body.order_description).slice(0, 255) : null,
+          raw_body: rawBody ? rawBody.slice(0, 200000) : null,
+          error_message: 'missing_identifiers',
+          created_at: new Date().toISOString()
+        });
+      } catch(_) {}
+      return json(400, { ok: false, error: 'missing_identifiers' });
+    }
 
     const IPN_SECRET = getEnv(context, 'NOWPAYMENTS_IPN_SECRET', '');
     let sigOk = !IPN_SECRET ? true : false;
     if (IPN_SECRET) {
       try { sigOk = Boolean(await validSignature(IPN_SECRET, rawBody, sigHeader)); } catch(_) { sigOk = false; }
-      if (!sigOk) {
-        return json(401, { ok: false, error: 'invalid_signature' });
+    }
+
+    let resolvedProfile = null;
+    let profilePartial8 = '';
+    if (!profileId && orderId) {
+      const parsed = extractProfileIdFromOrderId(orderId);
+      if (parsed && /^[0-9a-fA-F]{8}$/.test(parsed)) {
+        profilePartial8 = parsed;
+        resolvedProfile = await sbGetProfileByPartialId(context, parsed);
+        if (resolvedProfile && resolvedProfile.id) profileId = String(resolvedProfile.id);
+      } else if (parsed && /^[0-9a-fA-F]{8}-/.test(parsed)) {
+        profileId = parsed;
       }
+    }
+
+    try {
+      await sbInsertWebhook(context, {
+        payment_id: paymentId || null, order_id: orderId || null,
+        payment_status: payStatus || null,
+        request_ip: null, sig_header: sigHeader || null, sig_validated: !!sigOk,
+        order_description: (body && body.order_description) ? String(body.order_description).slice(0, 255) : null,
+        raw_body: rawBody ? rawBody.slice(0, 200000) : null,
+        profile_id: profileId || null,
+        error_message: null,
+        created_at: new Date().toISOString()
+      });
+    } catch(_) {}
+
+    if (IPN_SECRET && !sigOk) {
+      try {
+        await sbInsertWebhook(context, {
+          payment_id: paymentId || null, order_id: orderId || null,
+          payment_status: payStatus || null,
+          request_ip: null, sig_header: sigHeader || null, sig_validated: false,
+          order_description: (body && body.order_description) ? String(body.order_description).slice(0, 255) : null,
+          raw_body: null, profile_id: profileId || null,
+          error_message: 'invalid_signature',
+          created_at: new Date().toISOString()
+        });
+      } catch(_) {}
+      return json(401, { ok: false, error: 'invalid_signature', profile_id: profileId, order_id: orderId });
     }
 
     const finalStates = ['finished','confirmed','completed','success','partially_paid'];
     const isPaid = finalStates.indexOf(payStatus) >= 0 || /paid|finished|confirmed|complete|success/i.test(payStatus);
     const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
 
+    if (!profileId && orderId) {
+      const parsedFull = extractProfileIdFromOrderId(orderId);
+      if (parsedFull && parsedFull.length >= 32) profileId = parsedFull;
+    }
+
     let activation = false;
+    let walletUpdated = false;
+    let txMatched = false;
+    let attemptedMissing = null;
     try {
-      if (profileId.length > 10) {
-        if (orderId || paymentId) {
-          const patchTx = {
-            status: isPaid ? 'confirmed' : (isFailed ? 'failed' : 'pending'),
-            confirmed_at: isPaid ? new Date().toISOString() : (isFailed ? new Date().toISOString() : null),
-            error_message: isFailed ? ('status_pagamento=' + payStatus) : null,
-            nowpayments_status: payStatus
-          };
-          if (body && typeof body === 'object') {
-            try {
-              patchTx.metadata = JSON.stringify({ gateway: { provider: 'nowpayments', ipn: body, signature_validated: sigOk, processed_at: new Date().toISOString() } });
-            } catch(_) {}
-          }
-          const filters = [];
-          if (orderId)   filters.push('order_id.eq.' + encodeURIComponent(orderId));
-          if (paymentId) filters.push('nowpayments_id.eq.' + encodeURIComponent(paymentId));
-          if (paymentId) filters.push('gateway_payment_id.eq.' + encodeURIComponent(paymentId));
-          if (paymentId) filters.push('tx_hash.eq.' + encodeURIComponent(paymentId));
-          if (orderId && paymentId) filters.push('and=(profile_id.eq.' + encodeURIComponent(profileId) + ',or(order_id.eq.' + encodeURIComponent(orderId) + ',nowpayments_id.eq.' + encodeURIComponent(paymentId) + ',gateway_payment_id.eq.' + encodeURIComponent(paymentId) + ',tx_hash.eq.' + encodeURIComponent(paymentId) + '))');
-          let q = filters.slice(0, 3).join(',');
-          if (!q) q = 'id=is.null';
-          try { await sbUpdateTransactions(context, q, patchTx); } catch(_) {}
+      if ((profileId && profileId.length >= 10) || orderId || paymentId) {
+        const patchTx = {
+          status: isPaid ? 'confirmed' : (isFailed ? 'failed' : 'pending'),
+          confirmed_at: isPaid ? new Date().toISOString() : (isFailed ? new Date().toISOString() : null),
+          note: (isFailed ? ('[status_pagamento=' + payStatus + '] ') : '') +
+                ((body && body.order_description) ? String(body.order_description).slice(0, 120) : ''),
+          nowpayments_status: payStatus,
+          network: (body && (body.network || body.payin_network || body.pay_network)) ? String(body.network || body.payin_network || body.pay_network).toUpperCase() : null,
+          from_address: (body && (body.pay_address || body.payout_address)) ? String(body.pay_address || body.payout_address) : null,
+          to_address: (body && (body.payin_extra_id || body.withdraw_address)) ? String(body.payin_extra_id || body.withdraw_address) : null
+        };
+        if (body && body.payin_hash) patchTx.tx_hash = String(body.payin_hash);
+        if (body && typeof body === 'object') {
           try {
-            const qFallback = 'and=(profile_id.eq.' + encodeURIComponent(profileId) + ',kind=in.(deposit,adjustment_credit),status=in.(pending),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString()) + ')';
-            await sbUpdateTransactions(context, qFallback, patchTx);
+            patchTx.metadata = {
+              gateway: {
+                provider: 'nowpayments',
+                payment_id: paymentId || null,
+                order_id: orderId || null,
+                ipn: body,
+                signature_validated: sigOk,
+                processed_at: new Date().toISOString()
+              }
+            };
+          } catch(_) {}
+        }
+        const filters = [];
+        if (paymentId) filters.push('nowpayments_id=eq.' + encodeURIComponent(paymentId));
+        if (paymentId) filters.push('tx_hash=eq.' + encodeURIComponent(paymentId));
+        if (body && body.payin_hash) filters.push('tx_hash=eq.' + encodeURIComponent(String(body.payin_hash)));
+        if (orderId) filters.push('or=(nowpayments_id.eq.' + encodeURIComponent(orderId) + ',metadata->>order_id.eq.' + encodeURIComponent(orderId) + ')');
+        if (profileId) filters.push('profile_id=eq.' + encodeURIComponent(profileId));
+        let q = filters.length ? filters.slice(0, 4).join(',') : ('id=is.null');
+        try { txMatched = Boolean(await sbUpdateTransactions(context, q, patchTx)); } catch(_) { txMatched = false; }
+        if (!txMatched) {
+          try {
+            const qFallback = (profileId ? ('and=(profile_id.eq.' + encodeURIComponent(profileId) + ',') : 'and=(') +
+              'kind=in.(deposit,adjustment_credit),status=in.(pending),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
+            const okFb = await sbUpdateTransactions(context, qFallback, patchTx);
+            if (okFb) txMatched = true;
+          } catch(_) {}
+        }
+        if (!profileId && orderId) {
+          try {
+            const rows = await sbGetTransactions(context, ('or=(nowpayments_id.eq.' + encodeURIComponent(orderId) + ',metadata->>order_id.eq.' + encodeURIComponent(orderId) + ')&select=profile_id,id,amount&limit=1'));
+            if (Array.isArray(rows) && rows.length && rows[0].profile_id) {
+              profileId = String(rows[0].profile_id);
+            }
+          } catch(_) {}
+        }
+        if (!profileId && paymentId) {
+          try {
+            const rows2 = await sbGetTransactions(context, ('or=(nowpayments_id.eq.' + encodeURIComponent(paymentId) + ',tx_hash.eq.' + encodeURIComponent(paymentId) + ')&select=profile_id,id,amount&limit=1'));
+            if (Array.isArray(rows2) && rows2.length && rows2[0].profile_id) {
+              profileId = String(rows2[0].profile_id);
+            }
           } catch(_) {}
         }
 
-        if (isPaid) {
-          const amount = amountPaid || amountQs || 10;
+        if (isPaid && profileId && profileId.length >= 10) {
+          const amount = amountPaid || amountQs || Number(body.outcome_amount || body.pay_amount || 0) || 10;
           try {
-            const note = '[' + new Date().toISOString().slice(0,16) + '] Conta ativada via Gateway #' + (paymentId || orderId) + ' US$' + amount + '.';
-            const okUp = await sbUpdateProfile(context, profileId, {
+            const now = new Date().toISOString();
+            const note = '[' + now.slice(0,16) + '] Conta ativada via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (NowPayments).';
+            const patchProfile = {
               status: 'active',
               level_number: 1,
-              activated_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              internal_note: note
-            });
+              activated_at: now,
+              last_active_at: now,
+              updated_at: now,
+              bio: note
+            };
+            const okUp = await sbUpdateProfile(context, profileId, patchProfile);
             let okInc = await sbRpc(context, 'increment_wallet_balance', {
               target_profile_id: profileId, add_amount: amount
             });
             if (!okInc) okInc = await sbWalletFallback(context, profileId, amount);
+            walletUpdated = !!okInc;
+            try { await sbInsertPositionIfMissing(context, profileId); } catch(_) {}
             activation = okUp;
           } catch(_act) {}
         }
@@ -226,9 +528,22 @@ async function doPost(context) {
       payment_status: payStatus, is_paid: isPaid,
       profile_id: profileId, kind: kind,
       amount: amountPaid || amountQs,
-      activation: activation
+      activation: activation,
+      wallet_updated: walletUpdated,
+      tx_matched: txMatched,
+      profile_resolved_via_order_id: !!(profilePartial8 || (profileId && !url.searchParams.get('profile_id')))
     });
   } catch(err) {
+    try {
+      await sbInsertWebhook(context, {
+        payment_id: null, order_id: null,
+        payment_status: null,
+        request_ip: null, sig_header: null, sig_validated: false,
+        order_description: null, raw_body: null, profile_id: null,
+        error_message: 'internal: ' + String((err && (err.message || String(err))) || String(err)).slice(0, 500),
+        created_at: new Date().toISOString()
+      });
+    } catch(_) {}
     return json(500, { ok: false, error: 'internal_error', message: (err && (err.message || String(err))) || String(err) });
   }
 }

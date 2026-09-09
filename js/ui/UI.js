@@ -59,6 +59,17 @@ const UI = {
     const list = document.getElementById('notif-list');
     if (!list) return;
 
+    if (!AppState.notifications || AppState.notifications.length === 0) {
+      list.innerHTML = `
+        <div class="px-4 py-10 text-center space-y-2">
+          <div class="text-3xl opacity-40">📭</div>
+          <p class="text-[11px] text-gray-500 font-medium">Sem notificações no momento</p>
+          <p class="text-[9px] text-gray-600">Quando houver novidades, aparecerão aqui.</p>
+        </div>
+      `;
+      return;
+    }
+
     list.innerHTML = AppState.notifications.map(n => `
       <div class="px-4 py-3 hover:bg-white/[0.02] transition ${n.read ? 'opacity-60' : 'bg-brand/5'}">
         <div class="flex items-center justify-between font-bold text-white mb-0.5">

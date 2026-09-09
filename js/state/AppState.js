@@ -12,6 +12,23 @@ const AppState = {
   adminFinanceFilter: 'Todos',
   adminSupportFilter: 'Todos',
 
+  isValidEvmAddress(addr) {
+    try {
+      if (!addr || typeof addr !== 'string') return false;
+      const s = addr.trim();
+      if (!/^0x[a-fA-F0-9]{40}$/.test(s)) return false;
+      return true;
+    } catch (e) { return false; }
+  },
+
+  isValidTronAddress(addr) {
+    try {
+      if (!addr || typeof addr !== 'string') return false;
+      const s = addr.trim();
+      return /^T[a-zA-Z0-9]{33}$/.test(s);
+    } catch (e) { return false; }
+  },
+
   projectSettings: {
     entryAmount: 10,
     currency: 'USDT',
@@ -20,7 +37,7 @@ const AppState = {
     projectFundPercentage: 40,
     totalDistributedPercentage: 60,
     teamCommissionPercents: [50, 2.5, 2.5, 2.5, 2.5],
-    depositAddress: '0x71C4HashBEP20ProtocolVault99F4A810d7E8',
+    depositAddress: '',
     presaleEndDate: new Date(Date.now() + 9 * 86400000 + 23 * 3600000 + 59 * 60000 + 59 * 1000).toISOString(),
     withdraw: {
       minAmount: 10,
@@ -118,11 +135,74 @@ const AppState = {
     }
   },
 
+  _notifStorageKey() {
+    const uid = (this.currentUser && this.currentUser.id) ? this.currentUser.id : 'guest';
+    return 'fh_notifs_' + String(uid).replace(/[^a-zA-Z0-9]/g, '_');
+  },
+
+  _refreshNotifBadge() {
+    try {
+      const badge = document.getElementById('notif-badge');
+      if (!badge) return;
+      const unread = this.notifications.filter(n => !n.read).length;
+      if (unread <= 0) {
+        badge.textContent = '0';
+        badge.classList.add('hidden');
+      } else {
+        badge.textContent = String(unread > 99 ? '99+' : unread);
+        badge.classList.remove('hidden');
+      }
+    } catch(e) {}
+  },
+
+  _persistNotifications() {
+    try {
+      const key = this._notifStorageKey();
+      localStorage.setItem(key, JSON.stringify(this.notifications || []));
+    } catch(e) {}
+  },
+
+  _loadNotificationsFromStorage() {
+    try {
+      const key = this._notifStorageKey();
+      const raw = localStorage.getItem(key);
+      if (raw && raw.length > 2) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) this.notifications = arr;
+      }
+    } catch(e) { this.notifications = this.notifications || []; }
+    this._refreshNotifBadge();
+  },
+
+  pushNotification(title, message, opts) {
+    opts = opts || {};
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const notif = {
+      id: opts.id || ('n_' + Date.now().toString(36) + '_' + Math.floor(Math.random()*1e6).toString(36)),
+      title: String(title || 'Notificação').toString(),
+      message: String(message || '').toString(),
+      icon: opts.icon || '',
+      type: opts.type || 'info',
+      time: (opts.time && opts.time.length) ? opts.time : (hh + ':' + mm),
+      read: false,
+      createdAt: opts.createdAt || now.toISOString()
+    };
+    this.notifications = this.notifications || [];
+    this.notifications.unshift(notif);
+    if (this.notifications.length > 200) this.notifications.length = 200;
+    this._persistNotifications();
+    this._refreshNotifBadge();
+    try { if (UI && typeof UI.renderNotificationList === 'function') UI.renderNotificationList(); } catch(e) {}
+    return notif;
+  },
+
   clearNotifications() {
     this.notifications.forEach(n => n.read = true);
-    const badge = document.getElementById('notif-badge');
-    if (badge) badge.classList.add('hidden');
-    UI.renderNotificationList();
+    this._persistNotifications();
+    this._refreshNotifBadge();
+    try { UI.renderNotificationList(); } catch(e) {}
     UI.showToast('Todas as notificações foram marcadas como lidas.', 'success');
   },
 
@@ -140,6 +220,10 @@ const AppState = {
   async _loadUserProfileFromSupabase(userAuth, sessionAuth) {
     if (!userAuth || !userAuth.id) return false;
     try {
+      this.currentUser.id = this.currentUser.id || userAuth.id;
+      var oldStatus = String(this.currentUser.status || 'GUEST').toUpperCase();
+      this._loadNotificationsFromStorage();
+
       var sb = this._sb();
       if (!sb) return false;
       if (sessionAuth) this.sbSession = sessionAuth;
@@ -279,6 +363,30 @@ const AppState = {
           this.currentUser.totalReceived    = this.currentUser.totalReceived || 0;
         }
       } catch(eWallet) {}
+
+      try {
+        var newStatus = String(this.currentUser.status || 'PENDING').toUpperCase();
+        if ((oldStatus !== 'ACTIVE') && (newStatus === 'ACTIVE')) {
+          var pos = this.currentUser.positionNumber || '#';
+          var bal = Number(this.currentUser.availableBalance || 0).toFixed(2);
+          try {
+            this.pushNotification(
+              '🎉 Conta ativada!',
+              'A sua posição Linear ' + pos + ' foi garantida. Dashboard, Carteira e Árvore desbloqueados.',
+              { type: 'success', icon: 'fa-circle-check' }
+            );
+          } catch(_e1) {}
+          if (bal && Number(bal) > 0) {
+            try {
+              this.pushNotification(
+                '💸 Depósito confirmado!',
+                'USD ' + bal + ' foram creditados no seu saldo disponível.',
+                { type: 'success', icon: 'fa-wallet' }
+              );
+            } catch(_e2) {}
+          }
+        }
+      } catch(_eTrans) {}
 
       return true;
     } catch(e) {
@@ -837,6 +945,28 @@ const AppState = {
       try { await this.refreshFromSupabase(); } catch(err) {}
       if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
       UI.showToast(`Bem-vindo(a) ${this.currentUser.fullName || 'usuário'}! Autenticado com sucesso.`, 'success', 'fa-circle-check');
+      try {
+        var stLogin = String(this.currentUser.status || '').toUpperCase();
+        if (stLogin === 'ACTIVE') {
+          var notifExistsWelcome = this.notifications.some(function(n){ return n.title && n.title.indexOf('Bem-vindo') >= 0; });
+          if (!notifExistsWelcome) {
+            this.pushNotification(
+              '👋 Bem-vindo(a) ao FourHash!',
+              'Autenticação efetuada com sucesso. A sua posição é ' + (this.currentUser.positionNumber || '#') + '.',
+              { type: 'success', icon: 'fa-circle-check' }
+            );
+          }
+        } else if (stLogin === 'PENDING') {
+          var notifExistsPending = this.notifications.some(function(n){ return n.title && n.title.indexOf('ativação') >= 0 || n.title.indexOf('pendente') >= 0; });
+          if (!notifExistsPending) {
+            this.pushNotification(
+              '⏳ Conta pendente de ativação',
+              'Efetue um depósito de USD 10.00 em USDT para ativar a sua posição e desbloquear o dashboard.',
+              { type: 'warning', icon: 'fa-clock' }
+            );
+          }
+        }
+      } catch(_eWelcome) {}
       var route = 'dashboard';
       try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
       if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
@@ -967,6 +1097,26 @@ const AppState = {
       try { await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession); } catch(eReload) {}
       try { await this.refreshFromSupabase(); } catch(eRefr) {}
       UI.showToast('Pagamento confirmado ✓ Conta ativada na posição ' + (this.currentUser.positionNumber || '#') + '.', 'success', 'fa-circle-check');
+      try {
+        var amtActiv = Number(amount || this.projectSettings.entryAmount || 10).toFixed(2);
+        var posActiv = this.currentUser.positionNumber || '#';
+        var notifActiv = this.notifications.some(function(n){ return n.title && (n.title.indexOf('ativada') >= 0 || n.title.indexOf('ativado') >= 0); });
+        if (!notifActiv) {
+          this.pushNotification(
+            '🎉 Conta ativada!',
+            'A sua posição Linear ' + posActiv + ' foi garantida. Dashboard, Carteira e Árvore desbloqueados.',
+            { type: 'success', icon: 'fa-circle-check' }
+          );
+        }
+        var notifDep = this.notifications.some(function(n){ return n.title && n.title.indexOf('Depósito confirmado') >= 0 && n.message.indexOf(amtActiv) >= 0; });
+        if (!notifDep) {
+          this.pushNotification(
+            '💸 Depósito confirmado!',
+            'USD ' + amtActiv + ' foram creditados no seu saldo disponível (' + network + ' · pagamento #' + String(txHash || '').slice(-10) + ').',
+            { type: 'success', icon: 'fa-wallet' }
+          );
+        }
+      } catch(_eActNotif) {}
       return true;
     } catch (e) {
       this.currentUser.status = 'ACTIVE';

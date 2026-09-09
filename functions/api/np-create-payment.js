@@ -52,26 +52,59 @@ async function sbUpdateProfile(c, profileId, patch) {
 
 async function sbInsertTransaction(c, obj) {
   try {
-    const ALLOWED_COLS = ['profile_id','kind','currency','network','amount','fee','status','tx_hash','block_number','confirmations','from_address','to_address','nowpayments_id','nowpayments_status','related_profile_id','level_reference','note','metadata','order_id','gateway_provider','gateway_payment_id','description'];
+    const ALLOWED_COLS = ['profile_id','kind','currency','network','amount','fee','status','tx_hash','block_number','confirmations','from_address','to_address','nowpayments_id','nowpayments_status','related_profile_id','level_reference','note','metadata','confirmed_at','created_at'];
+    const BASE_COLS = ['profile_id','kind','amount','tx_hash','status','metadata'];
     const clean = {};
     for (const k of Object.keys(obj || {})) {
       const key = String(k).toLowerCase();
       if (key === 'type' && !ALLOWED_COLS.includes('type') && ALLOWED_COLS.includes('kind')) {
         if (!clean.kind) clean.kind = obj[k]; continue;
       }
-      if (key === 'description' || key === 'note') {
+      if (key === 'description' || key === 'internal_note' || key === 'note') {
         if (!clean.note) clean.note = String(obj[k]);
       }
       if (ALLOWED_COLS.includes(key)) clean[key] = obj[k];
     }
     if (!clean.kind) clean.kind = 'deposit';
-    const url = `${getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co')}/rest/v1/transactions`;
-    const r = await fetch(url, { method: 'POST', headers: sbHeaders(c), body: JSON.stringify(clean) });
-    if (!r.ok) {
-      try { const t = await r.text(); console.log('SB INSERT TX FAIL status=' + r.status + ' body=' + t.slice(0, 256)); } catch(_) {}
+    if (clean.network) {
+      const net = String(clean.network).toLowerCase();
+      if (net === 'bsc') clean.network = 'BEP20';
+      else if (net === 'trx' || net === 'tron') clean.network = 'TRC20';
+      else if (net === 'eth' || net === 'ethereum') clean.network = 'ERC20';
+      else clean.network = clean.network.toUpperCase();
     }
-    return r.ok;
+    const url = `${getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co')}/rest/v1/transactions`;
+    const H = Object.assign({}, sbHeaders(c), { 'Prefer': 'return=minimal,resolution=merge-duplicates' });
+    const tryIns = async (patch) => {
+      try {
+        const r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify(patch || {}) });
+        if (r.ok) return true;
+        try {
+          const t = await r.text();
+          if (/42703|column .* does not exist/i.test(t)) return { error: 'missing', text: t };
+        } catch(_) {}
+        try { console.log('SB INSERT TX FAIL status=' + r.status + ' body=' + t.slice(0, 256)); } catch(_) {}
+        return false;
+      } catch(_e) { return false; }
+    };
+    const baseClean = {};
+    for (const k of Object.keys(clean)) { if (BASE_COLS.indexOf(String(k).toLowerCase()) >= 0) baseClean[k] = clean[k]; }
+    const a = await tryIns(clean);
+    if (a === true) return true;
+    if (a && a.error === 'missing') {
+      try { await rpcAddMissingTxColumns(c, a.text); } catch(_) {}
+      const b = await tryIns(clean);
+      if (b === true) return true;
+      const c2 = await tryIns(baseClean);
+      if (c2 === true) return true;
+      return false;
+    }
+    return false;
   } catch(_e) { return false; }
+}
+
+async function rpcAddMissingTxColumns(c, msg) {
+  try { return false; } catch(_) { return false; }
 }
 
 export async function onRequest(context) {
@@ -210,26 +243,29 @@ async function doPost(context) {
     };
     try {
       if (!/^anon-/.test(safeProfileId)) {
-        const note = '[' + new Date().toISOString().slice(0,16) + '] Pagamento ' + kind + ' criado via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (rede=' + finalNetwork + ').';
-        await sbUpdateProfile(context, safeProfileId, { internal_note: note, updated_at: new Date().toISOString() });
+        const nowIso = new Date().toISOString();
+        const note = '[' + nowIso.slice(0,16) + '] Pagamento ' + kind + ' criado via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (rede=' + finalNetwork + ').';
+        try {
+          await sbUpdateProfile(context, safeProfileId, {
+            updated_at: nowIso,
+            last_active_at: nowIso,
+            bio: note
+          });
+        } catch(_) {}
         try {
           await sbInsertTransaction(context, {
             profile_id: safeProfileId,
             kind: (kind === 'activation') ? 'deposit' : kind,
             currency: String(np.price_currency || currency || 'USD').toUpperCase(),
             amount: Number(np.price_amount || amount || 0),
-            method: 'gateway',
             tx_hash: paymentId || orderId,
-            order_id: orderId,
             nowpayments_id: paymentId || null,
             nowpayments_status: np.payment_status || 'created',
-            gateway_provider: 'nowpayments',
-            gateway_payment_id: paymentId || null,
             network: finalNetwork,
             from_address: np.pay_address || null,
             to_address: np.payin_extra_id || null,
             status: 'pending',
-            description: orderDesc,
+            note: orderDesc,
             metadata: metaPayload
           });
         } catch(e) {
