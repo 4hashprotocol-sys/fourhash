@@ -422,10 +422,11 @@ async function doPost(context) {
       return json(401, { ok: false, error: 'invalid_signature', profile_id: profileId, order_id: orderId });
     }
 
-    const finalStates = ['finished','confirmed','completed','success','partially_paid'];
-    const isPaid = finalStates.indexOf(payStatus) >= 0 || /paid|finished|confirmed|complete|success/i.test(payStatus);
+    const finalStates = ['finished','confirmed','completed','success','partially_paid','wrong_asset','paid','payment_received','settled'];
+    const isPaid = finalStates.indexOf(payStatus) >= 0 || /(paid|finish|confirm|complete|success|settle|wrong.?asset|received)/i.test(payStatus);
     const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
 
+    const parentPaymentId = String(body && (body.parent_payment_id || body.original_payment_id || body.original_id || body.payment_id_of_failed_tx || '') || '').trim();
     if (!profileId && orderId) {
       const parsedFull = extractProfileIdFromOrderId(orderId);
       if (parsedFull && parsedFull.length >= 32) profileId = parsedFull;
@@ -465,10 +466,12 @@ async function doPost(context) {
         const filters = [];
         if (paymentId) filters.push('nowpayments_id=eq.' + encodeURIComponent(paymentId));
         if (paymentId) filters.push('tx_hash=eq.' + encodeURIComponent(paymentId));
+        if (parentPaymentId) filters.push('nowpayments_id=eq.' + encodeURIComponent(parentPaymentId));
+        if (parentPaymentId) filters.push('tx_hash=eq.' + encodeURIComponent(parentPaymentId));
         if (body && body.payin_hash) filters.push('tx_hash=eq.' + encodeURIComponent(String(body.payin_hash)));
         if (orderId) filters.push('or=(nowpayments_id.eq.' + encodeURIComponent(orderId) + ',metadata->>order_id.eq.' + encodeURIComponent(orderId) + ')');
         if (profileId) filters.push('profile_id=eq.' + encodeURIComponent(profileId));
-        let q = filters.length ? filters.slice(0, 4).join(',') : ('id=is.null');
+        let q = filters.length ? filters.slice(0, 8).join(',') : ('id=is.null');
         try { txMatched = Boolean(await sbUpdateTransactions(context, q, patchTx)); } catch(_) { txMatched = false; }
         if (!txMatched) {
           try {
@@ -491,6 +494,29 @@ async function doPost(context) {
             const rows2 = await sbGetTransactions(context, ('or=(nowpayments_id.eq.' + encodeURIComponent(paymentId) + ',tx_hash.eq.' + encodeURIComponent(paymentId) + ')&select=profile_id,id,amount&limit=1'));
             if (Array.isArray(rows2) && rows2.length && rows2[0].profile_id) {
               profileId = String(rows2[0].profile_id);
+            }
+          } catch(_) {}
+        }
+        if (!profileId && parentPaymentId) {
+          try {
+            const rows3 = await sbGetTransactions(context, ('or=(nowpayments_id.eq.' + encodeURIComponent(parentPaymentId) + ',tx_hash.eq.' + encodeURIComponent(parentPaymentId) + ')&select=profile_id,id,amount&limit=1'));
+            if (Array.isArray(rows3) && rows3.length && rows3[0].profile_id) {
+              profileId = String(rows3[0].profile_id);
+            }
+          } catch(_) {}
+        }
+        if (!profileId && (paymentId || parentPaymentId)) {
+          try {
+            const allIds = [paymentId, parentPaymentId].filter(Boolean);
+            const rowsAny = await sbGetTransactions(context, 'status=in.(pending)&kind=in.(deposit,adjustment_credit)&created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + '&select=profile_id,id,amount,nowpayments_id,tx_hash&order=created_at.desc&limit=50');
+            if (Array.isArray(rowsAny) && rowsAny.length) {
+              for (let i = 0; i < rowsAny.length; i++) {
+                const r = rowsAny[i];
+                const cand = [String(r.nowpayments_id || ''), String(r.tx_hash || '')].map(s => s.trim());
+                if (allIds.some(id => cand.some(c => c && c.length > 2 && (c === id || id.indexOf(c) >= 0 || c.indexOf(id) >= 0)))) {
+                  if (r.profile_id) { profileId = String(r.profile_id); break; }
+                }
+              }
             }
           } catch(_) {}
         }

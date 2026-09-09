@@ -253,15 +253,21 @@ async function doPost(context) {
           });
         } catch(_) {}
         try {
+          const payCurr = String(np.pay_currency || payCurrency || '').toLowerCase();
+          let netFinal = 'BEP20';
+          if (/trc20|usdttrc20|tron|trx/i.test(payCurr)) netFinal = 'TRC20';
+          else if (/erc20|usdterc20|ethereum|eth/i.test(payCurr)) netFinal = 'ERC20';
+          else if (/bep20|usdtbsc|usdtbep20|bsc/i.test(payCurr)) netFinal = 'BEP20';
+          const currencyFinal = 'USDT';
           await sbInsertTransaction(context, {
             profile_id: safeProfileId,
             kind: (kind === 'activation') ? 'deposit' : kind,
-            currency: String(np.price_currency || currency || 'USD').toUpperCase(),
+            currency: currencyFinal,
             amount: Number(np.price_amount || amount || 0),
-            tx_hash: paymentId || orderId,
+            tx_hash: null,
             nowpayments_id: paymentId || null,
             nowpayments_status: np.payment_status || 'created',
-            network: finalNetwork,
+            network: netFinal,
             from_address: np.pay_address || null,
             to_address: np.payin_extra_id || null,
             status: 'pending',

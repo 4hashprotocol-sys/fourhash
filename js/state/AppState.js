@@ -388,6 +388,8 @@ const AppState = {
         }
       } catch(_eTrans) {}
 
+      try { await this.refreshReferrals(); } catch(_eRef) {}
+
       return true;
     } catch(e) {
       this.sbError = (e && e.message) ? e.message : String(e);
@@ -454,7 +456,8 @@ const AppState = {
         this.refreshSupportTickets(),
         this.refreshFinanceProblems(),
         this.refreshAdminSummaries(),
-        this.refreshAdminUsersList()
+        this.refreshAdminUsersList(),
+        this.refreshReferrals()
       ]);
       return true;
     } catch (e) {
@@ -970,6 +973,8 @@ const AppState = {
       var route = 'dashboard';
       try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
       if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
+      try { this.npStartReconcileWatchdog(); } catch(_rd1) {}
+      try { this.npReconcilePendingPayments({ force: true }); } catch(_rd2) {}
       return true;
     } catch (e) {
       var errStr = String((e && e.message) || 'Erro login' + '').toLowerCase();
@@ -1243,6 +1248,138 @@ const AppState = {
       if (typeof Router !== 'undefined') Router.refresh();
       return true;
     } catch (e) { UI.showToast((e && e.message) || 'Erro resolver financeiro', 'error'); return false; }
-  }
+  },
 
+  _reconcileTimer: null,
+  _reconcileLastRunAt: 0,
+
+  async npReconcilePendingPayments(opts) {
+    opts = opts || {};
+    if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) return { ok: false, skipped: 'no_auth' };
+    try {
+      if (!opts.force) {
+        const diff = Date.now() - Number(this._reconcileLastRunAt || 0);
+        if (diff < (1000 * 60 * 1)) return { ok: true, skipped: 'rate_limited', wait_ms: ((1000 * 60 * 1) - diff) };
+      }
+      this._reconcileLastRunAt = Date.now();
+      const endpoint = '/api/np-reconcile';
+      const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (!r || !r.ok) { try { console.log('[reconcile] HTTP ' + (r ? r.status : 'null')); } catch(_) {} return { ok: false, error: 'http_' + (r ? r.status : 'network') }; }
+      const data = await r.json().catch(function(){ return {}; });
+      if (data && (Number(data.activated) > 0 || Number(data.already_confirmed) > 0)) {
+        try { await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession); } catch(_) {}
+        try { await this.refreshFromSupabase(); } catch(_) {}
+        try { if (typeof Router !== 'undefined' && Router.refresh) Router.refresh(); } catch(_) {}
+        try {
+          if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
+            UI.showToast('Sistema verificou pagamentos pendentes · ' + Number(data.activated || 0) + ' ativação(ões) aplicadas.', 'success', 'fa-circle-check', 4500);
+          }
+        } catch(_) {}
+      }
+      return data || { ok: true };
+    } catch (e) {
+      try { console.log('[reconcile] erro:', e && e.message ? e.message : String(e)); } catch(_) {}
+      return { ok: false, error: (e && e.message) ? e.message : String(e) };
+    }
+  },
+
+  npStartReconcileWatchdog() {
+    try {
+      if (this._reconcileTimer) { try { clearInterval(this._reconcileTimer); } catch(_) {} this._reconcileTimer = null; }
+      var self = this;
+      var fn = function(){ try { if (self.isAuthenticated) self.npReconcilePendingPayments({ force: false }); } catch(_x) {} };
+      setTimeout(fn, 12000);
+      this._reconcileTimer = setInterval(fn, 1000 * 60 * 3);
+      try { console.log('[reconcile] Watchdog iniciado (3/3 min).'); } catch(_) {}
+      return true;
+    } catch(e) { return false; }
+  },
+
+  async refreshReferrals() {
+    try {
+      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) {
+        if (this.referrals) { this.referrals.direct = []; this.referrals.indirect = []; }
+        if (this.currentUser) {
+          this.currentUser.directReferralsCount = 0;
+          this.currentUser.activeReferralsCount = 0;
+          this.currentUser.inactiveReferralsCount = 0;
+        }
+        return false;
+      }
+      var me = this.currentUser.id;
+      var sb = this._sb();
+      if (!sb) return false;
+
+      var list = [];
+      try {
+        var rRpc = await sb.rpc('get_my_direct_referrals', { me: me });
+        if (rRpc && Array.isArray(rRpc.data)) {
+          list = rRpc.data;
+        } else {
+          var rFb = await sb.from('profiles')
+            .select('id, username, full_name, status, level_number, created_at, position_index, line_row, line_seat')
+            .eq('upline_id', me)
+            .order('created_at', { ascending: true });
+          if (rFb && Array.isArray(rFb.data)) {
+            list = rFb.data.map(function (p) {
+              var pos = '-';
+              if (p.position_index) pos = '#' + p.position_index;
+              else if (p.line_row && p.line_seat) pos = '#' + p.line_row + '-' + p.line_seat;
+              return {
+                id: p.id,
+                username: p.username || '',
+                full_name: p.full_name || '',
+                status: p.status || 'pending',
+                level_number: Number(p.level_number || 0),
+                created_at: p.created_at,
+                bonus_earned: 0,
+                position_code: pos
+              };
+            });
+          }
+        }
+      } catch (_eRef) {
+        try {
+          var rFb2 = await sb.from('profiles')
+            .select('id, username, full_name, status, level_number, created_at, position_index, line_row, line_seat')
+            .eq('upline_id', me)
+            .order('created_at', { ascending: true });
+          if (rFb2 && Array.isArray(rFb2.data)) {
+            list = rFb2.data.map(function (p) {
+              var pos = '-';
+              if (p.position_index) pos = '#' + p.position_index;
+              else if (p.line_row && p.line_seat) pos = '#' + p.line_row + '-' + p.line_seat;
+              return {
+                id: p.id,
+                username: p.username || '',
+                full_name: p.full_name || '',
+                status: p.status || 'pending',
+                level_number: Number(p.level_number || 0),
+                created_at: p.created_at,
+                bonus_earned: 0,
+                position_code: pos
+              };
+            });
+          }
+        } catch (_eFb) {}
+      }
+
+      if (!this.referrals) this.referrals = { direct: [], indirect: [] };
+      this.referrals.direct = list || [];
+      this.referrals.indirect = [];
+      var total = (this.referrals.direct && this.referrals.direct.length) ? this.referrals.direct.length : 0;
+      var activeCount = 0;
+      for (var i = 0; i < total; i++) {
+        var ref = this.referrals.direct[i];
+        if (ref && String(ref.status || '').toLowerCase() === 'active') activeCount++;
+      }
+      this.currentUser.directReferralsCount = total;
+      this.currentUser.activeReferralsCount = activeCount;
+      this.currentUser.inactiveReferralsCount = Math.max(0, total - activeCount);
+      return true;
+    } catch (e) {
+      try { console.log('[referrals] erro:', e && e.message ? e.message : String(e)); } catch(_) {}
+      return false;
+    }
+  }
 };
