@@ -895,7 +895,16 @@ const Views = {
   Wallet() {
     const u = AppState.currentUser;
     const s = AppState.projectSettings.withdraw;
-    const totalWithdrawn = AppState.withdrawals.reduce((sum, w) => sum + w.netAmount, 0);
+    const _st = (v) => Number(v || 0);
+    const uiTotalDeposited = _st(u.totalDeposited);
+    const uiTotalBonusTeam = _st(u.totalBonusTeam);
+    const uiTotalBonusMatrix = _st(u.totalBonusMatrix);
+    const uiTotalBonus = uiTotalBonusTeam + uiTotalBonusMatrix;
+    const uiTotalWithdrawn = _st(u.totalWithdrawn);
+    const convRate = _st(u.directReferralsCount) > 0
+      ? Math.round((_st(u.activeReferralsCount) / _st(u.directReferralsCount)) * 100)
+      : 0;
+
     const txTypeKey = (t) => t === 'DEPÓSITO' ? 'depositBonus' : t === 'POSICIONAMENTO' ? 'positioningBonus' : 'bonusDirect';
     const txStatusKey = (st) => st === 'Confirmado' ? 'statusConfirmed' : st === 'Processando' ? 'statusProcessing' : 'statusPending';
     const wdStatusKey = (st) => st === 'Concluído' ? 'statusCompleted' : st === 'Processando' ? 'statusProcessing' : 'statusPending';
@@ -916,34 +925,40 @@ const Views = {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="availableBalance">Saldo Disponível</div>
-            <div class="text-2xl font-black text-white font-mono">$ ${u.availableBalance.toFixed(2)}</div>
+            <div class="text-2xl font-black text-white font-mono">$ ${_st(u.availableBalance).toFixed(2)}</div>
             <div class="text-[10px] text-brand mt-1 font-mono" data-i18n="readyToUse">Pronto para saque / uso</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="pendingBalance">Saldo Pendente</div>
-            <div class="text-2xl font-black text-amber-400 font-mono">$ ${u.pendingBalance.toFixed(2)}</div>
+            <div class="text-2xl font-black text-amber-400 font-mono">$ ${_st(u.pendingBalance).toFixed(2)}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="pendingBlockConf">Em confirmação de bloco</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
-            <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="totalReceived">Total Recebido</div>
-            <div class="text-2xl font-black text-brand font-mono">$ ${u.totalReceived.toFixed(2)}</div>
-            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="bonusesDirectPos">Bônus diretos + posicionamento</div>
+            <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="walletCardTotalDeposited">Total Depositado</div>
+            <div class="text-2xl font-black text-brand font-mono">$ ${uiTotalDeposited.toFixed(2)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="walletCardDepLegend">Valores que você enviou</div>
+          </div>
+
+          <div class="rounded-2xl border border-emerald-500/30 bg-brand-card p-5">
+            <div class="text-xs font-mono text-emerald-300 mb-1" data-i18n="walletCardBonusTeam">Bônus de Equipe</div>
+            <div class="text-2xl font-black text-emerald-400 font-mono">$ ${uiTotalBonusTeam.toFixed(2)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="walletCardBonusLegend">N1 50% + N2-N5 2.5%</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
             <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="directReferrals">Indicados Ativos</div>
-            <div class="text-2xl font-black text-white font-mono">${u.activeReferralsCount} / ${u.directReferralsCount}</div>
-            <div class="text-[10px] text-gray-400 mt-1 font-mono"><span data-i18n="convRateLabel">Taxa de conversão</span>: 78%</div>
+            <div class="text-2xl font-black text-white font-mono">${_st(u.activeReferralsCount)} / ${_st(u.directReferralsCount)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono"><span data-i18n="convRateLabel">Taxa de conversão</span>: ${convRate}%</div>
           </div>
 
           <div class="rounded-2xl border border-amber-500/30 bg-brand-card p-5">
             <div class="text-xs font-mono text-amber-300 mb-1" data-i18n="withdrawCardTotalWithdrawn">Total Sacado</div>
-            <div class="text-2xl font-black text-amber-200 font-mono">$ ${totalWithdrawn.toFixed(2)}</div>
+            <div class="text-2xl font-black text-amber-200 font-mono">$ ${uiTotalWithdrawn.toFixed(2)}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono">${AppState.withdrawals.length} <span data-i18n="withdrawalsCountLabel">saques • USDT BEP20</span></div>
           </div>
         </div>
