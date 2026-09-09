@@ -18,7 +18,23 @@ const TreeEngine = {
 
   render() {
     const container = document.getElementById('tree-canvas');
-    if (!container) return;
+    if (!container) {
+      try { console.log('[TreeEngine.render] CANCELADO: #tree-canvas não existe no DOM'); } catch(_) {}
+      return;
+    }
+    var totalLvl = 0;
+    var totalPos = 0;
+    try {
+      if (AppState && AppState.treeLevels && Array.isArray(AppState.treeLevels)) {
+        totalLvl = AppState.treeLevels.length;
+        for (var tl = 0; tl < AppState.treeLevels.length; tl++) {
+          if (AppState.treeLevels[tl] && AppState.treeLevels[tl].positions && Array.isArray(AppState.treeLevels[tl].positions)) {
+            totalPos += AppState.treeLevels[tl].positions.length;
+          }
+        }
+      }
+    } catch(_) {}
+    try { console.log('[TreeEngine.render] INICIADO | níveis:', totalLvl, '| total posições filhas:', totalPos, '| currentUser:', (AppState && AppState.currentUser && AppState.currentUser.username) ? '@' + AppState.currentUser.username : 'n/d'); } catch(_) {}
 
     let html = '';
 
@@ -79,6 +95,7 @@ const TreeEngine = {
 
     container.innerHTML = html;
     this.updateTransform();
+    try { console.log('[TreeEngine.render] FINALIZADO com sucesso | HTML escrito no #tree-canvas'); } catch(_) {}
   },
 
   bindEvents() {

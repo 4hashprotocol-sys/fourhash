@@ -133,24 +133,6 @@ const AppState = {
       var sb = this._sb();
       if (!sb) { this.treeLevels = []; return false; }
 
-      var allRows = [];
-      try {
-        var rAll = await sb.from('profiles')
-          .select('id, username, full_name, status, level_number, created_at, position_index, line_row, line_seat, upline_id')
-          .not('upline_id', 'is', null)
-          .order('created_at', { ascending: true });
-        if (rAll && Array.isArray(rAll.data)) allRows = rAll.data;
-      } catch(_eTr) { allRows = []; }
-
-      var byParent = {};
-      for (var i = 0; i < allRows.length; i++) {
-        var r = allRows[i];
-        var pid = String(r.upline_id || '').toLowerCase();
-        if (!pid) continue;
-        if (!byParent[pid]) byParent[pid] = [];
-        byParent[pid].push(r);
-      }
-
       var levels = [];
       for (var ln = 2; ln <= 12; ln++) {
         levels.push({
@@ -168,6 +150,7 @@ const AppState = {
         var posNum = '-';
         try {
           if (profile.position_index) posNum = '#' + profile.position_index;
+          else if (profile.position_code) posNum = String(profile.position_code);
           else if (profile.line_row && profile.line_seat) posNum = '#' + profile.line_row + '-' + profile.line_seat;
         } catch(_) {}
         var dt = '';
@@ -186,36 +169,142 @@ const AppState = {
         });
       }
 
+      var allRows = [];
+      var byParent = {};
+      var usedFallback = 'fb1_direct_profiles';
+
+      try {
+        var rAll = await sb.from('profiles')
+          .select('id, username, full_name, status, level_number, created_at, position_index, line_row, line_seat, upline_id')
+          .not('upline_id', 'is', null)
+          .order('created_at', { ascending: true });
+        if (rAll && Array.isArray(rAll.data)) allRows = rAll.data;
+        try { console.log('[refreshTreeNetwork][fb1_direct_profiles] rows carregadas:', allRows.length); } catch(_) {}
+      } catch(_eTr) {
+        allRows = [];
+        try { console.log('[refreshTreeNetwork][fb1_direct_profiles] FALHOU (RLS provavelmente):', _eTr && _eTr.message ? _eTr.message : String(_eTr)); } catch(_) {}
+      }
+
+      if (allRows.length > 0) {
+        for (var i = 0; i < allRows.length; i++) {
+          var r = allRows[i];
+          var pid = String(r.upline_id || '').toLowerCase();
+          if (!pid) continue;
+          if (!byParent[pid]) byParent[pid] = [];
+          byParent[pid].push(r);
+        }
+        var fb1TotalChildren = (byParent[me] || []).length;
+        try { console.log('[refreshTreeNetwork][fb1_direct_profiles] filhos diretos de @me:', fb1TotalChildren); } catch(_) {}
+      }
+
+      var directReferralsCount = 0;
+      try {
+        if (this.referrals && this.referrals.direct && Array.isArray(this.referrals.direct)) {
+          directReferralsCount = this.referrals.direct.length;
+        }
+      } catch(_) {}
+
+      if (allRows.length === 0 || (directReferralsCount > 0 && (byParent[me] || []).length < directReferralsCount)) {
+        usedFallback = 'fb2_rpc_bfs_get_my_direct_referrals';
+        try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] INICIANDO BFS via RPC get_my_direct_referrals (SECURITY DEFINER bypass RLS)'); } catch(_) {}
+        allRows = [];
+        byParent = {};
+        var visitedIds = new Set([me]);
+        var currentLevelIds = [me];
+        for (var bfsDepth = 1; bfsDepth <= 11; bfsDepth++) {
+          var nextLevelIds = [];
+          for (var bfsJ = 0; bfsJ < currentLevelIds.length; bfsJ++) {
+            var cid = currentLevelIds[bfsJ];
+            var nodeChildren = [];
+            try {
+              var rpcRes = await sb.rpc('get_my_direct_referrals', { me: cid });
+              if (rpcRes && Array.isArray(rpcRes.data)) {
+                nodeChildren = rpcRes.data;
+              } else if (Array.isArray(rpcRes)) {
+                nodeChildren = rpcRes;
+              }
+            } catch(_rpcErr) {
+              nodeChildren = [];
+              try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] ERRO RPC nó', cid, ':', _rpcErr && _rpcErr.message ? _rpcErr.message : String(_rpcErr)); } catch(_) {}
+            }
+            try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] nível', bfsDepth + 1, 'nó', cid, '→ filhos:', nodeChildren.length); } catch(_) {}
+            if (!byParent[cid]) byParent[cid] = [];
+            for (var bfsK = 0; bfsK < nodeChildren.length; bfsK++) {
+              var ch = nodeChildren[bfsK];
+              var chid = String(ch.id || '').toLowerCase();
+              if (!chid || visitedIds.has(chid)) continue;
+              visitedIds.add(chid);
+              ch.upline_id = cid;
+              byParent[cid].push(ch);
+              allRows.push(ch);
+              nextLevelIds.push(chid);
+            }
+          }
+          currentLevelIds = nextLevelIds;
+          if (!currentLevelIds.length) break;
+        }
+      }
+
+      var totalFilhos = (byParent[me] || []).length;
+      if (totalFilhos === 0 && directReferralsCount > 0) {
+        usedFallback = 'fb3_referrals_direct_fallback';
+        try { console.log('[refreshTreeNetwork][fb3_referrals_direct] USANDO AppState.referrals.direct (já carregado:', directReferralsCount, ')'); } catch(_) {}
+        try {
+          if (this.referrals && this.referrals.direct && Array.isArray(this.referrals.direct)) {
+            byParent[me] = [];
+            for (var f3 = 0; f3 < this.referrals.direct.length; f3++) {
+              var ref = this.referrals.direct[f3];
+              var rid = String(ref.id || '').toLowerCase();
+              if (!rid || rid === me) continue;
+              ref.upline_id = me;
+              byParent[me].push(ref);
+              allRows.push(ref);
+            }
+          }
+        } catch(_e3) {}
+      }
+
       var currentIds = [me];
       for (var depth = 1; depth <= 11; depth++) {
         var relLevel = depth + 1;
         var nextIds = [];
         for (var j = 0; j < currentIds.length; j++) {
-          var cid = currentIds[j];
-          var children = byParent[cid] || [];
+          var cid2 = currentIds[j];
+          var children = byParent[cid2] || [];
           for (var k = 0; k < children.length; k++) {
-            var ch = children[k];
-            var chid = String(ch.id || '').toLowerCase();
-            if (chid === me) continue;
-            pushNode(ch, relLevel);
-            nextIds.push(chid);
+            var ch2 = children[k];
+            var chid2 = String(ch2.id || '').toLowerCase();
+            if (chid2 === me) continue;
+            pushNode(ch2, relLevel);
+            nextIds.push(chid2);
           }
         }
         currentIds = nextIds;
         if (!currentIds.length) break;
       }
 
+      var totalPositions = 0;
+      for (var lc = 0; lc < levels.length; lc++) totalPositions += levels[lc].positions.length;
+
       this.treeLevels = levels;
       this.treeNodes = allRows;
+
+      try { console.log('[refreshTreeNetwork] FINALIZADO | fallback usado:', usedFallback, '| total nós carregados:', allRows.length, '| total posições na árvore:', totalPositions); } catch(_) {}
       try {
-        if (typeof window !== 'undefined' && window.TreeEngine && typeof window.TreeEngine.render === 'function') {
-          var viewport = document.getElementById('tree-viewport');
-          if (viewport) window.TreeEngine.render();
+        if (typeof window !== 'undefined') {
+          window._treeReady = true;
+          window._treeLoadedAt = Date.now();
+          if (window.TreeEngine && typeof window.TreeEngine.render === 'function') {
+            var viewport = document.getElementById('tree-viewport');
+            if (viewport) {
+              try { window.TreeEngine.render(); } catch(_eRd) {}
+            }
+          }
         }
-      } catch(_eRd) {}
+      } catch(_eEvt) {}
       return true;
     } catch(e) {
-      try { console.log('[tree] erro:', e && e.message ? e.message : String(e)); } catch(_) {}
+      try { console.log('[refreshTreeNetwork] ERRO FATAL:', e && e.message ? e.message : String(e)); } catch(_) {}
       this.treeLevels = [];
       this.treeNodes = [];
       return false;

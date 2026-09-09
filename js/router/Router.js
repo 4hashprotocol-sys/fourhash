@@ -233,19 +233,30 @@ const Router = {
         break;
       case 'position':
         app.innerHTML = Views.Position();
-        TreeEngine.init();
+        try { TreeEngine.init(); } catch(_) {}
         (function(){
           var tries = 0;
+          var maxTries = 15;
           var fn = function(){
+            var hasData = false;
             try {
-              if (window.AppState && window.AppState.treeLevels && window.AppState.treeLevels.length) {
-                TreeEngine.render();
+              if (window.AppState && window.AppState.treeLevels && Array.isArray(window.AppState.treeLevels)) {
+                hasData = window.AppState.treeLevels.some(function(l){ return l && l.positions && l.positions.length > 0; });
               }
-            } catch(_){}
+            } catch(_) { hasData = false; }
+            try {
+              if (window._treeReady || hasData) {
+                var vp = document.getElementById('tree-viewport');
+                if (vp) {
+                  try { TreeEngine.render(); } catch(e) { try { console.log('[Router.position] TreeEngine.render erro:', e && e.message ? e.message : String(e)); } catch(_) {} }
+                  try { console.log('[Router.position] Árvore renderizada | window._treeReady:', !!window._treeReady, '| hasPositions:', hasData, '| tentativa:', tries + 1); } catch(_) {}
+                }
+              }
+            } catch(_) {}
             tries++;
-            if (tries < 6) setTimeout(fn, tries === 1 ? 800 : 1200);
+            if (tries < maxTries) setTimeout(fn, (tries < 3) ? 600 : 1200);
           };
-          setTimeout(fn, 400);
+          setTimeout(fn, 300);
         })();
         break;
       case 'wallet':
