@@ -231,6 +231,10 @@ const Views = {
 
   Dashboard() {
     const u = AppState.currentUser;
+    const _st = (v) => Number(v || 0);
+    const uiAvailable = _st(u.availableBalance);  // SÓ bônus líquido, NÃO depósito
+    const uiBlocked   = _st(u.blockedActivationBalance);
+    const hasBonusToWithdraw = uiAvailable > 0;
     const txTypeKey = (t) => t === 'DEPÓSITO' ? 'depositBonus' : t === 'POSICIONAMENTO' ? 'positioningBonus' : 'bonusDirect';
     const txStatusKey = (s) => s === 'Confirmado' ? 'statusConfirmed' : s === 'Processando' ? 'statusProcessing' : 'statusPending';
     return `
@@ -271,10 +275,11 @@ const Views = {
             <div class="text-[10px] text-gray-400 mt-1">${I18n.t('currentLevel')}: <span class="text-white font-bold">Nível 0${u.level} / 12</span></div>
           </div>
 
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4 sm:p-5">
+          <div class="rounded-2xl border ${hasBonusToWithdraw ? 'border-emerald-500/35' : 'border-brand-border'} bg-brand-card p-4 sm:p-5">
             <div class="text-xs text-gray-400 font-mono mb-1" data-i18n="availableBalance">Saldo Disponível</div>
-            <div class="text-base sm:text-lg font-mono font-extrabold text-white">$ ${u.availableBalance.toFixed(2)}</div>
-            <div class="text-[10px] text-brand mt-1 font-mono">USDT BEP20</div>
+            <div class="text-base sm:text-lg font-mono font-extrabold ${hasBonusToWithdraw ? 'text-emerald-400' : 'text-gray-500'}">$ ${uiAvailable.toFixed(2)}</div>
+            <div class="text-[10px] mt-1 font-mono ${hasBonusToWithdraw ? 'text-emerald-300/90' : 'text-gray-500'}" data-i18n="bonusOnlyHintShort">Apenas bônus de rede (N1 → N5)</div>
+            ${uiBlocked > 0 && !hasBonusToWithdraw ? `<div class="text-[9px] mt-1 text-red-400/90 font-mono"><i class="fa-solid fa-lock mr-1"></i>Ativação bloqueada: $${uiBlocked.toFixed(2)} (não-sacável)</div>` : ''}
           </div>
 
         </div>
@@ -999,6 +1004,9 @@ const Views = {
     const u = AppState.currentUser;
     const s = AppState.projectSettings.withdraw;
     const _st = (v) => Number(v || 0);
+    const uiBlockedActivation = _st(u.blockedActivationBalance);
+    const uiAvailable   = _st(u.availableBalance);    // SÓ BÔNUS LÍQUIDO (bônus ganhos - saques já feitos)
+    const uiPending     = _st(u.pendingBonusBalance); // bônus pendentes (confirmação rede)
     const uiTotalDeposited = _st(u.totalDeposited);
     const uiTotalBonusTeam = _st(u.totalBonusTeam);
     const uiTotalBonusMatrix = _st(u.totalBonusMatrix);
@@ -1007,6 +1015,9 @@ const Views = {
     const convRate = _st(u.directReferralsCount) > 0
       ? Math.round((_st(u.activeReferralsCount) / _st(u.directReferralsCount)) * 100)
       : 0;
+    const hasBonusToWithdraw = uiAvailable > 0;
+    const withdrawDisabledAttr = hasBonusToWithdraw ? '' : 'disabled';
+    const withdrawDisabledClass = hasBonusToWithdraw ? '' : 'opacity-60 cursor-not-allowed grayscale pointer-events-none';
 
     const txTypeKey = (t) => t === 'DEPÓSITO' ? 'depositBonus' : t === 'POSICIONAMENTO' ? 'positioningBonus' : 'bonusDirect';
     const txStatusKey = (st) => st === 'Confirmado' ? 'statusConfirmed' : st === 'Processando' ? 'statusProcessing' : 'statusPending';
@@ -1019,8 +1030,9 @@ const Views = {
             <p class="text-xs text-gray-400" data-i18n="walletSubtitle">Controle financeiro transparente com rastreio na BSC e saques apenas em <span class="text-brand font-bold">USDT BEP20</span></p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <button onclick="UI.openWithdrawModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-bold text-xs shadow-neon transition shadow-amber-500/20 border border-amber-400/40">
-              <i class="fa-solid fa-money-bill-transfer mr-1.5"></i><span data-i18n="withdrawBtn">Sacar em USDT BEP20</span>
+            <button onclick="UI.openWithdrawModal()" ${withdrawDisabledAttr} class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-black font-bold text-xs shadow-neon transition shadow-amber-500/20 border border-amber-400/40 ${withdrawDisabledClass}" title="${hasBonusToWithdraw ? '' : I18n.t('withdrawNoBonusHint') || 'Você ainda não tem ganhos de rede para sacar. Ative indicados N1 a N5.'}">
+              <i class="fa-solid fa-money-bill-transfer mr-1.5"></i><span>${I18n.t('withdrawBtn') || 'Sacar em USDT BEP20'}</span>
+              ${!hasBonusToWithdraw ? '<span class="ml-2 text-[10px] font-mono opacity-80">(' + (I18n.t('withdrawNoBonusShort') || 'Sem ganhos') + ')</span>' : ''}
             </button>
             <button onclick="Router.navigate('deposit')" class="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs shadow-neon transition">
               <i class="fa-solid fa-plus mr-1.5"></i><span data-i18n="newDepositBtn">Novo Depósito</span>
@@ -1028,17 +1040,38 @@ const Views = {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
-            <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="availableBalance">Saldo Disponível</div>
-            <div class="text-2xl font-black text-white font-mono">$ ${_st(u.availableBalance).toFixed(2)}</div>
-            <div class="text-[10px] text-brand mt-1 font-mono" data-i18n="readyToUse">Pronto para saque / uso</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="rounded-2xl border ${hasBonusToWithdraw ? 'border-emerald-500/35' : 'border-white/10'} bg-brand-card p-5">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div class="text-xs font-mono ${hasBonusToWithdraw ? 'text-emerald-300' : 'text-gray-400'}" data-i18n="availableBalance">Saldo Disponível</div>
+              <div class="shrink-0 px-2 py-0.5 rounded-md border ${hasBonusToWithdraw ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-white/5 text-gray-500'} text-[10px] font-mono font-bold uppercase tracking-wider">
+                <i class="fa-solid ${hasBonusToWithdraw ? 'fa-circle-check mr-1' : 'fa-lock mr-1'}"></i>${hasBonusToWithdraw ? (I18n.t('readyToWithdraw') || 'Liberado') : (I18n.t('noBonusYet') || 'Aguardando rede')}
+              </div>
+            </div>
+            <div class="text-2xl font-black ${hasBonusToWithdraw ? 'text-emerald-400' : 'text-gray-400'} font-mono">$ ${uiAvailable.toFixed(2)}</div>
+            <div class="text-[10px] mt-1 font-mono ${hasBonusToWithdraw ? 'text-emerald-300/90' : 'text-gray-500'}" data-i18n="bonusOnlyHint">Apenas bônus de rede (N1 → N5) podem ser sacados</div>
           </div>
 
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
-            <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="pendingBalance">Saldo Pendente</div>
-            <div class="text-2xl font-black text-amber-400 font-mono">$ ${_st(u.pendingBalance).toFixed(2)}</div>
-            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="pendingBlockConf">Em confirmação de bloco</div>
+          <div class="rounded-2xl border border-amber-500/25 bg-brand-card p-5">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div class="text-xs font-mono text-gray-400" data-i18n="pendingBalance">Bônus Pendente</div>
+              <div class="shrink-0 px-2 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('confirmingLabel') || 'Confirmando'}
+              </div>
+            </div>
+            <div class="text-2xl font-black text-amber-400 font-mono">$ ${uiPending.toFixed(2)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="pendingBlockConf">Em confirmação de bloco na rede</div>
+          </div>
+
+          <div class="rounded-2xl border border-red-500/20 bg-brand-card p-5">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <div class="text-xs font-mono text-red-300/90" data-i18n="blockedActivationLabel">Saldo de Ativação Bloqueado</div>
+              <div class="shrink-0 px-2 py-0.5 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-lock mr-1"></i>${I18n.t('nonWithdrawable') || 'Não-sacável'}
+              </div>
+            </div>
+            <div class="text-2xl font-black text-red-400 font-mono">$ ${uiBlockedActivation.toFixed(2)}</div>
+            <div class="text-[10px] text-gray-500 mt-1 font-mono" data-i18n="blockedActivationHint">Seu depósito inicial ativa a conta, não pode ser sacado — vira Fundo Projeto 40% + Bônus 60% distribuído ao seu upline.</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
@@ -1048,15 +1081,9 @@ const Views = {
           </div>
 
           <div class="rounded-2xl border border-emerald-500/30 bg-brand-card p-5">
-            <div class="text-xs font-mono text-emerald-300 mb-1" data-i18n="walletCardBonusTeam">Bônus de Equipe</div>
-            <div class="text-2xl font-black text-emerald-400 font-mono">$ ${uiTotalBonusTeam.toFixed(2)}</div>
-            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="walletCardBonusLegend">N1 50% + N2-N5 2.5%</div>
-          </div>
-
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
-            <div class="text-xs font-mono text-gray-400 mb-1" data-i18n="directReferrals">Indicados Ativos</div>
-            <div class="text-2xl font-black text-white font-mono">${_st(u.activeReferralsCount)} / ${_st(u.directReferralsCount)}</div>
-            <div class="text-[10px] text-gray-400 mt-1 font-mono"><span data-i18n="convRateLabel">Taxa de conversão</span>: ${convRate}%</div>
+            <div class="text-xs font-mono text-emerald-300 mb-1" data-i18n="walletCardBonusTeam">Bônus de Equipe (Histórico)</div>
+            <div class="text-2xl font-black text-emerald-400 font-mono">$ ${uiTotalBonus.toFixed(2)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono" data-i18n="walletCardBonusLegend">N1 50% + N2-N5 2,5% (recebido até hoje)</div>
           </div>
 
           <div class="rounded-2xl border border-amber-500/30 bg-brand-card p-5">
@@ -1152,8 +1179,9 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono" data-i18n="recordWithdrawals">Histórico de Saques (USDT BEP20)</h3>
-            <button onclick="UI.openWithdrawModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 text-amber-300 font-bold text-[11px] font-mono transition">
+            <button onclick="UI.openWithdrawModal()" ${withdrawDisabledAttr} class="px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30 text-amber-300 font-bold text-[11px] font-mono transition ${withdrawDisabledClass}">
               <i class="fa-solid fa-plus mr-1 text-[9px]"></i><span data-i18n="wdNewBtn">Novo Saque</span>
+              ${!hasBonusToWithdraw ? '<span class="ml-1 text-[9px] opacity-80">(Sem bônus)</span>' : ''}
             </button>
           </div>
 

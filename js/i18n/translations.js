@@ -127,6 +127,22 @@ const translations = {
     wdViewTx: "Ver Tx",
     wdEmptyState: "Nenhum saque realizado ainda. Clique em \"Sacar em USDT BEP20\" para começar.",
 
+    // Carteira — Cards (Views.js Wallet())
+    bonusOnlyHint: "Apenas bônus de rede (N1 → N5) podem ser sacados",
+    bonusOnlyHintShort: "Apenas bônus de rede (N1 → N5)",
+    confirmingLabel: "Confirmando",
+    blockedActivationLabel: "Saldo de Ativação Bloqueado",
+    blockedActivationHint: "Seu depósito inicial ativa a conta, não pode ser sacado — vira Fundo Projeto 40% + Bônus 60% distribuído ao seu upline.",
+    nonWithdrawable: "Não-sacável",
+    readyToWithdraw: "Liberado",
+    noBonusYet: "Aguardando rede",
+    withdrawNoBonusHint: "No FourHash, o depósito de ativação (40% Fundo Projeto + 60% Bônus distribuído ao upline) nunca pode ser sacado diretamente. Você só recebe valores quando indicados ativam nas suas 5 linhas (N1 50% + N2..N5 2,5% cada).",
+    withdrawNoBonusShort: "Sem ganhos",
+    withdrawBonusProgress: "Seu histórico",
+    withdrawGoReferrals: "Ver minhas indicações e bônus",
+    withdrawBlockedActLabel: "Ativação bloqueada",
+    withdrawNoBonusTitle: "Sem ganhos de rede para sacar",
+
     // Modal Saque (UI.js)
     withdrawTitle: "Solicitar Saque",
     withdrawSubtitle: "Envio exclusivo em USDT BEP20 na rede BNB Smart Chain.",

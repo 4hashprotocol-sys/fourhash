@@ -121,7 +121,13 @@ const UI = {
   openWithdrawModal() {
     const u = AppState.currentUser;
     const s = AppState.projectSettings.withdraw;
-    const maxPossible = Math.min(u.availableBalance, s.maxAmountPerRequest);
+    const _st = (v) => Number(v || 0);
+    const uiAvailable   = _st(u.availableBalance);    // SÓ bônus líquido
+    const uiBlocked     = _st(u.blockedActivationBalance);
+    const uiTotalBonus  = _st(u.totalBonusTeam) + _st(u.totalBonusMatrix);
+    const uiTotalWithdrawn = _st(u.totalWithdrawn);
+    const hasBonus = uiAvailable > 0 && uiAvailable >= s.minAmount;
+    const maxPossible = hasBonus ? Math.min(uiAvailable, s.maxAmountPerRequest) : 0;
 
     const contentHtml = `
       <div class="space-y-5">
@@ -142,10 +148,10 @@ const UI = {
           </button>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 p-3 rounded-xl bg-brand-surface border border-white/5 text-xs">
-          <div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-brand-surface border border-white/5 text-xs">
+          <div class="sm:col-span-1">
             <div class="text-gray-500 font-mono text-[10px]">${I18n.t('withdrawAvailNow')}</div>
-            <div class="font-mono font-black text-white">$ ${u.availableBalance.toFixed(2)}</div>
+            <div class="font-mono font-black ${hasBonus ? 'text-emerald-400' : 'text-gray-500'}">$ ${uiAvailable.toFixed(2)}</div>
           </div>
           <div>
             <div class="text-gray-500 font-mono text-[10px]">${I18n.t('withdrawMinLabel')}</div>
@@ -155,14 +161,41 @@ const UI = {
             <div class="text-gray-500 font-mono text-[10px]">${I18n.t('withdrawNetworkFeeTitle')}</div>
             <div class="font-mono font-bold text-amber-300">$ ${s.networkFeeFlat.toFixed(2)}</div>
           </div>
+          <div>
+            <div class="text-gray-500 font-mono text-[10px]">${I18n.t('withdrawBlockedActLabel') || 'Ativação bloqueada'}</div>
+            <div class="font-mono font-black text-red-400">$ ${uiBlocked.toFixed(2)}</div>
+          </div>
         </div>
 
-        <form onsubmit="event.preventDefault(); UI.submitWithdraw(this);" class="space-y-4">
+        ${!hasBonus ? `
+          <div class="rounded-xl border border-red-500/30 bg-red-500/5 p-4 flex items-start gap-3">
+            <div class="w-8 h-8 shrink-0 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="space-y-1 text-xs">
+              <div class="font-bold text-red-300 font-mono uppercase tracking-wider">${I18n.t('withdrawNoBonusTitle') || 'Sem ganhos de rede para sacar'}</div>
+              <div class="text-gray-300 leading-relaxed">
+                ${I18n.t('withdrawNoBonusHint') || 'No FourHash, o depósito de ativação (40% Fundo Projeto + 60% Bônus distribuído ao upline) nunca pode ser sacado diretamente. Você só recebe valores quando indicados ativam nas suas 5 linhas (N1 50% + N2..N5 2,5% cada).'}
+              </div>
+              <div class="text-xs text-gray-400 pt-1">
+                ${I18n.t('withdrawBonusProgress') || 'Seu histórico'}:
+                <span class="text-emerald-400 font-bold font-mono"> Bônus ganhos: $ ${uiTotalBonus.toFixed(2)}</span>
+                <span class="text-gray-500"> · </span>
+                <span class="text-amber-300 font-bold font-mono">Já sacados: $ ${uiTotalWithdrawn.toFixed(2)}</span>
+              </div>
+              <button type="button" onclick="Router.navigate('referrals'); UI.closeModal();" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand/40 bg-brand/10 text-brand font-bold text-[11px] hover:bg-brand/20 transition">
+                <i class="fa-solid fa-users"></i>${I18n.t('withdrawGoReferrals') || 'Ver minhas indicações e bônus'}
+              </button>
+            </div>
+          </div>
+        ` : ''}
+
+        <form onsubmit="event.preventDefault(); UI.submitWithdraw(this);" class="space-y-4 ${!hasBonus ? 'opacity-50 pointer-events-none' : ''}">
           <div>
             <label class="block text-xs font-mono text-gray-300 mb-1.5">${I18n.t('withdrawWalletLabel')} <span class="text-red-400">*</span></label>
             <div class="relative">
               <div class="absolute left-3 top-1/2 -translate-y-1/2 text-brand/60"><i class="fa-solid fa-wallet text-xs"></i></div>
-              <input id="withdraw_wallet" oninput="UI._withdrawRefreshCalc()" required minlength="42" maxlength="42" pattern="^0x[a-fA-F0-9]{40}$" placeholder="${I18n.t('withdrawWalletPlaceholder')}" class="w-full pl-9 pr-3 py-3 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-white text-xs font-mono transition"/>
+              <input id="withdraw_wallet" oninput="UI._withdrawRefreshCalc()" ${!hasBonus ? 'disabled' : ''} required minlength="42" maxlength="42" pattern="^0x[a-fA-F0-9]{40}$" placeholder="${I18n.t('withdrawWalletPlaceholder')}" class="w-full pl-9 pr-3 py-3 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-white text-xs font-mono transition disabled:opacity-40 disabled:cursor-not-allowed"/>
             </div>
             <div class="text-[10px] text-gray-500 mt-1 font-mono">${I18n.t('withdrawWalletWarning')}</div>
           </div>
@@ -170,13 +203,13 @@ const UI = {
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <label class="text-xs font-mono text-gray-300">${I18n.t('withdrawAmountLabel')} <span class="text-red-400">*</span></label>
-              <button type="button" onclick="document.getElementById('withdraw_amount').value = '${maxPossible.toFixed(2)}'; UI._withdrawRefreshCalc();" class="text-[10px] font-mono text-brand hover:text-brand-glow font-bold px-2 py-0.5 rounded border border-brand/30 bg-brand/10">
+              <button type="button" ${!hasBonus ? 'disabled' : ''} onclick="document.getElementById('withdraw_amount').value = '${maxPossible.toFixed(2)}'; UI._withdrawRefreshCalc();" class="text-[10px] font-mono text-brand hover:text-brand-glow font-bold px-2 py-0.5 rounded border border-brand/30 bg-brand/10 disabled:opacity-40 disabled:cursor-not-allowed">
                 ${I18n.t('withdrawAll')}
               </button>
             </div>
             <div class="relative">
               <div class="absolute left-3 top-1/2 -translate-y-1/2 text-white font-mono text-sm">$</div>
-              <input id="withdraw_amount" oninput="UI._withdrawRefreshCalc()" required type="number" step="0.01" min="${s.minAmount}" max="${maxPossible}" placeholder="${s.minAmount.toFixed(2)} – ${maxPossible.toFixed(2)}" class="w-full pl-8 pr-3 py-3 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-white text-sm font-bold font-mono transition"/>
+              <input id="withdraw_amount" oninput="UI._withdrawRefreshCalc()" ${!hasBonus ? 'disabled' : ''} required type="number" step="0.01" min="${s.minAmount}" max="${maxPossible}" placeholder="${hasBonus ? (s.minAmount.toFixed(2) + ' – ' + maxPossible.toFixed(2)) : ('0.00 — ' + I18n.t('withdrawNoBonusShort') || 'Sem ganhos')}" class="w-full pl-8 pr-3 py-3 rounded-xl bg-brand-surface border border-white/10 focus:border-brand focus:outline-none text-white text-sm font-bold font-mono transition disabled:opacity-40 disabled:cursor-not-allowed"/>
             </div>
           </div>
 
@@ -224,6 +257,9 @@ const UI = {
   _withdrawRefreshCalc() {
     const s = AppState.projectSettings.withdraw;
     const u = AppState.currentUser;
+    const _st = (v) => Number(v || 0);
+    const uiAvailable = _st(u.availableBalance);
+    const hasBonus = uiAvailable > 0 && uiAvailable >= s.minAmount;
     const amountInput = document.getElementById('withdraw_amount');
     const grossEl = document.getElementById('withdraw_gross');
     const feeEl = document.getElementById('withdraw_fee');
@@ -232,7 +268,7 @@ const UI = {
     if (!amountInput) return;
 
     const amount = parseFloat(amountInput.value) || 0;
-    const maxPossible = Math.min(u.availableBalance, s.maxAmountPerRequest);
+    const maxPossible = hasBonus ? Math.min(uiAvailable, s.maxAmountPerRequest) : 0;
     const fee = s.networkFeeFlat;
     const net = Math.max(0, amount - fee);
 
@@ -241,8 +277,8 @@ const UI = {
     if (netEl) netEl.textContent = `$ ${net.toFixed(2)}`;
 
     const walletInput = document.getElementById('withdraw_wallet');
-    const walletOk = walletInput && /^0x[a-fA-F0-9]{40}$/.test(walletInput.value.trim());
-    const amountOk = amount >= s.minAmount && amount <= maxPossible;
+    const walletOk = hasBonus && walletInput && /^0x[a-fA-F0-9]{40}$/.test(walletInput.value.trim());
+    const amountOk = hasBonus && amount >= s.minAmount && amount <= maxPossible;
 
     if (submitBtn) submitBtn.disabled = !(walletOk && amountOk);
   },

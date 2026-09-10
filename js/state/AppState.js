@@ -635,25 +635,38 @@ const AppState = {
       try {
         var w = await sb.from('wallets').select('*').eq('profile_id', userAuth.id).limit(1).maybeSingle();
         if (w && w.data) {
-          this.currentUser.availableBalance = Number(w.data.available_balance || 0);
-          this.currentUser.pendingBalance   = Number(w.data.pending_balance   || 0);
+          var rawAvailable = Number(w.data.available_balance || 0);
+          var rawPending   = Number(w.data.pending_balance   || 0);
           var dep = Number(w.data.total_deposited || 0);
           var bT = Number(w.data.total_bonus_team || 0);
           var bM = Number(w.data.total_bonus_matrix || 0);
           var wT = Number(w.data.total_withdrawn  || 0);
+
+          var totalBonusEarned = bT + bM;
+          var bonusWithdrawn   = Math.min(wT, totalBonusEarned);
+          var bonusNetAvail    = Math.max(0, totalBonusEarned - bonusWithdrawn);
+
+          this.currentUser.blockedActivationBalance = dep;
+          this.currentUser.availableBalance = bonusNetAvail;
+          this.currentUser.pendingBonusBalance = rawPending;
+          this.currentUser.pendingBalance = rawPending;
           this.currentUser.totalDeposited    = dep;
           this.currentUser.totalBonusTeam    = bT;
           this.currentUser.totalBonusMatrix  = bM;
-          this.currentUser.totalBonusReceived = bT + bM;
-          this.currentUser.totalReceived    = dep + bT + bM;
+          this.currentUser.totalBonusReceived = totalBonusEarned;
+          this.currentUser.totalBonusNet = bonusNetAvail;
+          this.currentUser.totalReceived    = dep + totalBonusEarned;
           this.currentUser.totalWithdrawn   = wT;
         } else {
+          this.currentUser.blockedActivationBalance = this.currentUser.blockedActivationBalance || 0;
           this.currentUser.availableBalance = this.currentUser.availableBalance || 0;
+          this.currentUser.pendingBonusBalance = this.currentUser.pendingBonusBalance || 0;
           this.currentUser.pendingBalance   = this.currentUser.pendingBalance || 0;
           this.currentUser.totalDeposited   = this.currentUser.totalDeposited   || 0;
           this.currentUser.totalBonusTeam   = this.currentUser.totalBonusTeam   || 0;
           this.currentUser.totalBonusMatrix = this.currentUser.totalBonusMatrix || 0;
           this.currentUser.totalBonusReceived = this.currentUser.totalBonusReceived || 0;
+          this.currentUser.totalBonusNet = this.currentUser.totalBonusNet || 0;
           this.currentUser.totalReceived    = this.currentUser.totalReceived    || 0;
           this.currentUser.totalWithdrawn   = this.currentUser.totalWithdrawn   || 0;
         }
@@ -718,8 +731,8 @@ const AppState = {
         this.currentUser = {
           id: null, fullName: 'Usuário Convidado', username: 'guest', email: '', country: '',
           phone: '', sponsor: '', positionNumber: '-', level: 0, status: 'GUEST',
-          entryDate: '', availableBalance: 0, pendingBalance: 0,
-          totalDeposited: 0, totalBonusTeam: 0, totalBonusMatrix: 0, totalBonusReceived: 0,
+          entryDate: '', blockedActivationBalance: 0, availableBalance: 0, pendingBonusBalance: 0, pendingBalance: 0,
+          totalDeposited: 0, totalBonusTeam: 0, totalBonusMatrix: 0, totalBonusReceived: 0, totalBonusNet: 0,
           totalReceived: 0, totalWithdrawn: 0,
           directReferralsCount: 0, activeReferralsCount: 0, inactiveReferralsCount: 0
         };
