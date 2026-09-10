@@ -486,7 +486,7 @@ const Views = {
 
             <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 text-[10.5px] text-amber-200/90 leading-relaxed">
               <span class="font-black text-amber-300 uppercase tracking-wide"><i class="fa-solid fa-shield-halved mr-1"></i> Validação automática 3 camadas</span><br/>
-              Quando enviares: <b>Camada A (IPN 0-2s) • Camada B (Cron 1min) • Camada C (Watchdog 45s)</b>. A conta fica ativa automaticamente em &lt; 2 minutos. <b>Não é necessário colar TXID.</b>
+              Quando enviares: <b>Camada A (IPN 0-2s) • Camada B (Cron 1min) • Camada C (Watchdog 12s)</b>. A conta fica ativa automaticamente em &lt; 60 segundos. <b>Não é necessário colar TXID.</b>
             </div>
           </div>
         </div>
@@ -552,7 +552,7 @@ const Views = {
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
 
-              <div class="lg:col-span-7 space-y-4 sm:space-y-5">
+              <div class="lg:col-span-5 space-y-4 sm:space-y-5">
                 <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] text-gray-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
                   Utilizador: <span class="text-brand font-bold">@${u.username || ''}</span>
@@ -601,7 +601,7 @@ const Views = {
                 </div>
               </div>
 
-              <div class="lg:col-span-5 lg:sticky lg:top-24">
+              <div class="lg:col-span-7 lg:sticky lg:top-24">
                 <div class="relative rounded-3xl border border-brand-border bg-brand-card/80 backdrop-blur-2xl p-5 sm:p-6 shadow-2xl overflow-hidden">
                   <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-brand/20 blur-3xl pointer-events-none"></div>
 
@@ -627,7 +627,7 @@ const Views = {
                         </div>
                       </div>
 
-                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-2.5 md:gap-3">
                         ${[
                           {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
                           {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
@@ -756,7 +756,7 @@ const Views = {
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
                   <div class="font-bold text-white text-sm mb-1">Confirmação On-Chain Automática</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas automática: (A) Confirmação IPN · (B) Cron 1 minuto · (C) Watchdog UI 45s. Não precisa submeter TXID manualmente — tudo é automático.</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas automática: (A) Confirmação IPN · (B) Cron 1 minuto · (C) Watchdog UI 12s. Não precisa submeter TXID manualmente — tudo é automático.</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
@@ -859,7 +859,7 @@ const Views = {
                         </div>
                       </div>
 
-                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-2.5 md:gap-3">
                         ${[
                           {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
                           {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},

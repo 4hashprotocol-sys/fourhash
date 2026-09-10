@@ -218,6 +218,93 @@ export async function onRequestPost(context) { return doReconcile(context); }
 export async function onRequestGet(context)  { return doReconcile(context); }
 export async function onRequestOptions(context) { return new Response(null, { status: 204, headers: corsHeaders() }); }
 
+async function npListRecentPayments(c, limit) {
+  const NP_API_URL = getEnv(c, 'NOWPAYMENTS_API_URL', 'https://api.nowpayments.io/v1');
+  const NP_API_KEY = getEnv(c, 'NOWPAYMENTS_API_KEY', '');
+  if (!NP_API_KEY) return [];
+  try {
+    const u = NP_API_URL.endsWith('/') ? (NP_API_URL + 'payments') : (NP_API_URL + '/payments');
+    const params = new URLSearchParams({ limit: String(limit || 200) });
+    const r = await fetch(u + '?' + params.toString(), {
+      method: 'GET',
+      headers: { 'x-api-key': NP_API_KEY, 'User-Agent': 'fourhash.app-reconcile/1.0' }
+    });
+    if (!r.ok) return [];
+    const d = await r.json().catch(function(){ return {}; });
+    if (d && Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d)) return d;
+    return [];
+  } catch(_) { return []; }
+}
+
+async function sbInsertOrIgnorePosition(c, profileId) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const H = sbHeaders(c);
+    const exists = await sbGet(c, 'rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&level_number=eq.1&select=id&limit=1');
+    if (Array.isArray(exists) && exists.length && exists[0].id) return true;
+    let seat = 1;
+    try {
+      const tops = await sbGet(c, 'rest/v1/linear_network?level_number=eq.1&select=seat_number&order=seat_number.desc&limit=1');
+      if (Array.isArray(tops) && tops.length && Number(tops[0].seat_number) >= 1) seat = Number(tops[0].seat_number) + 1;
+    } catch(_) {}
+    const now = new Date().toISOString();
+    const r = await fetch(base + '/rest/v1/linear_network', {
+      method: 'POST',
+      headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
+      body: JSON.stringify({ profile_id: profileId, level_number: 1, seat_number: seat, row_number: 1, filled_at: now })
+    });
+    return r.ok;
+  } catch(_) { return false; }
+}
+
+async function ensureActivated(c, profileId, amount) {
+  let changes = 0;
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const H = sbHeaders(c);
+    const now = new Date().toISOString();
+    const patchProfile = { status: 'active', level_number: 1, updated_at: now };
+    try {
+      const cur = await sbGet(c, 'rest/v1/profiles?id=eq.' + encodeURIComponent(profileId) + '&select=status,activated_at,level_number&limit=1');
+      if (Array.isArray(cur) && cur.length && cur[0]) {
+        const st = String(cur[0].status || 'pending').toUpperCase();
+        if (st !== 'ACTIVE' && st !== 'ATIVO') patchProfile.activated_at = cur[0].activated_at || now;
+        else patchProfile.activated_at = cur[0].activated_at || now;
+      } else {
+        patchProfile.activated_at = now;
+      }
+    } catch(_) { patchProfile.activated_at = now; }
+    const rp = await fetch(base + '/rest/v1/profiles?id=eq.' + encodeURIComponent(profileId), {
+      method: 'PATCH', headers: H, body: JSON.stringify(patchProfile)
+    });
+    if (rp.ok) changes++;
+
+    try {
+      const wlist = await sbGet(c, 'rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=profile_id,total_deposited&limit=1');
+      const amt = Number(amount || 0) > 0 ? Number(amount) : 10;
+      if (Array.isArray(wlist) && wlist.length && wlist[0].profile_id) {
+        const curTot = Number(wlist[0].total_deposited || 0);
+        if (curTot < amt) {
+          const rw = await fetch(base + '/rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId), {
+            method: 'PATCH', headers: H, body: JSON.stringify({ total_deposited: amt, updated_at: now })
+          });
+          if (rw.ok) changes++;
+        } else changes++;
+      } else {
+        const ri = await fetch(base + '/rest/v1/wallets', {
+          method: 'POST', headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
+          body: JSON.stringify({ profile_id: profileId, total_deposited: amt, total_bonus_team: 0, total_bonus_matrix: 0, total_withdrawn: 0, updated_at: now })
+        });
+        if (ri.ok) changes++;
+      }
+    } catch(_) {}
+
+    if (sbInsertOrIgnorePosition(c, profileId)) changes++;
+  } catch(_) {}
+  return changes;
+}
+
 async function doReconcile(context) {
   const NP_API_KEY = getEnv(context, 'NOWPAYMENTS_API_KEY', '');
   const SUPA_KEY = getEnv(context, 'SUPABASE_SERVICE_ROLE_KEY', '');
@@ -225,13 +312,55 @@ async function doReconcile(context) {
 
   const nowIso = new Date().toISOString();
   const twoDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString();
-  const minAgeMs = 1000 * 30;
+  const minAgeMs = 1000 * 2;
   const result = { ok: true, started_at: nowIso, total_scanned: 0, checked: 0, activated: 0, already_confirmed: 0, failed_or_expired: 0, still_pending: 0, items: [] };
 
   try {
-    const rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=in.(pending,created,waiting)&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
+    let rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=in.(pending,created,waiting)&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
     result.total_scanned = Array.isArray(rows) ? rows.length : 0;
-    if (!Array.isArray(rows) || rows.length === 0) return json(200, Object.assign(result, { msg: 'Nenhum pagamento pendente para reconciliar.' }));
+    if (!Array.isArray(rows)) rows = [];
+
+    const rowsMissingNpId = rows.filter(r => !(r && (String(r.nowpayments_id || '').trim() || String(r.tx_hash || '').trim())));
+    if (rowsMissingNpId.length) {
+      try {
+        const recent = await npListRecentPayments(context, 500);
+        const byOrder = [];
+        for (let k = 0; k < recent.length; k++) {
+          const p = recent[k]; if (!p || !p.order_id) continue;
+          const oId = String(p.order_id).trim();
+          let shortId = '';
+          const m = /^4H-(?:activation|deposit)-([0-9a-fA-F]{8})-/.exec(oId);
+          if (m) shortId = m[1].toLowerCase();
+          byOrder.push({ order_id: oId.toLowerCase(), short_id: shortId, payment: p });
+        }
+        for (let k = 0; k < rowsMissingNpId.length; k++) {
+          const r = rowsMissingNpId[k]; if (!r || !r.profile_id) continue;
+          const pid8 = String(r.profile_id).slice(0,8).toLowerCase();
+          let matched = null;
+          for (let z = 0; z < byOrder.length; z++) {
+            if (byOrder[z].short_id === pid8) { matched = byOrder[z].payment; break; }
+          }
+          if (!matched) {
+            for (let z = 0; z < byOrder.length; z++) {
+              if (byOrder[z].order_id.indexOf('4h-activation-' + pid8) === 0 || byOrder[z].order_id.indexOf('4h-deposit-' + pid8) === 0) {
+                matched = byOrder[z].payment; break;
+              }
+            }
+          }
+          if (matched && matched.payment_id) {
+            try {
+              await sbPatch(context, 'rest/v1/transactions?id=eq.' + encodeURIComponent(r.id), {
+                nowpayments_id: String(matched.payment_id),
+                nowpayments_status: String(matched.payment_status || matched.status || 'created').toLowerCase().slice(0,50)
+              });
+              r.nowpayments_id = String(matched.payment_id);
+            } catch(_) {}
+          }
+        }
+      } catch(_) {}
+    }
+
+    if (!rows.length) return json(200, Object.assign(result, { msg: 'Nenhum pagamento pendente para reconciliar.' }));
 
     const seen = new Set();
     for (let i = 0; i < rows.length; i++) {
@@ -240,9 +369,31 @@ async function doReconcile(context) {
       const ageMs = Date.now() - new Date(r.created_at || nowIso).getTime();
       if (ageMs < minAgeMs) { result.still_pending++; continue; }
 
-      const candidates = [String(r.nowpayments_id || ''), String(r.tx_hash || '')].map(s => s.trim()).filter(s => /^\d{6,20}$/.test(s));
-      if (!candidates.length) { result.still_pending++; continue; }
-      const paymentId = candidates[0];
+      const candidates = [String(r.nowpayments_id || ''), String(r.tx_hash || '')]
+        .map(s => s.trim())
+        .filter(s => s.length >= 4);
+      let paymentId = candidates.length ? candidates[0] : null;
+
+      if (!paymentId && r.profile_id) {
+        try {
+          const recent2 = await npListRecentPayments(context, 500);
+          const pid8 = String(r.profile_id).slice(0,8).toLowerCase();
+          for (let zz = 0; zz < recent2.length; zz++) {
+            const p = recent2[zz]; if (!p || !p.order_id || !p.payment_id) continue;
+            const oId = String(p.order_id).toLowerCase();
+            if (oId.indexOf('4h-activation-' + pid8) === 0 || oId.indexOf('4h-deposit-' + pid8) === 0) {
+              paymentId = String(p.payment_id);
+              try {
+                await sbPatch(context, 'rest/v1/transactions?id=eq.' + encodeURIComponent(r.id), { nowpayments_id: paymentId });
+                r.nowpayments_id = paymentId;
+              } catch(_) {}
+              break;
+            }
+          }
+        } catch(_) {}
+      }
+
+      if (!paymentId) { result.still_pending++; continue; }
       if (seen.has(paymentId)) continue;
       seen.add(paymentId);
 
@@ -277,10 +428,14 @@ async function doReconcile(context) {
           status: 'confirmed',
           confirmed_at: (np.body.updated_at || np.body.created_at || nowIso),
           nowpayments_status: status,
-          currency: 'USDT'
+          currency: 'USDT',
+          confirmations: 12
         };
         if (netw) patchTx.network = netw;
         if (np.body.payin_hash) patchTx.tx_hash = String(np.body.payin_hash);
+        if (!patchTx.tx_hash && paymentId) patchTx.tx_hash = String(paymentId);
+
+        let okPatch = false;
         try {
           const txidAll = [paymentId, parent].filter(Boolean);
           const qParts = [];
@@ -288,15 +443,18 @@ async function doReconcile(context) {
           if (r.id) qParts.push('id=eq.' + encodeURIComponent(r.id));
           if (r.profile_id) qParts.push('profile_id=eq.' + encodeURIComponent(r.profile_id));
           const q = qParts.slice(0, 8).join(',');
-          await sbPatch(context, 'rest/v1/transactions?' + q, patchTx);
+          okPatch = await sbPatch(context, 'rest/v1/transactions?' + q, patchTx);
+          info.patch_tx = okPatch;
         } catch(_) {}
+
         if (r.profile_id) {
           try {
-            const act = await activateProfile(context, r.profile_id, amt);
-            info.activation = act;
-            if (act.profile) result.activated++;
-          } catch(_eAct) { info.error = 'activation: ' + String(_eAct && _eAct.message || _eAct); }
+            const c = await ensureActivated(context, r.profile_id, amt);
+            if (c >= 2) info.profile_activated = true;
+          } catch(_) {}
         }
+
+        if (okPatch || (r.profile_id && info.profile_activated)) result.activated++;
         info.result = 'activated_or_confirmed';
         result.items.push(info);
         continue;

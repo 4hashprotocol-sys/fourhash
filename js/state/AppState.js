@@ -769,7 +769,8 @@ const AppState = {
         this.refreshAdminUsersList(),
         this.refreshReferrals(),
         this.refreshTreeNetwork(),
-        this.refreshBonusNotifications()
+        this.refreshBonusNotifications(),
+        this.npReconcilePendingPayments({ force: false })
       ]);
       return true;
     } catch (e) {
@@ -1651,12 +1652,12 @@ const AppState = {
       var identLen = (r && r.data && Array.isArray(r.data.user && r.data.user.identities)) ? r.data.user.identities.length : 0;
       var weakConf = userAuth && userAuth.email_confirmed_at;
       if (weakConf || (sessAuth && identLen > 0)) {
-        UI.showToast('Conta criada! Confirme o link no seu e-mail (' + (userAuth.email || email) + ') para ativar o acesso.', 'info', 'fa-envelope');
-        if (typeof Router !== 'undefined') try { Router.navigate('login'); } catch(e) {}
+        try { await sb.auth.signOut(); } catch(_) {}
+        this.showEmailPendingModal(userAuth.email || email);
         return true;
       }
-      UI.showToast('Conta criada com sucesso! Enviamos um link para ' + (userAuth.email || email) + ' — clique em CONFIRMAR para ativar.', 'success', 'fa-envelope');
-      if (typeof Router !== 'undefined') try { Router.navigate('login'); } catch(e) {}
+      try { await sb.auth.signOut(); } catch(_) {}
+      this.showEmailPendingModal(userAuth.email || email);
       return true;
     } catch (e) { UI.showToast((e && e.message) || 'Erro registo', 'error'); return false; }
   },
@@ -1982,9 +1983,9 @@ const AppState = {
       if (this._reconcileTimer) { try { clearInterval(this._reconcileTimer); } catch(_) {} this._reconcileTimer = null; }
       var self = this;
       var fn = function(){ try { if (self.isAuthenticated) self.npReconcilePendingPayments({ force: false }); } catch(_x) {} };
-      setTimeout(fn, 8000);
-      this._reconcileTimer = setInterval(fn, 1000 * 45);
-      try { console.log('[reconcile] Watchdog iniciado (45/45 segundos). Atualização automática ativada.'); } catch(_) {}
+      setTimeout(fn, 4000);
+      this._reconcileTimer = setInterval(fn, 1000 * 12);
+      try { console.log('[reconcile] Watchdog iniciado (12/12 segundos). Rápido ativado.'); } catch(_) {}
       return true;
     } catch(e) { return false; }
   },
