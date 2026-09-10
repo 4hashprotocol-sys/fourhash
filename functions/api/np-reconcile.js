@@ -225,7 +225,7 @@ async function doReconcile(context) {
 
   const nowIso = new Date().toISOString();
   const twoDaysAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString();
-  const minAgeMs = 1000 * 60 * 2;
+  const minAgeMs = 1000 * 30;
   const result = { ok: true, started_at: nowIso, total_scanned: 0, checked: 0, activated: 0, already_confirmed: 0, failed_or_expired: 0, still_pending: 0, items: [] };
 
   try {

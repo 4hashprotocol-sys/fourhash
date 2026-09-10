@@ -182,12 +182,22 @@ async function sbGetProfileByPartialId(c, partial8) {
   try {
     if (!partial8 || partial8.length < 6) return null;
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
-    const q = 'id=like.' + encodeURIComponent(partial8 + '%') + '&select=id,username,status,activated_at,level_number&limit=10';
+    const q = 'id=like.' + encodeURIComponent(partial8 + '%') + '&select=id,username,status,activated_at,level_number,upline_id&limit=50';
     const url = (base.endsWith('/') ? (base + 'rest/v1/profiles?' + q) : (base + '/rest/v1/profiles?' + q));
     const r = await fetch(url, { headers: sbHeaders(c) });
     if (!r.ok) return null;
     const d = await r.json();
     if (Array.isArray(d) && d.length === 1) return d[0];
+    if (Array.isArray(d) && d.length > 1) {
+      for (let i = 0; i < d.length; i++) {
+        const rawId = String(d[i].id || '').toLowerCase();
+        if (rawId.startsWith(String(partial8 || '').toLowerCase())) {
+          try { console.log('[sbGetProfileByPartialId] AMBÍGUO (' + d.length + '), escolhido primeiro: @' + (d[i].username || '') + ' id=' + rawId.slice(0, 8)); } catch(_) {}
+          return d[i];
+        }
+      }
+      return d[0];
+    }
     return null;
   } catch(_) { return null; }
 }
@@ -320,15 +330,25 @@ function extractProfileIdFromOrderId(orderId) {
   try {
     const s = String(orderId || '').trim();
     if (!s) return '';
+    const mFull = s.match(/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+    if (mFull) return mFull[1];
     const parts = s.split('-');
-    if (parts.length >= 3) {
-      const candidate = parts.slice(2).join('-');
-      if (/^[0-9a-fA-F]{8}/.test(candidate)) return candidate;
+    for (let i = 0; i < parts.length; i++) {
+      if (/^[0-9a-fA-F]{8}$/.test(parts[i])) {
+        if (i + 4 < parts.length
+            && /^[0-9a-fA-F]{4}$/.test(parts[i+1])
+            && /^[0-9a-fA-F]{4}$/.test(parts[i+2])
+            && /^[0-9a-fA-F]{4}$/.test(parts[i+3])
+            && /^[0-9a-fA-F]{12}$/.test(parts[i+4])) {
+          return parts.slice(i, i + 5).join('-');
+        }
+        return parts[i];
+      }
     }
-    const m = s.match(/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
-    if (m) return m[1];
-    const m8 = s.match(/4H-[a-zA-Z]+-([0-9a-fA-F]{8})-/);
+    const m8 = s.match(/4H-[-_a-zA-Z0-9]+-([0-9a-fA-F]{8})-/);
     if (m8) return m8[1];
+    const m8b = s.match(/activation-([0-9a-fA-F]{8})-/i);
+    if (m8b) return m8b[1];
   } catch(_) {}
   return '';
 }
@@ -464,10 +484,14 @@ async function doPost(context) {
           } catch(_) {}
         }
         const filters = [];
-        if (paymentId) filters.push('nowpayments_id=eq.' + encodeURIComponent(paymentId));
-        if (paymentId) filters.push('tx_hash=eq.' + encodeURIComponent(paymentId));
-        if (parentPaymentId) filters.push('nowpayments_id=eq.' + encodeURIComponent(parentPaymentId));
-        if (parentPaymentId) filters.push('tx_hash=eq.' + encodeURIComponent(parentPaymentId));
+        if (paymentId) {
+          filters.unshift('nowpayments_id=eq.' + encodeURIComponent(paymentId));
+          filters.push('tx_hash=eq.' + encodeURIComponent(paymentId));
+        }
+        if (parentPaymentId) {
+          filters.push('nowpayments_id=eq.' + encodeURIComponent(parentPaymentId));
+          filters.push('tx_hash=eq.' + encodeURIComponent(parentPaymentId));
+        }
         if (body && body.payin_hash) filters.push('tx_hash=eq.' + encodeURIComponent(String(body.payin_hash)));
         if (orderId) filters.push('or=(nowpayments_id.eq.' + encodeURIComponent(orderId) + ',metadata->>order_id.eq.' + encodeURIComponent(orderId) + ')');
         if (profileId) filters.push('profile_id=eq.' + encodeURIComponent(profileId));
@@ -517,6 +541,24 @@ async function doPost(context) {
                   if (r.profile_id) { profileId = String(r.profile_id); break; }
                 }
               }
+            }
+          } catch(_) {}
+        }
+        if (!profileId && paymentId) {
+          try {
+            const rowsDirect = await sbGetTransactions(context, 'nowpayments_id=eq.' + encodeURIComponent(paymentId) + '&select=profile_id,id,amount,kind,status&limit=3');
+            if (Array.isArray(rowsDirect) && rowsDirect.length && rowsDirect[0].profile_id) {
+              profileId = String(rowsDirect[0].profile_id);
+              txMatched = true;
+            }
+          } catch(_) {}
+        }
+        if (!profileId && body && body.payin_hash) {
+          try {
+            const rowsHash = await sbGetTransactions(context, 'tx_hash=eq.' + encodeURIComponent(String(body.payin_hash)) + '&select=profile_id,id,amount,kind,status&limit=3');
+            if (Array.isArray(rowsHash) && rowsHash.length && rowsHash[0].profile_id) {
+              profileId = String(rowsHash[0].profile_id);
+              txMatched = true;
             }
           } catch(_) {}
         }

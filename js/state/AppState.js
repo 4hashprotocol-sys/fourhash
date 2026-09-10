@@ -1468,13 +1468,21 @@ const AppState = {
     try {
       if (!opts.force) {
         const diff = Date.now() - Number(this._reconcileLastRunAt || 0);
-        if (diff < (1000 * 60 * 1)) return { ok: true, skipped: 'rate_limited', wait_ms: ((1000 * 60 * 1) - diff) };
+        if (diff < (1000 * 30)) return { ok: true, skipped: 'rate_limited', wait_ms: ((1000 * 30) - diff) };
       }
       this._reconcileLastRunAt = Date.now();
       const endpoint = '/api/np-reconcile';
+      try { console.log('[reconcile] ▶️  INÍCIO busca pagamentos pendentes NowPayments... (force=' + (!!opts.force) + ')'); } catch(_) {}
       const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (!r || !r.ok) { try { console.log('[reconcile] HTTP ' + (r ? r.status : 'null')); } catch(_) {} return { ok: false, error: 'http_' + (r ? r.status : 'network') }; }
+      if (!r || !r.ok) { try { console.log('[reconcile] ❌ HTTP ' + (r ? r.status : 'null')); } catch(_) {} return { ok: false, error: 'http_' + (r ? r.status : 'network') }; }
       const data = await r.json().catch(function(){ return {}; });
+      try { console.log('[reconcile] ✅ RESPOSTA np-reconcile:', JSON.stringify({
+        total_scanned: Number(data.total_scanned || 0),
+        checked: Number(data.checked || 0),
+        activated: Number(data.activated || 0),
+        failed_or_expired: Number(data.failed_or_expired || 0),
+        still_pending: Number(data.still_pending || 0)
+      })); } catch(_) {}
       if (data && (Number(data.activated) > 0 || Number(data.already_confirmed) > 0)) {
         try { await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession); } catch(_) {}
         try { await this.refreshFromSupabase(); } catch(_) {}
@@ -1487,7 +1495,7 @@ const AppState = {
       }
       return data || { ok: true };
     } catch (e) {
-      try { console.log('[reconcile] erro:', e && e.message ? e.message : String(e)); } catch(_) {}
+      try { console.log('[reconcile] ❌ ERRO:', e && e.message ? e.message : String(e)); } catch(_) {}
       return { ok: false, error: (e && e.message) ? e.message : String(e) };
     }
   },
@@ -1497,9 +1505,9 @@ const AppState = {
       if (this._reconcileTimer) { try { clearInterval(this._reconcileTimer); } catch(_) {} this._reconcileTimer = null; }
       var self = this;
       var fn = function(){ try { if (self.isAuthenticated) self.npReconcilePendingPayments({ force: false }); } catch(_x) {} };
-      setTimeout(fn, 12000);
-      this._reconcileTimer = setInterval(fn, 1000 * 60 * 3);
-      try { console.log('[reconcile] Watchdog iniciado (3/3 min).'); } catch(_) {}
+      setTimeout(fn, 8000);
+      this._reconcileTimer = setInterval(fn, 1000 * 45);
+      try { console.log('[reconcile] Watchdog iniciado (45/45 segundos). Atualização automática ativada.'); } catch(_) {}
       return true;
     } catch(e) { return false; }
   },
