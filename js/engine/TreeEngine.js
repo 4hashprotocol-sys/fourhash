@@ -41,7 +41,7 @@ const TreeEngine = {
     const self = AppState.currentUser;
     html += `
       <div id="node-self" class="flex flex-col items-center z-20 mb-8">
-        <div onclick="TreeEngine.showNodeDetails('${self.username}', '${self.status}', '${self.level}', '${self.positionNumber}', '${self.entryDate}')" class="relative group cursor-pointer p-3 rounded-2xl bg-brand-surface border-2 border-brand shadow-neon hover:scale-105 transition transform flex items-center gap-3">
+        <div onclick="TreeEngine.showNodeDetails('${self.username}', '${self.status}', '0', '${self.positionNumber}', '${self.entryDate}')" class="relative group cursor-pointer p-3 rounded-2xl bg-brand-surface border-2 border-brand shadow-neon hover:scale-105 transition transform flex items-center gap-3">
           <div class="w-10 h-10 rounded-full bg-brand text-black font-black flex items-center justify-center text-sm">
             4#
           </div>
@@ -51,7 +51,7 @@ const TreeEngine = {
               <span class="text-xs font-bold text-white">@${self.username}</span>
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-brand text-black font-bold">VOCÊ</span>
             </div>
-            <div class="text-[10px] font-mono text-gray-400">${self.positionNumber} • Nível 0${self.level}</div>
+            <div class="text-[10px] font-mono text-gray-400">${self.positionNumber} • Tronco</div>
           </div>
         </div>
       </div>
@@ -227,6 +227,11 @@ const TreeEngine = {
   },
 
   showNodeDetails(username, status, level, position, date) {
+    var lv = String(level || '0').trim();
+    var isSelf = (lv === '0' || lv === '00');
+    var levelLabel = isSelf
+      ? 'Tronco (referencial, não conta como nível)'
+      : ('Nível ' + (lv.length === 1 ? '0' + lv : lv) + ' / 12');
     const content = `
       <div class="space-y-4">
         <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -246,8 +251,8 @@ const TreeEngine = {
 
         <div class="grid grid-cols-2 gap-3 text-xs font-mono">
           <div class="p-3 rounded-xl bg-brand-surface border border-white/5">
-            <div class="text-gray-400 text-[10px]">NÍVEL ATUAL</div>
-            <div class="text-white font-bold text-sm mt-0.5">Level 0${level} / 12</div>
+            <div class="text-gray-400 text-[10px]">NÍVEL NA REDE</div>
+            <div class="text-white font-bold text-sm mt-0.5">${levelLabel}</div>
           </div>
           <div class="p-3 rounded-xl bg-brand-surface border border-white/5">
             <div class="text-gray-400 text-[10px]">DATA DE ENTRADA</div>

@@ -134,7 +134,7 @@ const AppState = {
       if (!sb) { this.treeLevels = []; return false; }
 
       var levels = [];
-      for (var ln = 2; ln <= 12; ln++) {
+      for (var ln = 1; ln <= 12; ln++) {
         levels.push({
           level: ln,
           name: 'Nível ' + (ln < 10 ? '0' + ln : String(ln)),
@@ -144,8 +144,8 @@ const AppState = {
       }
 
       function pushNode(profile, relLevel) {
-        if (relLevel < 2 || relLevel > 12) return;
-        var lvl = levels[relLevel - 2];
+        if (relLevel < 1 || relLevel > 12) return;
+        var lvl = levels[relLevel - 1];
         if (!lvl) return;
         var posNum = '-';
         try {
@@ -211,7 +211,7 @@ const AppState = {
         byParent = {};
         var visitedIds = new Set([me]);
         var currentLevelIds = [me];
-        for (var bfsDepth = 1; bfsDepth <= 11; bfsDepth++) {
+        for (var bfsDepth = 1; bfsDepth <= 12; bfsDepth++) {
           var nextLevelIds = [];
           for (var bfsJ = 0; bfsJ < currentLevelIds.length; bfsJ++) {
             var cid = currentLevelIds[bfsJ];
@@ -227,7 +227,7 @@ const AppState = {
               nodeChildren = [];
               try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] ERRO RPC nó', cid, ':', _rpcErr && _rpcErr.message ? _rpcErr.message : String(_rpcErr)); } catch(_) {}
             }
-            try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] nível', bfsDepth + 1, 'nó', cid, '→ filhos:', nodeChildren.length); } catch(_) {}
+            try { console.log('[refreshTreeNetwork][fb2_rpc_bfs] nível', bfsDepth, 'nó', cid, '→ filhos:', nodeChildren.length); } catch(_) {}
             if (!byParent[cid]) byParent[cid] = [];
             for (var bfsK = 0; bfsK < nodeChildren.length; bfsK++) {
               var ch = nodeChildren[bfsK];
@@ -265,8 +265,8 @@ const AppState = {
       }
 
       var currentIds = [me];
-      for (var depth = 1; depth <= 11; depth++) {
-        var relLevel = depth + 1;
+      for (var depth = 1; depth <= 12; depth++) {
+        var relLevel = depth;
         var nextIds = [];
         for (var j = 0; j < currentIds.length; j++) {
           var cid2 = currentIds[j];
@@ -713,15 +713,25 @@ const AppState = {
     }
   },
 
+  _formatDDMM(dateOrStr) {
+    try {
+      var d = (dateOrStr instanceof Date) ? dateOrStr : new Date(dateOrStr);
+      if (!d || isNaN(d.getTime())) return String(dateOrStr || '');
+      var dd = String(d.getDate()).padStart(2, '0');
+      var mm = String(d.getMonth() + 1).padStart(2, '0');
+      return dd + '/' + mm;
+    } catch(e) { return String(dateOrStr || ''); }
+  },
+
   _mapTicket(row) {
     if (!row) return null;
     return {
-      id: row.code || ('tk_' + row.id),
+      id: ('TK-' + String(row.id).padStart(5, '0')),
       ticket_id: row.id,
-      username: (row.username_cache || row.profile_id || '').toString(),
-      email: (row.email_cache || '').toString(),
-      subject: row.subject || '(sem assunto)',
-      message: row.message || '',
+      username: (row.username || row.profile_id || '').toString(),
+      email: (row.email || '').toString(),
+      subject: row.title || row.subject || '(sem assunto)',
+      message: row.message || (Array.isArray(row.messages) && row.messages.length ? row.messages[0].text : ''),
       category: row.category || 'Outro',
       priority: row.priority || 'Média',
       status: row.status || 'Aberto',
@@ -729,25 +739,27 @@ const AppState = {
       createdAt: row.created_at ? row.created_at : '',
       created_at: row.created_at,
       assignedTo: row.assigned_to,
-      closedBy: row.closed_by,
+      closedBy: row.closed_at ? 'Admin' : '',
       closedAt: row.closed_at,
       lastReplyAt: row.last_reply_at,
-      internalTags: row.internal_tags || [],
-      privateNote: row.private_note,
-      viewCount: row.view_count || 0,
-      replies: []
+      internalTags: [],
+      privateNote: '',
+      viewCount: 0,
+      replies: Array.isArray(row.messages) ? row.messages.map(function(m){ return { id: m.id||Date.now(), author: m.author_name || (m.is_admin ? 'Admin' : 'Utilizador'), authorRole: m.author_role || (m.is_admin ? 'admin' : 'user'), isAdmin: !!m.is_admin, isInternal: !!m.is_internal, message: m.text || m.message || '', createdAt: m.created_at }; }) : []
     };
   },
 
   _mapFinance(row) {
     if (!row) return null;
+    var openedDDMM = this._formatDDMM(row.opened_at || row.created_at);
     return {
-      id: row.code || ('fin_' + row.id),
+      id: ('FP-' + String(row.id).padStart(5, '0')),
+      code: ('FP-' + String(row.id).padStart(5, '0')),
       fin_id: row.id,
       type: row.type || 'Depósito',
       category: row.category || row.type || '',
-      username: (row.username_cache || row.profile_id || '').toString(),
-      email: (row.email_cache || '').toString(),
+      username: (row.username || row.profile_id || '').toString(),
+      email: (row.email || '').toString(),
       amount: Number(row.amount || 0),
       expected: Number(row.expected || 0),
       currency: row.currency || 'USDT',
@@ -755,21 +767,22 @@ const AppState = {
       txHash: row.tx_hash || '',
       nowpaymentsId: row.nowpayments_id || '',
       status: row.status || 'Pendente Revisão',
-      priority: (row.status === 'Em Análise') ? 'Alta' : 'Normal',
-      opened: row.opened || '',
-      openedAt: row.opened || '',
-      assignedTo: row.assigned_to,
-      resolution: row.resolution || '',
+      priority: (row.status && row.status.indexOf('Análise') >= 0) ? 'Alta' : 'Normal',
+      opened: openedDDMM,
+      openedAt: row.opened_at || row.created_at || '',
+      assignedTo: row.resolved_by,
+      resolution: (Array.isArray(row.notes) && row.notes.length ? row.notes[row.notes.length - 1].text : '') || row.private_note || '',
       resolvedBy: row.resolved_by,
       resolvedAt: row.resolved_at,
-      finalDecision: row.final_decision || '',
-      finalObservation: row.final_observation || '',
-      signatureName: row.signature_name || '',
-      signatureTime: row.signature_time || '',
-      creditWallet: !!row.credit_wallet,
-      adjustedAmount: Number(row.adjusted_amount || 0),
-      internalTags: row.internal_tags || [],
-      privateNote: row.private_note
+      finalDecision: '',
+      finalObservation: row.private_note || '',
+      signatureName: '',
+      signatureTime: '',
+      creditWallet: false,
+      adjustedAmount: 0,
+      internalTags: [],
+      privateNote: row.private_note || '',
+      notes: Array.isArray(row.notes) ? row.notes : []
     };
   },
 
@@ -779,25 +792,8 @@ const AppState = {
       var sb = this._sb(); if (!sb) return false;
       var q = sb.from('support_tickets').select('*').order('created_at', { ascending: false });
       var r = await q;
-      if (!r || !r.data || !r.data.length) return false;
+      if (!r || !r.data || !r.data.length) { this.supportTickets = []; return false; }
       var rows = r.data.map(this._mapTicket.bind(this)).filter(Boolean);
-      var repl = await sb.from('support_ticket_replies').select('*').in('ticket_id', r.data.map(function(x){return x.id;}));
-      if (repl && repl.data && repl.data.length) {
-        var byId = {};
-        repl.data.forEach(function(rr){
-          if (!byId[rr.ticket_id]) byId[rr.ticket_id] = [];
-          byId[rr.ticket_id].push({
-            id: rr.id,
-            author: rr.author_name || (rr.is_admin_reply ? 'Admin' : 'Utilizador'),
-            authorRole: rr.author_role || (rr.is_admin_reply ? 'admin' : 'user'),
-            isAdmin: !!rr.is_admin_reply,
-            isInternal: !!rr.is_internal,
-            message: rr.message || '',
-            createdAt: rr.created_at
-          });
-        });
-        rows.forEach(function(t){ if (byId[t.ticket_id]) t.replies = byId[t.ticket_id]; });
-      }
       this.supportTickets = rows;
       return true;
     } catch (e) {
@@ -811,25 +807,8 @@ const AppState = {
     try {
       var sb = this._sb(); if (!sb) return false;
       var r = await sb.from('finance_problems').select('*').order('created_at', { ascending: false });
-      if (!r || !r.data || !r.data.length) return false;
+      if (!r || !r.data || !r.data.length) { this.financeProblems = []; return false; }
       var rows = r.data.map(this._mapFinance.bind(this)).filter(Boolean);
-      var notes = await sb.from('finance_problem_notes').select('*').in('problem_id', r.data.map(function(x){return x.id;}));
-      if (notes && notes.data) {
-        var byP = {};
-        notes.data.forEach(function(n){
-          if (!byP[n.problem_id]) byP[n.problem_id] = [];
-          byP[n.problem_id].push({
-            id: n.id, kind: n.kind || 'note',
-            from: n.status_from || '', to: n.status_to || '',
-            resolution: n.resolution_text || '',
-            message: n.message || '',
-            amount: Number(n.credit_amount || 0),
-            internal: !!n.is_internal,
-            createdAt: n.created_at
-          });
-        });
-        rows.forEach(function(f){ if (byP[f.fin_id]) f.history = byP[f.fin_id]; });
-      }
       this.financeProblems = rows;
       return true;
     } catch (e) {
@@ -842,28 +821,45 @@ const AppState = {
     if (!window.SupabaseOK || !window.SupabaseOK()) return false;
     try {
       var sb = this._sb(); if (!sb) return false;
+      var projectSettingsRows = null;
+      var legacyRows = null;
       try {
-        var setR = await sb.from('system_settings').select('*').limit(1).maybeSingle();
-        if (setR && setR.data && typeof setR.data === 'object') {
-          var d = setR.data;
-          if (typeof d.entry_amount === 'number' || typeof d.entry_amount === 'string') this.projectSettings.entryAmount = Number(d.entry_amount);
-          if (typeof d.currency === 'string') this.projectSettings.currency = d.currency;
-          if (typeof d.network === 'string') this.projectSettings.network = d.network;
-          if (typeof d.team_percent_n1 === 'number' || typeof d.team_percent_n1 === 'string') this.projectSettings.teamCommissionPercents[0] = Number(d.team_percent_n1);
-          if (typeof d.team_percent_n2 === 'number' || typeof d.team_percent_n2 === 'string') this.projectSettings.teamCommissionPercents[1] = Number(d.team_percent_n2);
-          if (typeof d.team_percent_n3 === 'number' || typeof d.team_percent_n3 === 'string') this.projectSettings.teamCommissionPercents[2] = Number(d.team_percent_n3);
-          if (typeof d.team_percent_n4 === 'number' || typeof d.team_percent_n4 === 'string') this.projectSettings.teamCommissionPercents[3] = Number(d.team_percent_n4);
-          if (typeof d.team_percent_n5 === 'number' || typeof d.team_percent_n5 === 'string') this.projectSettings.teamCommissionPercents[4] = Number(d.team_percent_n5);
-          if (typeof d.project_fund_percentage === 'number' || typeof d.project_fund_percentage === 'string') this.projectSettings.projectFundPercentage = Number(d.project_fund_percentage);
-          if (typeof d.total_distributed_percentage === 'number' || typeof d.total_distributed_percentage === 'string') this.projectSettings.totalDistributedPercentage = Number(d.total_distributed_percentage);
-          if (typeof d.vault_address === 'string') this.projectSettings.depositAddress = d.vault_address;
-          if (typeof d.presale_end_date !== 'undefined' && d.presale_end_date !== null) this.projectSettings.presaleEndDate = d.presale_end_date;
-          if (typeof d.withdraw_min === 'number' || typeof d.withdraw_min === 'string') this.projectSettings.withdraw.minAmount = Number(d.withdraw_min);
-          if (typeof d.withdraw_max === 'number' || typeof d.withdraw_max === 'string') this.projectSettings.withdraw.maxAmountPerRequest = Number(d.withdraw_max);
-          if (typeof d.withdraw_fee_flat === 'number' || typeof d.withdraw_fee_flat === 'string') this.projectSettings.withdraw.networkFeeFlat = Number(d.withdraw_fee_flat);
-          if (typeof d.withdraw_hours === 'number' || typeof d.withdraw_hours === 'string') this.projectSettings.withdraw.processingHours = Number(d.withdraw_hours);
-        }
-      } catch(settErr) {}
+        var rPs = await sb.from('project_settings').select('*').limit(1).maybeSingle();
+        if (rPs && rPs.data) projectSettingsRows = rPs.data;
+      } catch(_psErr) {}
+      try {
+        var rSs = await sb.from('system_settings').select('*').limit(1).maybeSingle();
+        if (rSs && rSs.data) legacyRows = rSs.data;
+      } catch(_ssErr) {}
+      var d = Object.assign({}, (legacyRows||{}), (projectSettingsRows||{}));
+      if (Object.keys(d).length > 0) {
+        if (typeof d.entry_amount === 'number' || typeof d.entry_amount === 'string') this.projectSettings.entryAmount = Number(d.entry_amount);
+        if (typeof d.currency === 'string') this.projectSettings.currency = d.currency;
+        if (typeof d.network === 'string') this.projectSettings.network = d.network;
+        var n1 = d.sponsor_percentage; if (typeof n1 !== 'number' && typeof n1 !== 'string') n1 = d.team_percent_n1;
+        var n2 = d.level2_percentage;  if (typeof n2 !== 'number' && typeof n2 !== 'string') n2 = d.team_percent_n2;
+        var n3 = d.level3_percentage;  if (typeof n3 !== 'number' && typeof n3 !== 'string') n3 = d.team_percent_n3;
+        var n4 = d.level4_percentage;  if (typeof n4 !== 'number' && typeof n4 !== 'string') n4 = d.team_percent_n4;
+        var n5 = d.level5_percentage;  if (typeof n5 !== 'number' && typeof n5 !== 'string') n5 = d.team_percent_n5;
+        var fp = d.fund_percentage; if (typeof fp !== 'number' && typeof fp !== 'string') fp = d.project_fund_percentage;
+        var tp = d.team_total_percentage; if (typeof tp !== 'number' && typeof tp !== 'string') tp = d.total_distributed_percentage;
+        var va = d.treasury_wallet; if (typeof va !== 'string') va = d.vault_address;
+        if (typeof n1 === 'number' || typeof n1 === 'string') this.projectSettings.teamCommissionPercents[0] = Number(n1);
+        if (typeof n2 === 'number' || typeof n2 === 'string') this.projectSettings.teamCommissionPercents[1] = Number(n2);
+        if (typeof n3 === 'number' || typeof n3 === 'string') this.projectSettings.teamCommissionPercents[2] = Number(n3);
+        if (typeof n4 === 'number' || typeof n4 === 'string') this.projectSettings.teamCommissionPercents[3] = Number(n4);
+        if (typeof n5 === 'number' || typeof n5 === 'string') this.projectSettings.teamCommissionPercents[4] = Number(n5);
+        if (typeof fp === 'number' || typeof fp === 'string') this.projectSettings.projectFundPercentage = Number(fp);
+        if (typeof tp === 'number' || typeof tp === 'string') this.projectSettings.totalDistributedPercentage = Number(tp);
+        if (typeof va === 'string') this.projectSettings.depositAddress = va;
+        if (typeof d.presale_end_date !== 'undefined' && d.presale_end_date !== null) this.projectSettings.presaleEndDate = d.presale_end_date;
+        var wm = d.min_withdrawal_usdt; if (typeof wm !== 'number' && typeof wm !== 'string') wm = d.withdraw_min;
+        var wf = d.withdrawal_fee_bp; if (typeof wf !== 'number' && typeof wf !== 'string') wf = d.withdraw_fee_flat;
+        if (typeof wm === 'number' || typeof wm === 'string') this.projectSettings.withdraw.minAmount = Number(wm);
+        if (typeof d.withdraw_max === 'number' || typeof d.withdraw_max === 'string') this.projectSettings.withdraw.maxAmountPerRequest = Number(d.withdraw_max);
+        if (typeof wf === 'number' || typeof wf === 'string') this.projectSettings.withdraw.networkFeeFlat = (Number(wf) / 100);
+        if (typeof d.withdraw_hours === 'number' || typeof d.withdraw_hours === 'string') this.projectSettings.withdraw.processingHours = Number(d.withdraw_hours);
+      }
 
       var rProfiles = await sb.from('profiles').select('id, status, role, created_at');
       var rowsProfiles = (rProfiles && rProfiles.data) ? rProfiles.data : [];
@@ -974,7 +970,7 @@ const AppState = {
       try {
         var sb = this._sb();
         if (sb) {
-          var p = {
+          var pLegacy = {
             id: 1,
             entry_amount: Number(this.projectSettings.entryAmount || 0),
             currency: this.projectSettings.currency,
@@ -993,16 +989,39 @@ const AppState = {
             withdraw_hours: Number(this.projectSettings.withdraw.processingHours || 0),
             updated_at: new Date().toISOString()
           };
+          var pSSOT = {
+            id: 1,
+            entry_amount: Number(this.projectSettings.entryAmount || 0),
+            currency: this.projectSettings.currency,
+            network: this.projectSettings.network,
+            sponsor_percentage: Number(this.projectSettings.teamCommissionPercents[0] || 0),
+            level2_percentage: Number(this.projectSettings.teamCommissionPercents[1] || 0),
+            level3_percentage: Number(this.projectSettings.teamCommissionPercents[2] || 0),
+            level4_percentage: Number(this.projectSettings.teamCommissionPercents[3] || 0),
+            level5_percentage: Number(this.projectSettings.teamCommissionPercents[4] || 0),
+            team_total_percentage: Number(this.projectSettings.totalDistributedPercentage || 0),
+            fund_percentage: Number(this.projectSettings.projectFundPercentage || 0),
+            treasury_wallet: this.projectSettings.depositAddress,
+            min_withdrawal_usdt: Number(this.projectSettings.withdraw.minAmount || 0),
+            withdrawal_fee_bp: Math.round(Number(this.projectSettings.withdraw.networkFeeFlat || 0) * 100),
+            updated_at: new Date().toISOString()
+          };
           try {
-            var ex = await sb.from('system_settings').select('id').limit(1).maybeSingle();
-            if (ex && ex.data) {
-              await sb.from('system_settings').update(p).eq('id', Number(ex.data.id || 1));
+            var exPs = await sb.from('project_settings').select('id').limit(1).maybeSingle();
+            if (exPs && exPs.data) {
+              await sb.from('project_settings').update(pSSOT).eq('id', 1);
             } else {
-              await sb.from('system_settings').insert([p]);
+              await sb.from('project_settings').insert([pSSOT]);
             }
-          } catch (tblErr) {
-            return true;
-          }
+          } catch (_psErr) {}
+          try {
+            var exSs = await sb.from('system_settings').select('id').limit(1).maybeSingle();
+            if (exSs && exSs.data) {
+              await sb.from('system_settings').update(pLegacy).eq('id', Number(exSs.data.id || 1));
+            } else {
+              await sb.from('system_settings').insert([pLegacy]);
+            }
+          } catch (_ssErr) {}
         }
       } catch(e) {}
     }
@@ -1341,17 +1360,20 @@ const AppState = {
 
   async sbReplyTicket(ticketIdOrCode, message, opts) {
     opts = opts || {};
+    if (!message || !String(message).trim()) { UI.showToast('Mensagem vazia.', 'warning'); return false; }
     var sb = this._sb();
     var tktId = ticketIdOrCode;
-    if (sb && typeof ticketIdOrCode === 'string' && ticketIdOrCode.indexOf('tk_') === 0) {
-      var t = await sb.from('support_tickets').select('id').eq('code', ticketIdOrCode).limit(1).maybeSingle();
-      if (t && t.data) tktId = t.data.id;
+    if (sb) {
+      var tRaw = await sb.from('support_tickets').select('id, messages').or('id.eq.' + ticketIdOrCode + ',id.eq.' + (String(ticketIdOrCode).replace(/[^0-9]/g, '') || 0)).limit(1).maybeSingle();
+      if (tRaw && tRaw.data) tktId = tRaw.data.id;
     }
     if (!window.SupabaseOK || !window.SupabaseOK() || !sb) {
       this.supportTickets.forEach(function(t){
-        if ((t.id === ticketIdOrCode || t.ticket_id === ticketIdOrCode)) {
-          t.replies.push({ author:'Admin', authorRole:'admin', isAdmin:true, message: message, createdAt: new Date().toISOString() });
-          t.status = 'Respondido'; t.lastReplyAt = new Date().toISOString();
+        if ((t.id === ticketIdOrCode || t.ticket_id === ticketIdOrCode || t.code === ticketIdOrCode)) {
+          if (!Array.isArray(t.replies)) t.replies = [];
+          t.replies.push({ id: 'r_' + Date.now(), author: (opts.internal ? 'Equipe Interna' : 'Admin'), authorRole: 'admin', isAdmin: true, isInternal: !!opts.internal, message: message, createdAt: new Date().toISOString() });
+          t.status = opts.close ? 'Fechado' : 'Respondido';
+          t.lastReplyAt = new Date().toISOString();
         }
       });
       UI.showToast('Resposta adicionada (modo offline).', 'success');
@@ -1359,12 +1381,12 @@ const AppState = {
     }
     try {
       var me = this.sbAuth && this.sbAuth.id ? this.sbAuth.id : null;
-      await sb.from('support_ticket_replies').insert({
-        ticket_id: tktId, author_id: me, is_admin_reply: true, is_internal: !!opts.internal,
-        message: message
-      });
-      var up = { status: (opts.close ? 'Fechado' : 'Respondido'), last_reply_at: new Date().toISOString() };
-      if (opts.close) { up.closed_by = me; up.closed_at = new Date().toISOString(); }
+      var now = new Date().toISOString();
+      var cur = await sb.from('support_tickets').select('messages').eq('id', tktId).limit(1).maybeSingle();
+      var curMsgs = (cur && cur.data && Array.isArray(cur.data.messages)) ? JSON.parse(JSON.stringify(cur.data.messages)) : [];
+      curMsgs.push({ id: 'r_' + Date.now(), author_name: (opts.internal ? 'Equipe Interna' : 'Admin'), author_role: 'admin', is_admin: true, is_internal: !!opts.internal, text: message, created_at: now });
+      var up = { status: (opts.close ? 'Fechado' : 'Respondido'), last_reply_at: now, messages: curMsgs };
+      if (opts.close) { up.closed_at = now; }
       if (me) up.assigned_to = me;
       await sb.from('support_tickets').update(up).eq('id', tktId);
       await this.refreshSupportTickets();
@@ -1378,27 +1400,70 @@ const AppState = {
     return await this.sbReplyTicket(ticketIdOrCode, note || 'Resolvido', { close: true });
   },
 
+  async openSupportTicket(opts) {
+    opts = opts || {};
+    var me = this.sbAuth ? this.sbAuth.id : null;
+    var uName = (this.currentUser && this.currentUser.username) ? this.currentUser.username : (this.sbAuth && this.sbAuth.email ? this.sbAuth.email : '');
+    var uEmail = (this.sbAuth && this.sbAuth.email) ? this.sbAuth.email : '';
+    var initialMsg = String(opts.message || opts.description || '').trim();
+    if (!opts.title && !initialMsg) { UI.showToast('Informe o assunto.', 'warning'); return false; }
+    var messagesJson = [];
+    if (initialMsg) messagesJson.push({ id: 'm_' + Date.now(), author_name: uName || 'Utilizador', author_role: 'user', is_admin: false, text: initialMsg, created_at: new Date().toISOString() });
+    var row = {
+      profile_id: me,
+      username: opts.username || uName,
+      email: opts.email || uEmail,
+      title: opts.title || (opts.category || 'Suporte'),
+      category: opts.category || 'Outro',
+      priority: opts.priority || 'Média',
+      status: 'Aberto',
+      messages: messagesJson,
+      metadata: { kind: opts.kind || '', tx_hash: opts.tx_hash || '', amount: opts.amount || 0, network: opts.network || '', order_id: opts.order_id || '', profile_id_ref: opts.profile_id || null }
+    };
+    if (!window.SupabaseOK || !window.SupabaseOK()) {
+      var tkt = this._mapTicket({
+        id: (this.supportTickets ? this.supportTickets.length + 1 : 1), created_at: new Date().toISOString(),
+        username: row.username, email: row.email, title: row.title,
+        category: row.category, priority: row.priority, status: row.status, messages: messagesJson
+      });
+      if (!this.supportTickets) this.supportTickets = [];
+      this.supportTickets.unshift(tkt);
+      return true;
+    }
+    var sb = this._sb();
+    try {
+      await sb.from('support_tickets').insert(row);
+      await this.refreshSupportTickets();
+      return true;
+    } catch (e) { return false; }
+  },
+
   async sbCreateFinanceProblem(data) {
     data = data || {};
+    var me = this.sbAuth ? this.sbAuth.id : null;
+    var meUsername = (this.currentUser && this.currentUser.username) ? this.currentUser.username : (this.sbAuth && this.sbAuth.email ? this.sbAuth.email : '');
+    var meEmail = (this.sbAuth && this.sbAuth.email) ? this.sbAuth.email : '';
     var def = {
+      profile_id: me, username: meUsername, email: meEmail,
       type: 'Depósito', category: 'Depósito',
       amount: 10.00, expected: 10.00, currency: 'USDT', network: 'BEP20',
-      status: 'Pendente Revisão', opened: new Date().toISOString().slice(0,16).replace('T',' ').slice(0,16),
-      profile_id: null, tx_hash: '', nowpayments_id: '', internal_tags: [], private_note: ''
+      status: 'Pendente · Revisar', priority: 'Alta',
+      tx_hash: '', vault_to_address: '', private_note: '', metadata: {}
     };
     for (var k in def) if (!(k in data)) data[k] = def[k];
+    if (!data.profile_id && this.sbAuth) data.profile_id = this.sbAuth.id;
     if (!window.SupabaseOK || !window.SupabaseOK()) {
-      var fid = 'fin_' + String(this.financeProblems.length + 1).padStart(3,'0');
-      var nr = this._mapFinance({ code: fid, created_at: new Date().toISOString(), username_cache: data.username_cache || 'demo', email_cache: data.email_cache || '',
+      var nr = this._mapFinance({ id: (this.financeProblems ? this.financeProblems.length + 1 : 1), created_at: new Date().toISOString(), opened_at: new Date().toISOString(),
+        username: data.username || 'demo', email: data.email || '',
         type: data.type, category: data.category, amount: data.amount, expected: data.expected, currency: data.currency, network: data.network,
-        tx_hash: data.tx_hash, nowpayments_id: data.nowpayments_id, status: data.status, opened: data.opened });
+        tx_hash: data.tx_hash, status: data.status });
+      if (!this.financeProblems) this.financeProblems = [];
       this.financeProblems.unshift(nr);
       UI.showToast('Problema adicionado (modo offline).', 'success');
       return true;
     }
     var sb = this._sb();
     try {
-      if (!data.profile_id && this.sbAuth) data.profile_id = this.sbAuth.id;
       await sb.from('finance_problems').insert(data);
       await this.refreshFinanceProblems();
       UI.showToast('Problema financeiro criado.', 'success');
@@ -1411,17 +1476,18 @@ const AppState = {
     opts = opts || {};
     var sb = this._sb();
     var pid = finIdOrCode;
-    if (sb && typeof finIdOrCode === 'string' && finIdOrCode.indexOf('fin_') === 0) {
-      var f = await sb.from('finance_problems').select('id').eq('code', finIdOrCode).limit(1).maybeSingle();
-      if (f && f.data) pid = f.data.id;
+    if (sb) {
+      var idStr = String(finIdOrCode).replace(/[^0-9]/g, '');
+      var fRaw = await sb.from('finance_problems').select('id, notes').or('id.eq.' + finIdOrCode + (idStr ? (',id.eq.' + idStr) : '')).limit(1).maybeSingle();
+      if (fRaw && fRaw.data) pid = fRaw.data.id;
     }
     if (!window.SupabaseOK || !window.SupabaseOK() || !sb) {
       this.financeProblems.forEach(function(fx){
-        if (fx.id === finIdOrCode || fx.fin_id === finIdOrCode) {
-          fx.status = 'Resolvido Total'; fx.resolution = resolution || '';
+        if (fx.id === finIdOrCode || fx.fin_id === finIdOrCode || fx.code === finIdOrCode) {
+          fx.status = 'Resolvido · Fechado'; fx.resolution = resolution || '';
           if (opts.credit) { fx.creditWallet = true; fx.adjustedAmount = Number(opts.amount || 0); }
-          if (!fx.history) fx.history = [];
-          fx.history.push({ kind: opts.credit ? 'credit' : 'note', resolution: resolution, amount: Number(opts.amount||0), createdAt: new Date().toISOString() });
+          if (!Array.isArray(fx.notes)) fx.notes = [];
+          fx.notes.push({ id: 'n_' + Date.now(), kind: opts.credit ? 'credit' : 'note', resolution: resolution, amount: Number(opts.amount||0), text: opts.message || resolution, created_at: new Date().toISOString() });
         }
       });
       UI.showToast('Resolução aplicada (modo offline).', 'success');
@@ -1430,17 +1496,10 @@ const AppState = {
     try {
       var me = this.sbAuth && this.sbAuth.id ? this.sbAuth.id : null;
       var now = new Date().toISOString();
-      await sb.from('finance_problem_notes').insert({
-        problem_id: pid, author_id: me, kind: (opts.credit ? 'credit':'note'), is_internal: !!opts.internal,
-        status_from: 'Em Análise', status_to: (opts.statusTo || 'Resolvido Total'),
-        resolution_text: resolution,
-        message: opts.message || resolution,
-        credit_amount: Number(opts.amount || 0)
-      });
-      var up = { status: (opts.statusTo || 'Resolvido Total'), resolved_by: me, resolved_at: now, final_decision: resolution,
-        final_observation: opts.finalObservation || resolution, signature_name: (opts.signature || 'Admin Master'),
-        signature_time: now, credit_wallet: !!opts.credit, adjusted_amount: Number(opts.amount || 0), updated_at: now };
-      if (me) up.assigned_to = me;
+      var cur = await sb.from('finance_problems').select('notes').eq('id', pid).limit(1).maybeSingle();
+      var curNotes = (cur && cur.data && Array.isArray(cur.data.notes)) ? JSON.parse(JSON.stringify(cur.data.notes)) : [];
+      curNotes.push({ id: 'n_' + Date.now(), author_id: me, kind: (opts.credit ? 'credit':'note'), is_internal: !!opts.internal, status_from: 'Em Análise', status_to: (opts.statusTo || 'Resolvido · Fechado'), resolution_text: resolution, text: opts.message || resolution, credit_amount: Number(opts.amount || 0), created_at: now });
+      var up = { status: (opts.statusTo || 'Resolvido · Fechado'), resolved_by: me, resolved_at: now, private_note: resolution, notes: curNotes, updated_at: now };
       await sb.from('finance_problems').update(up).eq('id', pid);
       if (opts.credit && Number(opts.amount || 0) > 0) {
         var pr = await sb.from('finance_problems').select('profile_id').eq('id', pid).limit(1).maybeSingle();
