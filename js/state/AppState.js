@@ -11,6 +11,87 @@ const AppState = {
   adminActiveTab: 'backoffice',
   adminFinanceFilter: 'Todos',
   adminSupportFilter: 'Todos',
+  adminUserSearch: '',
+  adminUserStatusFilter: 'Todos',
+  currentPayment: null,
+  _paymentPollTimer: null,
+
+  PAYMENT_LIFETIME_MS: 15 * 60 * 1000,
+
+  hasOpenPayment() {
+    var p = this.currentPayment;
+    if (!p || !p.payment_id) return false;
+    var st = String(p.status || 'waiting').toLowerCase();
+    if (st === 'finished' || st === 'confirmed' || st === 'success' || st === 'paid' || st === 'done' || st === 'closed' || st === 'cancelled' || st === 'canceled' || st === 'refunded') return false;
+    var createdAt = p.created_at || p.createdAt || p.created || null;
+    if (!createdAt) {
+      if (this._paymentStartedAt) createdAt = this._paymentStartedAt;
+    }
+    if (!createdAt) return true;
+    var ms = (typeof createdAt === 'string') ? (new Date(createdAt)).getTime() : (createdAt instanceof Date ? createdAt.getTime() : Number(createdAt));
+    if (!ms || isNaN(ms)) return true;
+    var age = Date.now() - ms;
+    return age < this.PAYMENT_LIFETIME_MS;
+  },
+
+  getOpenPaymentRemainingMs() {
+    var p = this.currentPayment; if (!p) return 0;
+    var createdAt = p.created_at || p.createdAt || p.created || this._paymentStartedAt || null;
+    if (!createdAt) return this.PAYMENT_LIFETIME_MS;
+    var ms = (typeof createdAt === 'string') ? (new Date(createdAt)).getTime() : (createdAt instanceof Date ? createdAt.getTime() : Number(createdAt));
+    if (!ms || isNaN(ms)) return this.PAYMENT_LIFETIME_MS;
+    var remain = this.PAYMENT_LIFETIME_MS - (Date.now() - ms);
+    return Math.max(0, remain);
+  },
+
+  setCurrentPayment(payData, kind) {
+    if (!payData) { this.currentPayment = null; this._paymentStartedAt = null; this.stopPaymentPolling(); return; }
+    if (!this._paymentStartedAt || !payData._reused) this._paymentStartedAt = Date.now();
+    payData.status = String(payData.status || 'waiting').toLowerCase();
+    if (kind) payData.kind = kind;
+    this.currentPayment = payData;
+  },
+
+  stopPaymentPolling() {
+    if (this._paymentPollTimer) { try { clearInterval(this._paymentPollTimer); } catch(_) {} this._paymentPollTimer = null; }
+  },
+
+  startPaymentPolling(onChangeCb) {
+    var self = this;
+    this.stopPaymentPolling();
+    this._paymentPollTimer = setInterval(async function(){
+      if (!self.hasOpenPayment()) { self.stopPaymentPolling(); return; }
+      try {
+        var pay = self.currentPayment; if (!pay || !pay.payment_id) return;
+        var raw = await fetch('/api/np-payment-status/' + encodeURIComponent(String(pay.payment_id)), { method: 'GET', headers: { 'Accept': 'application/json' } });
+        var j = await raw.json().catch(function(){ return {}; });
+        if (j && (j.ok === true || j.data)) {
+          var d = j.data || j;
+          var newSt = String(d.status || pay.status || 'waiting').toLowerCase();
+          var changed = (newSt !== pay.status) || (d.pay_amount && Number(d.pay_amount) !== Number(pay.pay_amount)) || (d.pay_address && String(d.pay_address) !== String(pay.pay_address));
+          if (newSt === 'finished' || newSt === 'confirmed' || newSt === 'paid' || newSt === 'success') {
+            self.stopPaymentPolling();
+            try { if (typeof onChangeCb === 'function') onChangeCb('finished', d, pay); } catch(_) {}
+            return;
+          }
+          if (newSt === 'expired' || newSt === 'cancelled' || newSt === 'canceled' || newSt === 'refunded' || newSt === 'closed') {
+            pay.status = newSt;
+            self.stopPaymentPolling();
+            try { if (typeof onChangeCb === 'function') onChangeCb(newSt, d, pay); } catch(_) {}
+            if (typeof Router !== 'undefined') Router.refreshCurrentView();
+            return;
+          }
+          if (changed) {
+            Object.assign(pay, d);
+            pay.status = newSt;
+            self.currentPayment = pay;
+            try { if (typeof onChangeCb === 'function') onChangeCb('updated', d, pay); } catch(_) {}
+            if (typeof Router !== 'undefined') Router.refreshCurrentView();
+          }
+        }
+      } catch(_pollErr) {}
+    }, 5000);
+  },
 
   isValidEvmAddress(addr) {
     try {
@@ -930,29 +1011,28 @@ const AppState = {
       var rProfiles = await sb.from('profiles').select('id, status, role, created_at');
       var rowsProfiles = (rProfiles && rProfiles.data) ? rProfiles.data : [];
       var totalUsers = rowsProfiles.length;
-      var activeUsers = rowsProfiles.filter(function(p){ return p.status === 'active' || p.status === 'ACTIVE'; }).length;
-      var pendingUsers = rowsProfiles.filter(function(p){ return p.status === 'pending' || p.status === 'PENDING'; }).length;
-      var adminUsers = rowsProfiles.filter(function(p){ return p.role === 'superadmin' || p.role === 'admin'; }).length;
+      var activeUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='ACTIVE' || s==='ATIVO'; }).length;
+      var pendingUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='PENDING' || s==='PENDENTE'; }).length;
+      var adminUsers = rowsProfiles.filter(function(p){ return (p.role||'') === 'superadmin' || (p.role||'') === 'admin'; }).length;
       var pctAtivos = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 1000) / 10 : 0;
+      console.log('[ADMIN-SB] profiles: total=' + totalUsers + ' active=' + activeUsers + ' pending=' + pendingUsers);
 
-      var rTx = await sb.from('transactions').select('amount, kind, status');
-      var rowsTx = (rTx && rTx.data) ? rTx.data : [];
-      var sumDep = 0; var sumDepOK = 0; var sumWd = 0; var sumWdOK = 0;
-      var sumBonus = 0;
+      var rTx = null; var rowsTx = [];
+      try { rTx = await sb.from('transactions').select('amount, kind, status'); rowsTx = (rTx && rTx.data) ? rTx.data : []; } catch(_txErr) { console.warn('[ADMIN-SB] transactions RLS blocked: ' + ((_txErr && _txErr.message)||String(_txErr))); }
+      var sumDep = 0; var sumDepOK = 0; var sumWd = 0; var sumWdOK = 0; var sumBonus = 0;
       rowsTx.forEach(function(t){
         var a = Number(t.amount || 0);
         var k = (t.kind || '').toString().toLowerCase();
-        var s = (t.status || '').toString().toLowerCase();
-        if (k === 'deposit') { sumDep += a; if (s === 'completed' || s === 'confirmed' || s === 'success') sumDepOK += a; }
-        else if (k === 'withdrawal' || k === 'withdraw') { sumWd += a; if (s === 'completed' || s === 'confirmed' || s === 'success') sumWdOK += a; }
-        else if (k.indexOf('bonus') >= 0 || k.indexOf('referral') >= 0 || k.indexOf('matrix') >= 0 || k.indexOf('team') >= 0) { sumBonus += a; }
+        var s = (t.status || '').toString().toUpperCase();
+        var confirmedTx = (s === 'COMPLETED' || s === 'CONFIRMED' || s === 'SUCCESS' || s === 'FINISHED' || s === 'PAID');
+        if (k === 'deposit') { sumDep += a; if (confirmedTx) sumDepOK += a; }
+        else if (k === 'withdrawal' || k === 'withdraw') { sumWd += a; if (confirmedTx) sumWdOK += a; }
+        else if (k.indexOf('bonus') >= 0 || k.indexOf('referral') >= 0 || k.indexOf('matrix') >= 0 || k.indexOf('team') >= 0 || k.indexOf('sponsor') >= 0 || k.indexOf('level') >= 0) { sumBonus += a; }
       });
-      var volumeEntradas = sumDepOK > 0 ? sumDepOK : sumDep;
-      var fundoLiquidez = volumeEntradas * (Number(this.projectSettings.projectFundPercentage || 40) / 100);
-      var bonusEquipe = volumeEntradas * (Number(this.projectSettings.totalDistributedPercentage || 60) / 100);
+      console.log('[ADMIN-SB] transactions: dep=' + sumDep + ' depOK=' + sumDepOK + ' bonus=' + sumBonus);
 
-      var rWallets = await sb.from('wallets').select('available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix');
-      var rowsW = (rWallets && rWallets.data) ? rWallets.data : [];
+      var rWallets = null; var rowsW = [];
+      try { rWallets = await sb.from('wallets').select('available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix'); rowsW = (rWallets && rWallets.data) ? rWallets.data : []; } catch(_wErr) { console.warn('[ADMIN-SB] wallets RLS blocked: ' + ((_wErr && _wErr.message)||String(_wErr))); }
       var totalBalance = 0; var totalDeposited = 0; var totalWithdrawn = 0; var totalBTeam = 0; var totalBMatrix = 0;
       rowsW.forEach(function(w){
         totalBalance += Number(w.available_balance || 0);
@@ -961,6 +1041,18 @@ const AppState = {
         totalBTeam += Number(w.total_bonus_team || 0);
         totalBMatrix += Number(w.total_bonus_matrix || 0);
       });
+      console.log('[ADMIN-SB] wallets: totalDeposited=' + totalDeposited + ' totalBonusTeam=' + totalBTeam + ' balance=' + totalBalance);
+
+      // FONTE DUPLO: volume = max(transactions confirmed, wallets total_deposited) — wallets tem PRIORIDADE (é SSOT reconciliado V22)
+      var volumeEntradas = 0;
+      if (totalDeposited > 0) volumeEntradas = totalDeposited;
+      else if (sumDepOK > 0) volumeEntradas = sumDepOK;
+      else volumeEntradas = sumDep;
+      var fundoLiquidez = volumeEntradas * (Number(this.projectSettings.projectFundPercentage || 40) / 100);
+      var bonusEquipe = 0;
+      if (totalBTeam > 0) bonusEquipe = totalBTeam;
+      else if (sumBonus > 0) bonusEquipe = sumBonus;
+      else bonusEquipe = volumeEntradas * (Number(this.projectSettings.totalDistributedPercentage || 60) / 100);
 
       this.adminSummaries = {
         users: {
@@ -991,8 +1083,8 @@ const AppState = {
         finance: {}
       };
 
-      this.adminSupportSummary = { open: 0, pending: 0, closed: 0 };
-      this.adminFinanceSummary = { open: 0, pending: 0, resolved: 0 };
+      this.adminSupportSummary = { open: 0, pending: 0, closed: 0, total: 0 };
+      this.adminFinanceSummary = { open: 0, pending: 0, resolved: 0, total: 0, valueOpen: 0, valueResolved: 0, valueToday: 0 };
 
       try {
         var tSup = await sb.from('support_tickets').select('status');

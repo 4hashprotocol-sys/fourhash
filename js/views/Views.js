@@ -408,6 +408,124 @@ const Views = {
     const addrValid = AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(addrRaw) : false;
     const addr = addrValid ? addrRaw : '';
 
+    const _pv = AppState;
+    const hasOpen = typeof _pv.hasOpenPayment === 'function' ? _pv.hasOpenPayment() : false;
+    const openPay = hasOpen && _pv.currentPayment ? _pv.currentPayment : null;
+    const _pvLife = Number(AppState.PAYMENT_LIFETIME_MS || 900000);
+    const openPayRemainMs = hasOpen && typeof _pv.getOpenPaymentRemainingMs === 'function' ? _pv.getOpenPaymentRemainingMs() : _pvLife;
+    const openPayExpired = openPay && !hasOpen && (String(openPay.status || '').toLowerCase() === 'expired' || openPayRemainMs <= 1000);
+    const openPayQR = openPay && openPay.pay_address ? String(openPay.pay_address).trim() : '';
+    const openPayAmt = openPay && openPay.pay_amount ? Number(openPay.pay_amount) : entryAmount;
+    const openPayNetwork = openPay && openPay.network ? String(openPay.network).toUpperCase() : 'BEP20';
+    const openPayId = openPay && openPay.payment_id ? String(openPay.payment_id) : '';
+    const openPayUrl = openPay && openPay.payment_url ? String(openPay.payment_url) : '';
+
+    const _pvQr = (txt, size) => { try { return 'https://api.qrserver.com/v1/create-qr-code/?size=' + Number(size||240) + 'x' + Number(size||240) + '&margin=6&ecc=Q&data=' + encodeURIComponent(String(txt||'')); } catch(_) { return ''; } };
+    const _fmtUSD = (n)=>{ try { return '$ ' + Number(n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:6}); } catch(e) { return '$ ' + Number(n||0).toFixed(4); } };
+    const _msMMSS = (ms) => {
+      var s = Math.max(0, Math.floor(Number(ms||0)/1000));
+      var m = Math.floor(s/60); s = s % 60;
+      return (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+    };
+
+    var OPEN_PAYMENT_BLOCK = '';
+    if (hasOpen && openPayQR) {
+      OPEN_PAYMENT_BLOCK = `
+      <div class="rounded-2xl border border-brand/50 bg-brand/5 p-4 sm:p-5 shadow-[0_0_40px_-12px_rgba(0,255,102,0.4)]">
+        <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-brand animate-ping"></div>
+            <span class="px-2.5 py-1 rounded-lg border border-brand/40 bg-brand/10 text-brand font-black font-mono text-[10px] uppercase tracking-[0.18em]">Pagamento NowPayments · Em Aberto</span>
+          </div>
+          <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-400">
+            <i class="fa-regular fa-clock"></i>
+            <span id="deposit-open-timer">${_msMMSS(openPayRemainMs)}</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 items-start">
+          <div class="sm:col-span-2 flex flex-col items-center gap-2">
+            <div class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl bg-white p-2.5 border border-white/10 shadow-[0_0_25px_rgba(0,255,102,0.12)]">
+              <img src="${_pvQr(openPayQR, 220)}" alt="QR Code Pagamento USDT ${openPayNetwork}" class="w-full h-full object-contain select-none" draggable="false" />
+            </div>
+            ${openPayUrl ? `<a href="${openPayUrl}" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition">
+              <i class="fa-solid fa-up-right-from-square text-brand"></i> Abrir pagamento no NowPayments
+            </a>` : ''}
+          </div>
+
+          <div class="sm:col-span-3 space-y-3 min-w-0">
+            <div class="rounded-xl border border-white/10 bg-black/30 p-3">
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Valor a Enviar (EXATO)</div>
+              <div class="flex items-center gap-2">
+                <div class="font-black font-mono text-2xl text-white" id="deposit-open-amount">${_fmtUSD(openPayAmt).replace('$ ','')}</div>
+                <span class="text-sm text-gray-400 font-bold">USDT</span>
+                <span class="ml-auto px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-gray-300 text-[10px] font-bold font-mono uppercase">${openPayNetwork}</span>
+                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-amount').innerText, 'Valor copiado ✓')" class="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5">
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Endereço NowPayments (envie aqui)</div>
+              <div id="deposit-open-addr" class="w-full break-all px-2.5 py-2 rounded-lg border border-brand/30 bg-black/60 text-brand font-mono text-[11px] leading-relaxed select-all">${openPayQR}</div>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-addr').innerText, 'Endereço copiado ✓')" class="py-2 rounded-xl bg-brand/15 border border-brand/30 hover:bg-brand/25 text-brand font-black text-xs tracking-wider transition inline-flex items-center justify-center gap-1.5">
+                  <i class="fa-regular fa-copy"></i> Copiar Endereço
+                </button>
+                <button onclick="AppState.startPaymentPolling(function(ev,d,p){ if(ev==='finished'){ PaymentVault._onPaymentFinished(p, (p.kind==='deposit'?'deposit':'activation'), ${entryAmount}); } else if(ev==='expired' || ev==='cancelled' || ev==='canceled') { Router.refreshCurrentView(); } }); UI.showToast('A verificar pagamento… Refresh em 5 segundos.', 'info');" class="py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white font-bold text-xs transition inline-flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-rotate"></i> Verificar Agora
+                </button>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 text-[10.5px] text-amber-200/90 leading-relaxed">
+              <span class="font-black text-amber-300 uppercase tracking-wide"><i class="fa-solid fa-shield-halved mr-1"></i> Validação automática 3 camadas</span><br/>
+              Quando enviares: <b>Camada A (IPN 0-2s) • Camada B (Cron 1min) • Camada C (Watchdog 45s)</b>. A conta fica ativa automaticamente em &lt; 2 minutos. <b>Não é necessário colar TXID.</b>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function(){
+          try {
+            var el = document.getElementById('deposit-open-timer');
+            if (!el) return;
+            var remain = ${openPayRemainMs};
+            var started = Date.now();
+            var iv = setInterval(function(){
+              try {
+                var left = remain - (Date.now() - started);
+                if (left <= 0) { clearInterval(iv); el.innerText = 'EXPIRADO'; el.className = 'flex items-center gap-1.5 font-mono text-[11px] font-bold text-red-400'; return; }
+                var s = Math.floor(left/1000); var m = Math.floor(s/60); s = s % 60;
+                el.innerText = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+              } catch(_) {}
+            }, 1000);
+            if (typeof AppState !== 'undefined' && typeof AppState.startPaymentPolling === 'function') {
+              AppState.startPaymentPolling(function(ev, d, pay) {
+                if (ev === 'finished') { try { PaymentVault && PaymentVault._onPaymentFinished && PaymentVault._onPaymentFinished(pay, (pay && pay.kind === 'deposit' ? 'deposit' : 'activation'), ${entryAmount}); } catch(_) {} }
+                else if (ev === 'expired' || ev === 'cancelled' || ev === 'canceled' || ev === 'closed') { try { Router && Router.refreshCurrentView && Router.refreshCurrentView(); } catch(_) {} }
+                else if (ev === 'updated')  { try { Router && Router.refreshCurrentView && Router.refreshCurrentView(); } catch(_) {} }
+              });
+            }
+          } catch(_) {}
+        })();
+      </script>`;
+    } else if (openPayExpired || (openPay && String(openPay.status||'').toLowerCase() === 'expired')) {
+      OPEN_PAYMENT_BLOCK = `
+      <div class="rounded-2xl border border-gray-500/30 bg-gray-500/5 p-4 sm:p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2.5 py-1 rounded-lg border border-gray-500/40 bg-gray-500/10 text-gray-300 font-black font-mono text-[10px] uppercase tracking-[0.18em]"><i class="fa-regular fa-clock mr-1"></i> Pagamento Expirado</span>
+        </div>
+        <div class="text-[11px] text-gray-400 mb-3">
+          Este pagamento expirou. Por favor gere um novo pagamento QR (o NowPayments altera a cotação a cada 15 minutos para garantir o valor on-chain).
+        </div>
+        <button onclick="AppState.setCurrentPayment(null); Router.refreshCurrentView(); UI.showToast('Pagamento antigo removido. Gere um novo QR abaixo.', 'success');" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-glow text-black font-black text-xs tracking-wider inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-trash-can"></i> Limpar e Gerar Novo QR
+        </button>
+      </div>`;
+    }
+
     if (!activated) {
       return `
       <div class="max-w-6xl mx-auto py-4 sm:py-6 space-y-6">
@@ -601,6 +719,9 @@ const Views = {
 
             </div>
 
+            ${ OPEN_PAYMENT_BLOCK || '' }
+
+            ${ !hasOpen && !openPayExpired ? `
             <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div class="relative rounded-2xl border border-white/10 bg-brand-card/60 backdrop-blur p-4 overflow-hidden group hover:border-brand/40 transition">
                 <div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-brand/10 blur-2xl group-hover:bg-brand/20 transition"></div>
@@ -610,9 +731,12 @@ const Views = {
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 01</div>
                   <div class="font-bold text-white text-sm mb-1">Deposite US$ ${entryAmount} USDT</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Envie exatamente ${entryAmount}.00 USDT pela rede BEP20 para a carteira do protocolo acima.</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Clique em "Ativar Conta" acima, gere o QR Code único e envie exatamente ${entryAmount}.00 USDT pela rede selecionada (BEP20/TRC20/ERC20) para o endereço NowPayments exibido.</div>
                 </div>
-              </div>
+              </div>` : `
+            <div class="mt-6"></div>
+            ` }
+            ${ !hasOpen && !openPayExpired ? `
               <div class="relative rounded-2xl border border-white/10 bg-brand-card/60 backdrop-blur p-4 overflow-hidden group hover:border-brand/40 transition">
                 <div class="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-brand/10 blur-2xl group-hover:bg-brand/20 transition"></div>
                 <div class="relative">
@@ -620,8 +744,8 @@ const Views = {
                     <i class="fa-solid fa-link"></i>
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
-                  <div class="font-bold text-white text-sm mb-1">Confirme On-Chain</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Após 12 confirmações na rede BNB Smart Chain, clique no botão de ativação.</div>
+                  <div class="font-bold text-white text-sm mb-1">Confirmação On-Chain Automática</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas: (A) IPN NowPayments 0-2s · (B) Cron 1 minuto · (C) Watchdog UI 45s. Não precisa submeter TXID manualmente — tudo é automático.</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
@@ -632,10 +756,11 @@ const Views = {
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 03</div>
                   <div class="font-bold text-white text-sm mb-1">Posição Liberada 🎉</div>
-                  <div class="text-[11px] text-gray-300 leading-relaxed">Dashboard, Árvore, Carteira e Indicações ficam liberados. Bónus N1 = 50% para o seu patrocinador.</div>
+                  <div class="text-[11px] text-gray-300 leading-relaxed">Dashboard, Árvore, Carteira e Indicações ficam liberados automaticamente em < 2 minutos. Bónus N1 = 50% creditado em tempo real para o seu patrocinador.</div>
                 </div>
               </div>
             </div>
+            ` : '' }
 
           </div>
         </div>
@@ -694,41 +819,17 @@ const Views = {
                   </div>
                 </div>
 
-                ${ !addrValid ? `
+                ${ OPEN_PAYMENT_BLOCK || ( !addrValid ? `
                 <div class="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 flex items-start gap-3">
                   <div class="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0 text-red-400">
                     <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
                   </div>
                   <div class="space-y-1.5">
-                    <div class="font-black text-red-400 text-sm uppercase tracking-wide">Endereço da Tesouraria Indisponível</div>
-                    <div class="text-[11px] text-red-300/80 leading-relaxed">⚠️ O endereço de carteira BEP-20 do protocolo ainda não foi configurado pelo administrador. <b>NÃO envie quaisquer fundos</b> para endereços antigos ou placeholders — risco de perda PERMANENTE. Use apenas o fluxo principal (painel direito · QR por rede) ou volte mais tarde.</div>
+                    <div class="font-black text-red-400 text-sm uppercase tracking-wide">Tesouraria em Manutenção</div>
+                    <div class="text-[11px] text-red-300/80 leading-relaxed">O endereço de carteira do protocolo está temporariamente indisponível. Por favor <b>use o fluxo principal no painel direito (botão "Depósito Adicional · Gerar QR")</b> — o NowPayments gera um endereço único e válido por 15 minutos com confirmação automática.</div>
                   </div>
                 </div>
-                ` : `
-                <div class="rounded-2xl border border-white/10 bg-black/30 p-4 flex items-start gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 text-white/80">
-                    <i class="fa-solid fa-vault"></i>
-                  </div>
-                  <div class="space-y-1.5 w-full">
-                    <div class="font-black text-white text-sm uppercase tracking-wide">Endereço Manual BEP-20 (Alternativo · Fallback)</div>
-                    <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-1">
-                      <div class="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5"><i class="fa-solid fa-circle-exclamation"></i> Aviso Crítico de Rede</div>
-                      <div class="text-[10.5px] text-amber-200/90 leading-relaxed">REDE OBRIGATÓRIA: <b class="text-amber-300">BEP-20 · BNB Smart Chain</b>. Envio por TRC-20, ERC-20, Solana, BTC ou outra rede = <b>PERDA PERMANENTE SEM REEMBOLSO.</b> Envie EXATAMENTE <b class="text-white">${entryAmount.toFixed(2)} USDT</b>.</div>
-                    </div>
-                    <div class="text-[11px] text-gray-400 leading-relaxed">Recomendamos o fluxo principal no painel direito (QR por rede · confirmação automática on-chain). Se preferir transferência manual direta para a tesouraria, use o endereço abaixo e <b>depois clique no botão verde</b> para submeter o TXID — o nosso sistema cria automaticamente um ticket de validação.</div>
-                    <div class="flex items-center gap-2 mt-1">
-                      <input type="text" readonly value="${addr}" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] font-mono text-brand focus:outline-none truncate" title="Endereço carteira tesouraria BEP-20 válido">
-                      <button onclick="UI.copyToClipboard('${addr}')" class="px-2.5 py-1.5 rounded-lg bg-brand hover:bg-brand-glow text-black font-bold text-[11px] shrink-0" title="Copiar endereço">
-                        <i class="fa-solid fa-copy"></i>
-                      </button>
-                    </div>
-                    <button onclick="PaymentVault.submitManualTxidBEP20()" class="w-full mt-2 px-3 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[11px] tracking-wide uppercase inline-flex items-center justify-center gap-2 transition-all shadow-[0_0_40px_-10px_rgba(16,185,129,0.6)]">
-                      <i class="fa-solid fa-file-invoice-dollar"></i> Já enviei · Submeter TXID do Depósito para Validação
-                    </button>
-                    <div class="text-[9px] text-gray-500 leading-snug text-center">Validação manual pela equipa FourHash · Prazo máximo: 1 hora útil após submissão do TXID confirmado on-chain (12 blocos BSC ~ 36s).</div>
-                  </div>
-                </div>
-                `}
+                ` : '' ) }
               </div>
 
               <div class="lg:col-span-7 lg:sticky lg:top-24">

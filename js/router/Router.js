@@ -285,6 +285,21 @@ const Router = {
           return;
         }
         app.innerHTML = Views.Admin();
+        try {
+          if (AppState && typeof AppState.refreshAdminSummaries === 'function') {
+            setTimeout(function(){
+              console.log('[ROUTER/admin] disparando refreshFromSupabase (admin)...');
+              if (typeof AppState.refreshFromSupabase === 'function') AppState.refreshFromSupabase();
+              else {
+                AppState.refreshAdminSummaries(); AppState.refreshAdminUsersList(); AppState.refreshFinanceProblems(); AppState.refreshSupportTickets();
+              }
+            }, 250);
+            setTimeout(function(){
+              AppState.refreshAdminSummaries(); AppState.refreshAdminUsersList();
+              if (typeof Router !== 'undefined') Router.refreshCurrentView();
+            }, 1600);
+          }
+        } catch(admErr) {}
         break;
       default:
         app.innerHTML = Views.Landing();

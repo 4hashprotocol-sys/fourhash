@@ -288,14 +288,16 @@
               </div>
 
               <div class="space-y-2 pt-1">
-                <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Hash da Transação (TXID)</div>
-                <div class="flex gap-2">
-                  <input id="pv-tx-input" type="text" placeholder="0x... (opcional, recomendado)" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-white/10 bg-black/40 text-white font-mono text-xs focus:outline-none focus:border-brand/50 focus:bg-brand-surface/40 transition" />
-                  <button onclick="PaymentVault.submitTx('` + kind + `','` + orderId + `','` + entryAmount + `')" class="px-3 py-2.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-black text-xs tracking-wider transition inline-flex items-center gap-1.5 flex-shrink-0">
-                    <i class="fa-solid fa-paper-plane"></i> Confirmar
-                  </button>
+                <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Validação Automática Ativa</div>
+                <div class="rounded-xl border border-brand/20 bg-brand/5 p-2.5 space-y-1">
+                  <div class="flex items-center gap-1.5 text-[10.5px] text-brand font-bold"><i class="fa-solid fa-circle-notch fa-spin text-brand/80"></i> Confirmação on-chain automática por 3 camadas:</div>
+                  <div class="text-[10px] text-gray-400 leading-relaxed">
+                    <span class="text-brand font-bold">A)</span> Camada A (0–2s) IPN NowPayments<br/>
+                    <span class="text-amber-400 font-bold">B)</span> Camada B (60s) Cron externo<br/>
+                    <span class="text-blue-400 font-bold">C)</span> Camada C (45s) Watchdog UI
+                  </div>
                 </div>
-                <div class="text-[10px] text-gray-500 leading-relaxed">A confirmação on-chain (12 blocos) processa em ~30–120s após envio. Informar o TXID acelera a validação manual da equipa FourHash.</div>
+                <div class="text-[10px] text-gray-500 leading-relaxed">Não é necessário colar qualquer TXID. O gateway confirma automaticamente e ativa a conta em menos de 2 minutos. Se demorar, abra um ticket de suporte.</div>
               </div>
             </div>
 
@@ -349,26 +351,57 @@
       const netCode = this._readSelectedNetwork() || 'bep20';
       try {
         this._setButtonLoading(true);
-        const r = await this._createPayment('activation', entryAmount, netCode);
-        if (r.ok && r.data && r.data.pay_address) {
-          try { AppState.currentPayment = Object.assign({ status: 'waiting', kind: 'activation' }, r.data); } catch(_) {}
+        var reuse = false;
+        try {
+          if (AppState && typeof AppState.hasOpenPayment === 'function' && AppState.hasOpenPayment()) {
+            var cur = AppState.currentPayment;
+            if (cur && cur.pay_address && (cur.kind === 'activation' || !cur.kind)) {
+              reuse = true;
+              cur._reused = true;
+              AppState.setCurrentPayment(cur, 'activation');
+            }
+          }
+        } catch(_reuseErr) { reuse = false; }
+        if (reuse) {
+          var curP = AppState.currentPayment;
           const html = this.buildVaultModal({
             kind: 'activation', entryAmount: entryAmount,
             network: netCode,
             nowPayments: {
-              pay_address: r.data.pay_address,
-              pay_amount: r.data.pay_amount,
-              pay_currency: r.data.pay_currency,
-              payment_id: r.data.payment_id,
-              payment_url: r.data.payment_url,
-              network: r.data.network
+              pay_address: curP.pay_address,
+              pay_amount: curP.pay_amount || entryAmount,
+              pay_currency: curP.pay_currency,
+              payment_id: curP.payment_id,
+              payment_url: curP.payment_url,
+              network: curP.network
             }
           });
           UI.openModal(html);
           this._startCountdown(15);
+          try { AppState.startPaymentPolling(function(evt, d, pay){ if (evt === 'finished') { PaymentVault._onPaymentFinished(pay, 'activation', entryAmount); } }); } catch(_poll) {}
         } else {
-          const reason = String(r.reason || 'gateway').toLowerCase();
-          this._showGatewayUnavailableModal(reason, netCode, entryAmount, 'activation');
+          const r = await this._createPayment('activation', entryAmount, netCode);
+          if (r.ok && r.data && r.data.pay_address) {
+            try { AppState.setCurrentPayment(r.data, 'activation'); } catch(_) {}
+            const html = this.buildVaultModal({
+              kind: 'activation', entryAmount: entryAmount,
+              network: netCode,
+              nowPayments: {
+                pay_address: r.data.pay_address,
+                pay_amount: r.data.pay_amount,
+                pay_currency: r.data.pay_currency,
+                payment_id: r.data.payment_id,
+                payment_url: r.data.payment_url,
+                network: r.data.network
+              }
+            });
+            UI.openModal(html);
+            this._startCountdown(15);
+            try { AppState.startPaymentPolling(function(evt, d, pay){ if (evt === 'finished') { PaymentVault._onPaymentFinished(pay, 'activation', entryAmount); } }); } catch(_poll) {}
+          } else {
+            const reason = String(r.reason || 'gateway').toLowerCase();
+            this._showGatewayUnavailableModal(reason, netCode, entryAmount, 'activation');
+          }
         }
       } catch (err) {
         this._showGatewayUnavailableModal('internal', netCode, entryAmount, 'activation');
@@ -387,32 +420,84 @@
       const netCode = this._readSelectedNetwork() || 'bep20';
       try {
         this._setButtonLoading(true);
-        const r = await this._createPayment('deposit', entryAmount, netCode);
-        if (r.ok && r.data && r.data.pay_address) {
-          try { AppState.currentPayment = Object.assign({ status: 'waiting', kind: 'deposit' }, r.data); } catch(_) {}
+        var reuse = false;
+        try {
+          if (AppState && typeof AppState.hasOpenPayment === 'function' && AppState.hasOpenPayment()) {
+            var cur = AppState.currentPayment;
+            if (cur && cur.pay_address && (cur.kind === 'deposit' || !cur.kind)) {
+              reuse = true;
+              cur._reused = true;
+              AppState.setCurrentPayment(cur, 'deposit');
+            }
+          }
+        } catch(_reuseErr) { reuse = false; }
+        if (reuse) {
+          var curP = AppState.currentPayment;
           const html = this.buildVaultModal({
             kind: 'deposit', entryAmount: entryAmount,
             network: netCode,
             nowPayments: {
-              pay_address: r.data.pay_address,
-              pay_amount: r.data.pay_amount,
-              pay_currency: r.data.pay_currency,
-              payment_id: r.data.payment_id,
-              payment_url: r.data.payment_url,
-              network: r.data.network
+              pay_address: curP.pay_address,
+              pay_amount: curP.pay_amount || entryAmount,
+              pay_currency: curP.pay_currency,
+              payment_id: curP.payment_id,
+              payment_url: curP.payment_url,
+              network: curP.network
             }
           });
           UI.openModal(html);
           this._startCountdown(15);
+          try { AppState.startPaymentPolling(function(evt, d, pay){ if (evt === 'finished') { PaymentVault._onPaymentFinished(pay, 'deposit', entryAmount); } }); } catch(_poll) {}
         } else {
-          const reason = String(r.reason || 'gateway').toLowerCase();
-          this._showGatewayUnavailableModal(reason, netCode, entryAmount, 'deposit');
+          const r = await this._createPayment('deposit', entryAmount, netCode);
+          if (r.ok && r.data && r.data.pay_address) {
+            try { AppState.setCurrentPayment(r.data, 'deposit'); } catch(_) {}
+            const html = this.buildVaultModal({
+              kind: 'deposit', entryAmount: entryAmount,
+              network: netCode,
+              nowPayments: {
+                pay_address: r.data.pay_address,
+                pay_amount: r.data.pay_amount,
+                pay_currency: r.data.pay_currency,
+                payment_id: r.data.payment_id,
+                payment_url: r.data.payment_url,
+                network: r.data.network
+              }
+            });
+            UI.openModal(html);
+            this._startCountdown(15);
+            try { AppState.startPaymentPolling(function(evt, d, pay){ if (evt === 'finished') { PaymentVault._onPaymentFinished(pay, 'deposit', entryAmount); } }); } catch(_poll) {}
+          } else {
+            const reason = String(r.reason || 'gateway').toLowerCase();
+            this._showGatewayUnavailableModal(reason, netCode, entryAmount, 'deposit');
+          }
         }
       } catch (err) {
         this._showGatewayUnavailableModal('internal', netCode, entryAmount, 'deposit');
       } finally {
         this._setButtonLoading(false);
       }
+    },
+
+    _onPaymentFinished(pay, kind, amount) {
+      try { if (this._timerRef) { clearInterval(this._timerRef); this._timerRef = null; } } catch(_) {}
+      try { AppState.stopPaymentPolling(); } catch(_) {}
+      try {
+        var pill = document.getElementById('pv-status-pill');
+        if (pill) {
+          pill.className = 'flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-brand/40 bg-brand/10 text-brand font-black text-xs sm:text-sm font-mono uppercase tracking-[0.18em]';
+          pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Pagamento Recebido · Validando ativação…';
+        }
+      } catch(_) {}
+      UI.showToast('Pagamento confirmado! Conta a ser atualizada em 2 segundos…', 'success', 'fa-circle-check', 3000);
+      setTimeout(async function(){
+        try {
+          if (typeof AppState !== 'undefined' && typeof AppState.refreshFromSupabase === 'function') {
+            await Promise.resolve(AppState.refreshFromSupabase());
+          }
+          if (typeof Router !== 'undefined') Router.navigate(kind === 'activation' ? 'dashboard' : 'wallet');
+        } catch(_) {}
+      }, 1800);
     },
 
     _showGatewayUnavailableModal(reason, netCode, entryAmount, kind) {
