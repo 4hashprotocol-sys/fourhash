@@ -615,13 +615,21 @@ const AppState = {
       var eml = (this.currentUser.email || userAuth.email || '').toString().toLowerCase();
       var ehMaster = (uid === ADMIN_MASTER_UUID.toLowerCase()) || (eml === ADMIN_MASTER_EMAIL.toLowerCase());
       if (ehMaster) {
+        this.isAdmin = true;
         this.userRole = 'admin';
+        this.currentUser.role = 'superadmin';
         this.currentUser.status = 'ACTIVE';
         this.currentUser.username = '4hashprotocol';
         this.currentUser.fullName = 'Four Hash';
         if (!this.currentUser.level || this.currentUser.level <= 0) this.currentUser.level = 1;
         if (!this.currentUser.positionNumber || this.currentUser.positionNumber === '-' || this.currentUser.positionNumber === '') this.currentUser.positionNumber = '#1';
         this.currentUser.sponsor = '';
+        try {
+          if (!this.sbProfile || typeof this.sbProfile !== 'object') this.sbProfile = {};
+          this.sbProfile.role = 'superadmin';
+          this.sbProfile.status = 'ACTIVE';
+          this.sbProfile.kyc_status = 'verified';
+        } catch(_sb) {}
       }
 
       try {
@@ -760,17 +768,34 @@ const AppState = {
     if (!window.SupabaseOK || !window.SupabaseOK()) { this.adminUsersList = []; return false; }
     try {
       var sb = this._sb(); if (!sb) { this.adminUsersList = []; return false; }
-      var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: false });
-      var rows = (r && r.data) ? r.data : [];
-      var pids = rows.map(function(p){ return p.id; }).filter(Boolean);
+      var rows = [];
       var walletByPid = {};
-      if (pids.length > 0) {
-        try {
-          var rW = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team').in('profile_id', pids);
-          if (rW && rW.data && rW.data.length) {
-            rW.data.forEach(function(w){ walletByPid[w.profile_id] = w; });
-          }
-        } catch(_wErr){}
+      try {
+        var rRpc = await sb.rpc('admin_get_all_profiles');
+        if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length > 1) {
+          rows = rRpc.data;
+          try {
+            var rWRpc = await sb.rpc('admin_get_all_wallets');
+            if (rWRpc && Array.isArray(rWRpc.data) && rWRpc.data.length) {
+              rWRpc.data.forEach(function(w){ walletByPid[w.profile_id] = w; });
+            }
+          } catch(_wrpcErr){}
+        }
+      } catch(_rpcErr){
+        console.log('[ADMIN-RPC] admin_get_all_profiles falhou (ainda não aplicou migration 013?): fallback direct select. ' + ((_rpcErr && (_rpcErr.message || _rpcErr.code)) || String(_rpcErr)));
+      }
+      if (!rows || rows.length <= 1) {
+        var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: false });
+        rows = (r && r.data) ? r.data : [];
+        var pids = rows.map(function(p){ return p.id; }).filter(Boolean);
+        if (pids.length > 0 && Object.keys(walletByPid).length === 0) {
+          try {
+            var rW = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team').in('profile_id', pids);
+            if (rW && rW.data && rW.data.length) {
+              rW.data.forEach(function(w){ walletByPid[w.profile_id] = w; });
+            }
+          } catch(_wErr){}
+        }
       }
       this.adminUsersList = rows.map(function(p){
         var full = (p.full_name || '').toString().trim();
@@ -882,6 +907,8 @@ const AppState = {
       category: row.category || 'Outro',
       priority: row.priority || 'Média',
       status: row.status || 'Aberto',
+      date: this._formatDDMM(row.created_at || row.createdAt || new Date()),
+      dateFull: (row.created_at || row.createdAt || ''),
       created: row.created_at ? new Date(row.created_at) : new Date(),
       createdAt: row.created_at ? row.created_at : '',
       created_at: row.created_at,
@@ -937,10 +964,23 @@ const AppState = {
     if (!window.SupabaseOK || !window.SupabaseOK()) return false;
     try {
       var sb = this._sb(); if (!sb) return false;
-      var q = sb.from('support_tickets').select('*').order('created_at', { ascending: false });
-      var r = await q;
-      if (!r || !r.data || !r.data.length) { this.supportTickets = []; return false; }
-      var rows = r.data.map(this._mapTicket.bind(this)).filter(Boolean);
+      var rowsRaw = null;
+
+      try {
+        var rRpc = await sb.rpc('admin_get_all_support_tickets');
+        if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length) {
+          rowsRaw = rRpc.data.slice().sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+        }
+      } catch (eRpc) { /* fallback direto abaixo */ }
+
+      if (!rowsRaw) {
+        var q = sb.from('support_tickets').select('*').order('created_at', { ascending: false });
+        var r = await q;
+        if (r && r.data && r.data.length) rowsRaw = r.data;
+      }
+
+      if (!rowsRaw || !rowsRaw.length) { this.supportTickets = []; return false; }
+      var rows = rowsRaw.map(this._mapTicket.bind(this)).filter(Boolean);
       this.supportTickets = rows;
       return true;
     } catch (e) {
@@ -953,9 +993,22 @@ const AppState = {
     if (!window.SupabaseOK || !window.SupabaseOK()) return false;
     try {
       var sb = this._sb(); if (!sb) return false;
-      var r = await sb.from('finance_problems').select('*').order('created_at', { ascending: false });
-      if (!r || !r.data || !r.data.length) { this.financeProblems = []; return false; }
-      var rows = r.data.map(this._mapFinance.bind(this)).filter(Boolean);
+      var rowsRaw = null;
+
+      try {
+        var rRpc = await sb.rpc('admin_get_all_finance_problems');
+        if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length) {
+          rowsRaw = rRpc.data.slice().sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
+        }
+      } catch (eRpc) { /* fallback direto abaixo */ }
+
+      if (!rowsRaw) {
+        var r = await sb.from('finance_problems').select('*').order('created_at', { ascending: false });
+        if (r && r.data && r.data.length) rowsRaw = r.data;
+      }
+
+      if (!rowsRaw || !rowsRaw.length) { this.financeProblems = []; return false; }
+      var rows = rowsRaw.map(this._mapFinance.bind(this)).filter(Boolean);
       this.financeProblems = rows;
       return true;
     } catch (e) {
@@ -1008,40 +1061,103 @@ const AppState = {
         if (typeof d.withdraw_hours === 'number' || typeof d.withdraw_hours === 'string') this.projectSettings.withdraw.processingHours = Number(d.withdraw_hours);
       }
 
-      var rProfiles = await sb.from('profiles').select('id, status, role, created_at');
-      var rowsProfiles = (rProfiles && rProfiles.data) ? rProfiles.data : [];
-      var totalUsers = rowsProfiles.length;
-      var activeUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='ACTIVE' || s==='ATIVO'; }).length;
-      var pendingUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='PENDING' || s==='PENDENTE'; }).length;
-      var adminUsers = rowsProfiles.filter(function(p){ return (p.role||'') === 'superadmin' || (p.role||'') === 'admin'; }).length;
-      var pctAtivos = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 1000) / 10 : 0;
-      console.log('[ADMIN-SB] profiles: total=' + totalUsers + ' active=' + activeUsers + ' pending=' + pendingUsers);
+      var rpcProfiles = null;
+      var rpcWallets = null;
+      var rpcStats = null;
+      try {
+        try { var _rp = await sb.rpc('admin_get_all_profiles'); if (_rp && Array.isArray(_rp.data) && _rp.data.length > 1) rpcProfiles = _rp.data; } catch(_e1){ console.log('[ADMIN-RPC] profiles (013) fallback: ' + ((_e1&&(_e1.message||_e1.code))||String(_e1))); }
+        try { var _rw = await sb.rpc('admin_get_all_wallets'); if (_rw && Array.isArray(_rw.data) && _rw.data.length) rpcWallets = _rw.data; } catch(_e2){}
+        try { var _rs = await sb.rpc('admin_get_tx_stats'); if (_rs && _rs.data && typeof _rs.data === 'object') rpcStats = _rs.data; } catch(_e3){ console.log('[ADMIN-RPC] tx_stats (013) fallback: ' + ((_e3&&(_e3.message||_e3.code))||String(_e3))); }
+      } catch(_rpcBulk) {}
 
-      var rTx = null; var rowsTx = [];
-      try { rTx = await sb.from('transactions').select('amount, kind, status'); rowsTx = (rTx && rTx.data) ? rTx.data : []; } catch(_txErr) { console.warn('[ADMIN-SB] transactions RLS blocked: ' + ((_txErr && _txErr.message)||String(_txErr))); }
+      var totalUsers = 0; var activeUsers = 0; var pendingUsers = 0; var adminUsers = 0; var pctAtivos = 0;
+      if (rpcProfiles && rpcProfiles.length) {
+        totalUsers = rpcProfiles.length;
+        activeUsers = rpcProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='ACTIVE' || s==='ATIVO'; }).length;
+        pendingUsers = rpcProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='PENDING' || s==='PENDENTE'; }).length;
+        adminUsers = rpcProfiles.filter(function(p){ return (p.role||'') === 'superadmin' || (p.role||'') === 'admin'; }).length;
+        pctAtivos = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 1000) / 10 : 0;
+        console.log('[ADMIN-RPC] profiles via 013: total=' + totalUsers + ' active=' + activeUsers + ' pending=' + pendingUsers);
+      } else {
+        var rProfiles = await sb.from('profiles').select('id, status, role, created_at');
+        var rowsProfiles = (rProfiles && rProfiles.data) ? rProfiles.data : [];
+        totalUsers = rowsProfiles.length;
+        activeUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='ACTIVE' || s==='ATIVO'; }).length;
+        pendingUsers = rowsProfiles.filter(function(p){ var s=(p.status||'').toString().toUpperCase(); return s==='PENDING' || s==='PENDENTE'; }).length;
+        adminUsers = rowsProfiles.filter(function(p){ return (p.role||'') === 'superadmin' || (p.role||'') === 'admin'; }).length;
+        pctAtivos = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 1000) / 10 : 0;
+        console.log('[ADMIN-SB] profiles direct fallback: total=' + totalUsers + ' active=' + activeUsers + ' pending=' + pendingUsers);
+      }
+
+      var _todayStart = new Date(); _todayStart.setHours(0,0,0,0); var _todayMs = _todayStart.getTime();
       var sumDep = 0; var sumDepOK = 0; var sumWd = 0; var sumWdOK = 0; var sumBonus = 0;
-      rowsTx.forEach(function(t){
-        var a = Number(t.amount || 0);
-        var k = (t.kind || '').toString().toLowerCase();
-        var s = (t.status || '').toString().toUpperCase();
-        var confirmedTx = (s === 'COMPLETED' || s === 'CONFIRMED' || s === 'SUCCESS' || s === 'FINISHED' || s === 'PAID');
-        if (k === 'deposit') { sumDep += a; if (confirmedTx) sumDepOK += a; }
-        else if (k === 'withdrawal' || k === 'withdraw') { sumWd += a; if (confirmedTx) sumWdOK += a; }
-        else if (k.indexOf('bonus') >= 0 || k.indexOf('referral') >= 0 || k.indexOf('matrix') >= 0 || k.indexOf('team') >= 0 || k.indexOf('sponsor') >= 0 || k.indexOf('level') >= 0) { sumBonus += a; }
-      });
-      console.log('[ADMIN-SB] transactions: dep=' + sumDep + ' depOK=' + sumDepOK + ' bonus=' + sumBonus);
+      var todayVolume = 0; var todayCount = 0; var todayDepCount = 0; var todayBonusCount = 0;
+      if (rpcStats && typeof rpcStats === 'object') {
+        sumDepOK = Number(rpcStats.total_deposited || 0);
+        sumBonus = Number(rpcStats.total_bonus_team || 0) + Number(rpcStats.total_bonus_matrix || 0);
+        sumDep = sumDepOK;
+        sumWdOK = Number(rpcStats.total_withdrawn || 0);
+        sumWd = sumWdOK;
+        todayVolume = Number(rpcStats.today_volume || 0);
+        todayCount = Number(rpcStats.today_tx_count || 0);
+        todayDepCount = Number(rpcStats.today_deposit_count || 0);
+        todayBonusCount = Number(rpcStats.today_bonus_count || 0);
+        console.log('[ADMIN-RPC] tx via 013: depOK=' + sumDepOK + ' bonus=' + sumBonus + ' todayVol=' + todayVolume + ' todayCnt=' + todayCount);
+      } else {
+        var rTx = null; var rowsTx = [];
+        try { rTx = await sb.from('transactions').select('amount, kind, status, created_at, network, currency'); rowsTx = (rTx && rTx.data) ? rTx.data : []; } catch(_txErr) { console.warn('[ADMIN-SB] transactions RLS blocked: ' + ((_txErr && _txErr.message)||String(_txErr))); }
+        rowsTx.forEach(function(t){
+          var a = Number(t.amount || 0);
+          var k = (t.kind || '').toString().toLowerCase();
+          var s = (t.status || '').toString().toUpperCase();
+          var confirmedTx = (s === 'COMPLETED' || s === 'CONFIRMED' || s === 'SUCCESS' || s === 'FINISHED' || s === 'PAID');
+          var isToday = false;
+          try {
+            var dt = t.created_at;
+            if (dt) {
+              var tms = (typeof dt === 'string') ? (new Date(dt)).getTime() : ((dt instanceof Date) ? dt.getTime() : Number(dt));
+              if (!isNaN(tms) && tms >= _todayMs) isToday = true;
+            }
+          } catch(_dt) {}
+          if (k === 'deposit') { sumDep += a; if (confirmedTx) sumDepOK += a; if (isToday) todayDepCount += 1; }
+          else if (k === 'withdrawal' || k === 'withdraw') { sumWd += a; if (confirmedTx) sumWdOK += a; }
+          else if (k.indexOf('bonus') >= 0 || k.indexOf('referral') >= 0 || k.indexOf('matrix') >= 0 || k.indexOf('team') >= 0 || k.indexOf('sponsor') >= 0 || k.indexOf('level') >= 0) { sumBonus += a; if (isToday) todayBonusCount += 1; }
+          if (confirmedTx) {
+            todayCount += 1;
+            todayVolume += a;
+          }
+        });
+        console.log('[ADMIN-SB] transactions fallback: dep=' + sumDep + ' depOK=' + sumDepOK + ' bonus=' + sumBonus + ' todayVolume=' + todayVolume + ' todayCount=' + todayCount);
+      }
 
-      var rWallets = null; var rowsW = [];
-      try { rWallets = await sb.from('wallets').select('available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix'); rowsW = (rWallets && rWallets.data) ? rWallets.data : []; } catch(_wErr) { console.warn('[ADMIN-SB] wallets RLS blocked: ' + ((_wErr && _wErr.message)||String(_wErr))); }
       var totalBalance = 0; var totalDeposited = 0; var totalWithdrawn = 0; var totalBTeam = 0; var totalBMatrix = 0;
-      rowsW.forEach(function(w){
-        totalBalance += Number(w.available_balance || 0);
-        totalDeposited += Number(w.total_deposited || 0);
-        totalWithdrawn += Number(w.total_withdrawn || 0);
-        totalBTeam += Number(w.total_bonus_team || 0);
-        totalBMatrix += Number(w.total_bonus_matrix || 0);
-      });
-      console.log('[ADMIN-SB] wallets: totalDeposited=' + totalDeposited + ' totalBonusTeam=' + totalBTeam + ' balance=' + totalBalance);
+      if (rpcWallets && rpcWallets.length) {
+        rpcWallets.forEach(function(w){
+          totalBalance += Number(w.available_balance || 0);
+          totalDeposited += Number(w.total_deposited || 0);
+          totalWithdrawn += Number(w.total_withdrawn || 0);
+          totalBTeam += Number(w.total_bonus_team || 0);
+          totalBMatrix += Number(w.total_bonus_matrix || 0);
+        });
+        if (rpcStats && typeof rpcStats === 'object') {
+          totalDeposited = Math.max(totalDeposited, Number(rpcStats.total_deposited || 0));
+          totalWithdrawn = Math.max(totalWithdrawn, Number(rpcStats.total_withdrawn || 0));
+          totalBTeam = Math.max(totalBTeam, Number(rpcStats.total_bonus_team || 0));
+          totalBMatrix = Math.max(totalBMatrix, Number(rpcStats.total_bonus_matrix || 0));
+        }
+        console.log('[ADMIN-RPC] wallets via 013: totalDeposited=' + totalDeposited + ' totalBonusTeam=' + totalBTeam + ' balance=' + totalBalance);
+      } else {
+        var rWallets = null; var rowsW = [];
+        try { rWallets = await sb.from('wallets').select('available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix'); rowsW = (rWallets && rWallets.data) ? rWallets.data : []; } catch(_wErr) { console.warn('[ADMIN-SB] wallets RLS blocked: ' + ((_wErr && _wErr.message)||String(_wErr))); }
+        rowsW.forEach(function(w){
+          totalBalance += Number(w.available_balance || 0);
+          totalDeposited += Number(w.total_deposited || 0);
+          totalWithdrawn += Number(w.total_withdrawn || 0);
+          totalBTeam += Number(w.total_bonus_team || 0);
+          totalBMatrix += Number(w.total_bonus_matrix || 0);
+        });
+        console.log('[ADMIN-SB] wallets fallback: totalDeposited=' + totalDeposited + ' totalBonusTeam=' + totalBTeam + ' balance=' + totalBalance);
+      }
 
       // FONTE DUPLO: volume = max(transactions confirmed, wallets total_deposited) — wallets tem PRIORIDADE (é SSOT reconciliado V22)
       var volumeEntradas = 0;
@@ -1070,7 +1186,12 @@ const AppState = {
           totalBonus: sumBonus,
           volumeEntradas: volumeEntradas,
           fundoLiquidez: fundoLiquidez,
-          bonusEquipe: bonusEquipe
+          bonusEquipe: bonusEquipe,
+          todayVolume: todayVolume,
+          todayCount: todayCount,
+          todayDeposits: todayDepCount,
+          todayBonuses: todayBonusCount,
+          todayDate: new Date().toLocaleDateString('pt-PT')
         },
         wallets: {
           totalBalance: totalBalance,

@@ -435,7 +435,7 @@ const Views = {
         <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div class="flex items-center gap-2">
             <div class="w-2 h-2 rounded-full bg-brand animate-ping"></div>
-            <span class="px-2.5 py-1 rounded-lg border border-brand/40 bg-brand/10 text-brand font-black font-mono text-[10px] uppercase tracking-[0.18em]">Pagamento NowPayments · Em Aberto</span>
+            <span class="px-2.5 py-1 rounded-lg border border-brand/40 bg-brand/10 text-brand font-black font-mono text-[10px] uppercase tracking-[0.18em]">Pagamento · Em Aberto</span>
           </div>
           <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-400">
             <i class="fa-regular fa-clock"></i>
@@ -449,7 +449,7 @@ const Views = {
               <img src="${_pvQr(openPayQR, 220)}" alt="QR Code Pagamento USDT ${openPayNetwork}" class="w-full h-full object-contain select-none" draggable="false" />
             </div>
             ${openPayUrl ? `<a href="${openPayUrl}" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition">
-              <i class="fa-solid fa-up-right-from-square text-brand"></i> Abrir pagamento no NowPayments
+              <i class="fa-solid fa-up-right-from-square text-brand"></i> Abrir link do pagamento
             </a>` : ''}
           </div>
 
@@ -467,7 +467,7 @@ const Views = {
             </div>
 
             <div class="rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5">
-              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Endereço NowPayments (envie aqui)</div>
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Endereço do Vault (envie aqui)</div>
               <div id="deposit-open-addr" class="w-full break-all px-2.5 py-2 rounded-lg border border-brand/30 bg-black/60 text-brand font-mono text-[11px] leading-relaxed select-all">${openPayQR}</div>
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <button onclick="PaymentVault.copy(document.getElementById('deposit-open-addr').innerText, 'Endereço copiado ✓')" class="py-2 rounded-xl bg-brand/15 border border-brand/30 hover:bg-brand/25 text-brand font-black text-xs tracking-wider transition inline-flex items-center justify-center gap-1.5">
@@ -518,7 +518,7 @@ const Views = {
           <span class="px-2.5 py-1 rounded-lg border border-gray-500/40 bg-gray-500/10 text-gray-300 font-black font-mono text-[10px] uppercase tracking-[0.18em]"><i class="fa-regular fa-clock mr-1"></i> Pagamento Expirado</span>
         </div>
         <div class="text-[11px] text-gray-400 mb-3">
-          Este pagamento expirou. Por favor gere um novo pagamento QR (o NowPayments altera a cotação a cada 15 minutos para garantir o valor on-chain).
+          Este pagamento expirou. Por favor gere um novo pagamento QR (a cotação on-chain é atualizada a cada 15 minutos para garantir o valor exato).
         </div>
         <button onclick="AppState.setCurrentPayment(null); Router.refreshCurrentView(); UI.showToast('Pagamento antigo removido. Gere um novo QR abaixo.', 'success');" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-glow text-black font-black text-xs tracking-wider inline-flex items-center gap-1.5">
           <i class="fa-solid fa-trash-can"></i> Limpar e Gerar Novo QR
@@ -622,24 +622,30 @@ const Views = {
                         </div>
                       </div>
 
-                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                         ${[
-                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30'},
-                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Min. US$ 15', checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30'},
-                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
+                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
+                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
+                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedTxt:'Segura', feeTxt:'Taxa média', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
                         ].map(function(n){
                           return '<label class="group cursor-pointer relative">'+
                             '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
-                            '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
-                              '<div class="flex items-center justify-between gap-2">'+
-                                '<div class="flex items-center gap-2 min-w-0">'+
-                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 '+(n.code==='bep20'?'peer-checked:text-yellow-400':(n.code==='trc20'?'peer-checked:text-red-400':'peer-checked:text-blue-400'))+' transition '+n.icon+'"></div>'+
-                                  '<div class="min-w-0">'+
-                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
-                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
+                            '<div class="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4 transition '+n.border+'">'+
+                              '<div class="flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">'+
+                                '<div class="w-9 h-9 sm:w-12 sm:h-12 shrink-0 rounded-2xl border border-white/10 bg-black/50 flex items-center justify-center text-base sm:text-xl text-gray-300 '+n.iconChecked+' transition '+n.icon+'"></div>'+
+                                '<div class="min-w-0 flex-1 flex flex-col justify-center sm:justify-start gap-1 sm:gap-1.5">'+
+                                  '<div class="flex items-center justify-between gap-2 min-w-0">'+
+                                    '<div class="text-[12px] sm:text-[13px] font-black font-mono uppercase tracking-wider text-white leading-none whitespace-nowrap truncate">'+n.name+'</div>'+
+                                    '<span class="shrink-0 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md border text-[8px] sm:text-[9px] font-mono font-black uppercase tracking-[0.14em] '+n.tagColor+'">'+n.short+'</span>'+
                                   '</div>'+
+                                  '<div class="text-[9px] sm:text-[10px] text-gray-500 font-mono uppercase tracking-[0.15em] leading-none whitespace-nowrap truncate">'+n.sub+'</div>'+
                                 '</div>'+
-                                '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
+                              '</div>'+
+                              '<div class="h-px w-full bg-white/[0.06] hidden sm:block"></div>'+
+                              '<div class="flex flex-wrap items-center gap-x-2.5 sm:gap-x-3 gap-y-1 text-[9px] sm:text-[10px] font-mono text-gray-400">'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+n.speedTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+n.feeTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>Mín. '+n.minTxt+'</span>'+
                               '</div>'+
                             '</div>'+
                           '</label>';
@@ -647,17 +653,17 @@ const Views = {
                       </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2.5">
-                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
                         <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token Fixo</div>
-                        <div class="text-[12px] font-black font-mono text-white flex items-center gap-1.5">
+                        <div class="text-[12px] sm:text-[13px] font-black font-mono text-white flex items-center gap-1.5">
                           <i class="fa-solid fa-t-sign text-brand"></i>
                           USDT (Tether)
                         </div>
                       </div>
-                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
                         <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Método Confirmação</div>
-                        <div class="text-[12px] font-black font-mono text-white">12 blocos on-chain</div>
+                        <div class="text-[12px] sm:text-[13px] font-black font-mono text-white">12 blocos on-chain</div>
                       </div>
                     </div>
 
@@ -731,7 +737,7 @@ const Views = {
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 01</div>
                   <div class="font-bold text-white text-sm mb-1">Deposite US$ ${entryAmount} USDT</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Clique em "Ativar Conta" acima, gere o QR Code único e envie exatamente ${entryAmount}.00 USDT pela rede selecionada (BEP20/TRC20/ERC20) para o endereço NowPayments exibido.</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Clique em "Ativar Conta" acima, gere o QR Code único do vault e envie exatamente ${entryAmount}.00 USDT pela rede selecionada (BEP20/TRC20/ERC20) para o endereço exibido.</div>
                 </div>
               </div>` : `
             <div class="mt-6"></div>
@@ -745,7 +751,7 @@ const Views = {
                   </div>
                   <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
                   <div class="font-bold text-white text-sm mb-1">Confirmação On-Chain Automática</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas: (A) IPN NowPayments 0-2s · (B) Cron 1 minuto · (C) Watchdog UI 45s. Não precisa submeter TXID manualmente — tudo é automático.</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas automática: (A) Confirmação IPN · (B) Cron 1 minuto · (C) Watchdog UI 45s. Não precisa submeter TXID manualmente — tudo é automático.</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
@@ -819,17 +825,7 @@ const Views = {
                   </div>
                 </div>
 
-                ${ OPEN_PAYMENT_BLOCK || ( !addrValid ? `
-                <div class="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 flex items-start gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center flex-shrink-0 text-red-400">
-                    <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
-                  </div>
-                  <div class="space-y-1.5">
-                    <div class="font-black text-red-400 text-sm uppercase tracking-wide">Tesouraria em Manutenção</div>
-                    <div class="text-[11px] text-red-300/80 leading-relaxed">O endereço de carteira do protocolo está temporariamente indisponível. Por favor <b>use o fluxo principal no painel direito (botão "Depósito Adicional · Gerar QR")</b> — o NowPayments gera um endereço único e válido por 15 minutos com confirmação automática.</div>
-                  </div>
-                </div>
-                ` : '' ) }
+                ${ OPEN_PAYMENT_BLOCK || '' }
               </div>
 
               <div class="lg:col-span-7 lg:sticky lg:top-24">
@@ -858,24 +854,30 @@ const Views = {
                         </div>
                       </div>
 
-                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                         ${[
-                          {code:'bep20', name:'BNB Chain', short:'BEP-20', icon:'fa-brands fa-btc', desc:'Rápida · Taxa baixa', checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30'},
-                          {code:'trc20', name:'Tron Network', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', desc:'Instantânea · Min. US$ 15', checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30'},
-                          {code:'erc20', name:'Ethereum', short:'ERC-20', icon:'fa-brands fa-ethereum', desc:'Segura · Taxa média', checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30'}
+                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
+                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
+                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedTxt:'Segura', feeTxt:'Taxa média', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
                         ].map(function(n){
                           return '<label class="group cursor-pointer relative">'+
                             '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
-                            '<div class="flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-black/30 p-3 transition '+n.border+'">'+
-                              '<div class="flex items-center justify-between gap-2">'+
-                                '<div class="flex items-center gap-2 min-w-0">'+
-                                  '<div class="w-9 h-9 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center text-gray-300 '+(n.code==='bep20'?'peer-checked:text-yellow-400':(n.code==='trc20'?'peer-checked:text-red-400':'peer-checked:text-blue-400'))+' transition '+n.icon+'"></div>'+
-                                  '<div class="min-w-0">'+
-                                    '<div class="text-[11px] font-black font-mono uppercase tracking-wider text-white leading-tight">'+n.name+'</div>'+
-                                    '<div class="text-[9px] text-gray-500 font-mono mt-0.5">'+n.desc+'</div>'+
+                            '<div class="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4 transition '+n.border+'">'+
+                              '<div class="flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">'+
+                                '<div class="w-9 h-9 sm:w-12 sm:h-12 shrink-0 rounded-2xl border border-white/10 bg-black/50 flex items-center justify-center text-base sm:text-xl text-gray-300 '+n.iconChecked+' transition '+n.icon+'"></div>'+
+                                '<div class="min-w-0 flex-1 flex flex-col justify-center sm:justify-start gap-1 sm:gap-1.5">'+
+                                  '<div class="flex items-center justify-between gap-2 min-w-0">'+
+                                    '<div class="text-[12px] sm:text-[13px] font-black font-mono uppercase tracking-wider text-white leading-none whitespace-nowrap truncate">'+n.name+'</div>'+
+                                    '<span class="shrink-0 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md border text-[8px] sm:text-[9px] font-mono font-black uppercase tracking-[0.14em] '+n.tagColor+'">'+n.short+'</span>'+
                                   '</div>'+
+                                  '<div class="text-[9px] sm:text-[10px] text-gray-500 font-mono uppercase tracking-[0.15em] leading-none whitespace-nowrap truncate">'+n.sub+'</div>'+
                                 '</div>'+
-                                '<span class="px-1.5 py-0.5 rounded-lg border text-[9px] font-mono font-black uppercase tracking-wider shrink-0 '+n.tagColor+'">'+n.short+'</span>'+
+                              '</div>'+
+                              '<div class="h-px w-full bg-white/[0.06] hidden sm:block"></div>'+
+                              '<div class="flex flex-wrap items-center gap-x-2.5 sm:gap-x-3 gap-y-1 text-[9px] sm:text-[10px] font-mono text-gray-400">'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+n.speedTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+n.feeTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>Mín. '+n.minTxt+'</span>'+
                               '</div>'+
                             '</div>'+
                           '</label>';
@@ -883,16 +885,16 @@ const Views = {
                       </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2.5">
-                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
                         <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token</div>
-                        <div class="text-[12px] font-black font-mono text-white flex items-center gap-1.5">
+                        <div class="text-[12px] sm:text-[13px] font-black font-mono text-white flex items-center gap-1.5">
                           <i class="fa-solid fa-t-sign text-brand"></i> USDT (Tether)
                         </div>
                       </div>
-                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3">
+                      <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
                         <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Método Confirmação</div>
-                        <div class="text-[12px] font-bold text-white">12 blocos on-chain</div>
+                        <div class="text-[12px] sm:text-[13px] font-bold font-mono text-white">12 blocos on-chain</div>
                       </div>
                     </div>
 
@@ -1219,16 +1221,16 @@ const Views = {
 
         <div class="rounded-2xl border border-brand/30 bg-gradient-to-r from-brand-card via-black to-brand-card p-6">
           <div class="text-xs font-mono text-brand font-bold uppercase tracking-wider mb-2" data-i18n="regTeamTitle">Estrutura de Divisão — Fase 1 Lançamento</div>
-          <div class="grid grid-cols-1 md:grid-cols-7 gap-3 items-center text-center">
-            <div class="p-4 rounded-xl bg-brand-surface border border-white/5 md:col-span-1">
+          <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.15fr)_auto_minmax(0,4fr)_minmax(0,0.95fr)] gap-3 md:gap-x-3 md:gap-y-4 items-center text-center">
+            <div class="p-4 rounded-xl bg-brand-surface border border-white/5">
               <div class="text-[10px] text-gray-400 font-mono" data-i18n="regEntradaLabel">ENTRADA</div>
               <div class="text-2xl font-black text-white font-mono mt-1" data-i18n="regEntradaValue">US$ 10</div>
               <div class="text-[9px] text-gray-500">100% USDT BEP20</div>
             </div>
 
-            <div class="text-brand font-black text-2xl hidden md:flex items-center justify-center">➜</div>
+            <div class="text-brand font-black text-2xl hidden md:flex items-center justify-center mx-0.5">➜</div>
 
-            <div class="md:col-span-5 grid grid-cols-5 gap-2">
+            <div class="grid grid-cols-5 gap-2">
               <div class="p-2.5 rounded-xl bg-brand/15 border border-brand/40">
                 <div class="text-[9px] text-brand font-mono font-bold"><span data-i18n="regTeamN1Label">N1</span> 50%</div>
                 <div class="text-sm font-black text-white font-mono mt-0.5" data-i18n="regTeamN1Val">$ 5,00</div>
@@ -1256,7 +1258,7 @@ const Views = {
               </div>
             </div>
 
-            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 md:col-span-1 mt-2 md:mt-0">
+            <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 mt-2 md:mt-0">
               <div class="text-[9px] text-amber-300 font-mono font-bold" data-i18n="regFundLabel">FUNDO 40%</div>
               <div class="text-lg font-black text-amber-200 font-mono mt-0.5" data-i18n="regFundVal">$ 4,00</div>
               <div class="text-[8px] text-gray-400" data-i18n="regFundPct">Liquidez</div>
@@ -1499,17 +1501,82 @@ const Views = {
               </button>
             </div>
 
-            <form onsubmit="event.preventDefault(); UI.showToast('Chamado #4812 criado com sucesso!', 'success');" class="space-y-3">
+            <form id="support-user-form" class="space-y-3">
               <div>
-                <input type="text" required placeholder="${I18n.t('supportSubjectPlaceholder')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-brand transition">
+                <label class="block text-[10px] font-mono text-gray-500 uppercase mb-1.5 tracking-wider">Categoria</label>
+                <select id="support-user-category" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand transition">
+                  <option value="Ativação">Ativação de Conta</option>
+                  <option value="Depósito">Depósito / Recebimento</option>
+                  <option value="Saque">Saque BEP20 / BEP-20</option>
+                  <option value="Indicação">Indicação / Upline</option>
+                  <option value="Bônus">Bônus / Carteira</option>
+                  <option value="Rede">Rede / Posicionamento</option>
+                  <option value="Outro" selected>Outro Assunto</option>
+                </select>
               </div>
               <div>
-                <textarea rows="3" required placeholder="${I18n.t('supportMsgPlaceholder')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-brand transition"></textarea>
+                <label class="block text-[10px] font-mono text-gray-500 uppercase mb-1.5 tracking-wider">Prioridade</label>
+                <select id="support-user-priority" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand transition">
+                  <option value="Baixa">Baixa · Dúvida geral</option>
+                  <option value="Média" selected>Média · Suporte regular</option>
+                  <option value="Alta">Alta · Urgência / Bloqueio</option>
+                </select>
               </div>
-              <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand text-black font-bold text-xs hover:bg-brand-glow shadow-neon-sm transition">
-                <span data-i18n="supportSubmitBtn">Enviar Chamado</span>
-              </button>
+              <div>
+                <label class="block text-[10px] font-mono text-gray-500 uppercase mb-1.5 tracking-wider" data-i18n="supportSubjectPlaceholderLabel">Assunto</label>
+                <input id="support-user-subject" type="text" required maxlength="140" placeholder="${I18n.t('supportSubjectPlaceholder')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand transition">
+              </div>
+              <div>
+                <label class="block text-[10px] font-mono text-gray-500 uppercase mb-1.5 tracking-wider" data-i18n="supportMsgPlaceholderLabel">Detalhes</label>
+                <textarea id="support-user-message" rows="4" required maxlength="3000" placeholder="${I18n.t('supportMsgPlaceholder')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand transition resize-none"></textarea>
+              </div>
+              <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-1">
+                <div id="support-user-hint" class="text-[10px] font-mono text-gray-500 leading-relaxed">Receberás uma resposta em até 24h úteis na Central de Suporte do Painel Admin.</div>
+                <button id="support-user-submit" type="submit" class="px-6 py-2.5 rounded-xl bg-brand text-black font-bold text-xs hover:bg-brand-glow shadow-neon-sm transition inline-flex items-center gap-2 justify-center">
+                  <i class="fa-solid fa-paper-plane"></i><span data-i18n="supportSubmitBtn">Enviar Chamado</span>
+                </button>
+              </div>
             </form>
+            <script>
+              (function(){
+                try {
+                  var fm = document.getElementById('support-user-form');
+                  var btn = document.getElementById('support-user-submit');
+                  var hint = document.getElementById('support-user-hint');
+                  if (fm && (typeof AppState !== 'undefined')) {
+                    fm.addEventListener('submit', async function(ev){
+                      ev.preventDefault();
+                      try {
+                        if (btn) { btn.disabled = true; btn.style.opacity='0.55'; btn.style.cursor='not-allowed'; }
+                        if (!AppState || !AppState.isAuthenticated) {
+                          if (hint) hint.innerHTML = '<span class="text-red-300">Faça login primeiro para abrir um chamado.</span>';
+                          if (window.UI) UI.showToast('Faça login para abrir um chamado.', 'warning', 'fa-triangle-exclamation');
+                          return;
+                        }
+                        var subj = (document.getElementById('support-user-subject')||{}).value || '';
+                        var msg  = (document.getElementById('support-user-message')||{}).value  || '';
+                        var cat  = (document.getElementById('support-user-category')||{}).value || 'Outro';
+                        var pri  = (document.getElementById('support-user-priority')||{}).value || 'Média';
+                        subj = String(subj).trim(); msg = String(msg).trim();
+                        if (subj.length < 5 || msg.length < 10) {
+                          if (window.UI) UI.showToast('Assunto (min 5) e detalhes (min 10) são obrigatórios.', 'warning', 'fa-triangle-exclamation');
+                          return;
+                        }
+                        var ok = await AppState.openSupportTicket({ title: subj, message: msg, category: cat, priority: pri });
+                        if (ok) {
+                          if (window.UI) UI.showToast('Chamado criado com sucesso. Acompanhe no Painel Admin.', 'success', 'fa-circle-check');
+                          try { fm.reset(); } catch(_){}
+                        } else {
+                          if (window.UI) UI.showToast('Não foi possível abrir o chamado. Tente novamente ou use WhatsApp.', 'error', 'fa-triangle-exclamation');
+                        }
+                      } finally {
+                        if (btn) { btn.disabled = false; btn.style.opacity='1'; btn.style.cursor=''; }
+                      }
+                    });
+                  }
+                } catch(_supportInit){}
+              })();
+            </script>
           </div>
         </div>
       </div>
@@ -1522,13 +1589,20 @@ const Views = {
     const fin = AppState.financeProblems || [];
     const tks = AppState.supportTickets || [];
 
-    const finTotalHoje = fin.filter(f=>f.opened.includes('03/09')).reduce((s,f)=>s+(f.amount||0),0);
-    const finPendentes = fin.filter(f=>['Pendente Revisão','Em Análise'].includes(f.status)).length;
-    const finResolvidos = fin.filter(f=>f.status.includes('Resolvido')||f.status.includes('Fechado')).length;
-    const finValorTotal = fin.reduce((s,f)=>s+(f.expected||f.amount||0),0);
+    const vol = (AppState.adminSummaries && AppState.adminSummaries.volume) ? AppState.adminSummaries.volume : {};
+    const todayVol = Number(vol.todayVolume || 0);
+    const todayCnt = Number(vol.todayCount || 0);
+    const todayDepCount = Number(vol.todayDepositCount || vol.todayDeposits || 0);
+    const todayBonusCount = Number(vol.todayBonusCount || vol.todayBonuses || 0);
+    const todayDateStr = vol.todayDate || (new Date().toLocaleDateString('pt-PT'));
+    const finHojeStr = fin.filter(function(f){ try { return String(f.opened||f.opened_at||f.created_at||'').includes(todayDateStr.substr(0,5)) || String(f.created_at||'').includes(todayDateStr.substr(6,4)); } catch(_e) { return false; } }).length;
+    const finPendentes = fin.filter(f=>['Pendente Revisão','Em Análise','Open','Pendente','Aberto','pending','open','new','Novo'].includes(String(f.status||''))).length;
+    const finResolvidos = fin.filter(f=>String(f.status||'').includes('Resolvido')||String(f.status||'').includes('Fechado')||String(f.status||'').toLowerCase()==='closed'||String(f.status||'').toLowerCase()==='resolved'||String(f.status||'').toLowerCase()==='done').length;
+    const finValorTotal = fin.reduce((s,f)=>s+Number((f.expected||f.amount||f.value||0)),0);
+    const finPendValor = fin.filter(f=>['Pendente Revisão','Em Análise','Open','Pendente','Aberto','pending','open','new','Novo'].includes(String(f.status||''))).reduce((s,f)=>s+Number((f.expected||f.amount||f.value||0)),0);
     const finFilter = AppState.adminFinanceFilter || 'Todos';
     const finCats = ['Todos','Depósito Atrasado','Hash Não Confirmado','Valor Incorreto','Rede Errada','Saque BEP20','Bônus N3','Processamento Lote 24h','Reembolso'];
-    const finFiltered = (finFilter==='Todos') ? fin : fin.filter(f=>f.category===finFilter || f.type===finFilter);
+    const finFiltered = (finFilter==='Todos') ? fin : fin.filter(f=>String(f.category||f.type||'')===finFilter);
 
     const tkAbertos = tks.filter(t=>t.status==='Aberto'||t.status==='Open').length;
     const tkRespondidos = tks.filter(t=>t.status==='Respondido'||t.status==='Replied').length;
@@ -1796,25 +1870,25 @@ const Views = {
             <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-red-500/10 blur-2xl"></div>
             <div class="text-xs font-mono text-red-300/80 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1.5"></i>Problemas Pendentes</div>
             <div class="text-3xl font-black text-white font-mono">${finPendentes}<span class="text-sm text-gray-500 font-bold ml-1">/ ${fin.length}</span></div>
-            <div class="text-[10px] text-red-300 mt-1 font-mono">Revisar hoje · prioridade alta</div>
+            <div class="text-[10px] text-red-300 mt-1 font-mono">Em aberto: $ ${Number(finPendValor||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})} · prioridade alta</div>
           </div>
           <div class="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-5 relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-amber-500/10 blur-2xl"></div>
-            <div class="text-xs font-mono text-amber-300/80 mb-1"><i class="fa-solid fa-calendar-day mr-1.5"></i>Movimentado HOJE</div>
-            <div class="text-3xl font-black text-white font-mono">$ ${finTotalHoje.toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-            <div class="text-[10px] text-amber-300 mt-1 font-mono">${fin.filter(f=>f.opened.includes('03/09')).length} ticket${fin.filter(f=>f.opened.includes('03/09')).length===1?'':'s'} · 03/09/2026</div>
+            <div class="text-xs font-mono text-amber-300/80 mb-1"><i class="fa-solid fa-calendar-day mr-1.5"></i>Movimentado HOJE (SSOT)</div>
+            <div class="text-3xl font-black text-white font-mono">$ ${Number(todayVol||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+            <div class="text-[10px] text-amber-300 mt-1 font-mono">${Number(todayCnt||0)} transações confirmadas · ${Number(todayDepCount||0)} depósitos · ${Number(todayBonusCount||0)} bónus · ${todayDateStr}</div>
           </div>
           <div class="rounded-2xl border border-green-500/20 bg-green-500/[0.04] p-5 relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-green-500/10 blur-2xl"></div>
             <div class="text-xs font-mono text-green-300/80 mb-1"><i class="fa-solid fa-circle-check mr-1.5"></i>Já Resolvidos</div>
             <div class="text-3xl font-black text-white font-mono">${finResolvidos}<span class="text-sm text-gray-500 font-bold ml-1">fechado${finResolvidos===1?'':'s'}</span></div>
-            <div class="text-[10px] text-green-300 mt-1 font-mono">${Math.round((finResolvidos/Math.max(1,fin.length))*100)}% da fila · SLA OK</div>
+            <div class="text-[10px] text-green-300 mt-1 font-mono">${fin.length>0?Math.round((finResolvidos/Math.max(1,fin.length))*100):0}% da fila · SLA OK</div>
           </div>
           <div class="rounded-2xl border border-purple-500/20 bg-purple-500/[0.04] p-5 relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-purple-500/10 blur-2xl"></div>
-            <div class="text-xs font-mono text-purple-300/80 mb-1"><i class="fa-solid fa-scale-balanced mr-1.5"></i>Valor Fila Total</div>
-            <div class="text-3xl font-black text-white font-mono">$ ${finValorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-            <div class="text-[10px] text-purple-300 mt-1 font-mono">USDT / BTC / ETH em análise</div>
+            <div class="text-xs font-mono text-purple-300/80 mb-1"><i class="fa-solid fa-scale-balanced mr-1.5"></i>Valor Total Fila (Abertos)</div>
+            <div class="text-3xl font-black text-white font-mono">$ ${Number(finPendValor||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+            <div class="text-[10px] text-purple-300 mt-1 font-mono">${finHojeStr} problema${finHojeStr===1?'':'s'} novos hoje · USDT on-chain</div>
           </div>
         </div>
 
@@ -2048,10 +2122,10 @@ const Views = {
                         </span>
                       </td>
                       <td class="py-3 text-right whitespace-nowrap">
-                        <button onclick="UI.openAdminTicketReply('${tk.id}')" class="px-3 py-1.5 rounded-lg border text-[11px] font-bold font-mono transition inline-flex items-center gap-1.5 ${btnClass}">
+                        <button onclick="UI.openAdminTicketReply('${tk.ticket_id}')" class="px-3 py-1.5 rounded-lg border text-[11px] font-bold font-mono transition inline-flex items-center gap-1.5 ${btnClass}">
                           <i class="fa-solid fa-${staRaw==='Aberto'?'reply':'eye'}"></i>${btnLabel}
                         </button>
-                        ${staRaw==='Respondido'?`<button onclick="UI.closeAdminTicket('${tk.id}')" class="ml-1.5 px-3 py-1.5 rounded-lg border border-gray-500/20 bg-gray-500/5 text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 text-[11px] font-bold font-mono transition" title="Fechar chamado"><i class="fa-solid fa-lock"></i></button>`:''}
+                        ${staRaw==='Respondido'?`<button onclick="UI.closeAdminTicket('${tk.ticket_id}')" class="ml-1.5 px-3 py-1.5 rounded-lg border border-gray-500/20 bg-gray-500/5 text-gray-300 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 text-[11px] font-bold font-mono transition" title="Fechar chamado"><i class="fa-solid fa-lock"></i></button>`:''}
                       </td>
                     </tr>
                   `;
