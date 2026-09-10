@@ -679,8 +679,18 @@ const AppState = {
     if (!window.SupabaseOK || !window.SupabaseOK()) { this.adminUsersList = []; return false; }
     try {
       var sb = this._sb(); if (!sb) { this.adminUsersList = []; return false; }
-      var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: true });
+      var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: false });
       var rows = (r && r.data) ? r.data : [];
+      var pids = rows.map(function(p){ return p.id; }).filter(Boolean);
+      var walletByPid = {};
+      if (pids.length > 0) {
+        try {
+          var rW = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team').in('profile_id', pids);
+          if (rW && rW.data && rW.data.length) {
+            rW.data.forEach(function(w){ walletByPid[w.profile_id] = w; });
+          }
+        } catch(_wErr){}
+      }
       this.adminUsersList = rows.map(function(p){
         var full = (p.full_name || '').toString().trim();
         var pos = '';
@@ -688,6 +698,7 @@ const AppState = {
         else if (p.line_row && p.line_seat) pos = '#' + p.line_row + '-' + p.line_seat;
         else pos = '-';
         var lvl = Number(p.level_number || 0);
+        var w = walletByPid[p.id] || {};
         return {
           id: p.id,
           username: p.username || '',
@@ -702,13 +713,68 @@ const AppState = {
           role: p.role || 'user',
           status: p.status || 'pending',
           kyc: p.kyc_status || 'none',
-          createdAt: p.created_at || ''
+          createdAt: p.created_at || '',
+          wallet: {
+            available_balance: Number(w.available_balance || 0),
+            pending_balance: Number(w.pending_balance || 0),
+            frozen_balance: Number(w.frozen_balance || 0),
+            total_deposited: Number(w.total_deposited || 0),
+            total_withdrawn: Number(w.total_withdrawn || 0),
+            total_bonus_team: Number(w.total_bonus_team || 0)
+          }
         };
       });
       return true;
     } catch (e) {
       this.sbError = 'admin-users: ' + ((e && e.message) || String(e));
       this.adminUsersList = [];
+      return false;
+    }
+  },
+
+  async adminActivateUser(profileIdOrUsername) {
+    if (!window.SupabaseOK || !window.SupabaseOK()) { UI.showToast('Conecte-se primeiro.', 'warning'); return false; }
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var where = (typeof profileIdOrUsername === 'string' && profileIdOrUsername.indexOf('-') < 0 && profileIdOrUsername.indexOf('@') < 0) ? { id: profileIdOrUsername } : null;
+      if (!where) {
+        var q = sb.from('profiles').select('id').or('id.eq.' + profileIdOrUsername + ',username.ilike.%25' + String(profileIdOrUsername).replace(/^@/,'') + '%25').limit(1).maybeSingle();
+        var r = await q;
+        if (!r || !r.data) { UI.showToast('Usuário não encontrado.', 'warning'); return false; }
+        where = { id: r.data.id };
+      }
+      await sb.from('profiles').update({ status: 'ACTIVE', updated_at: new Date().toISOString() }).eq('id', where.id);
+      try {
+        var updLevel = await sb.from('profiles').select('level_number').eq('id', where.id).limit(1).maybeSingle();
+        if (updLevel && updLevel.data && (!updLevel.data.level_number || Number(updLevel.data.level_number) < 1)) {
+          await sb.from('profiles').update({ level_number: 1 }).eq('id', where.id);
+        }
+      } catch(_lErr){}
+      UI.showToast('Usuário ativado com sucesso.', 'success');
+      await this.refreshAdminUsersList();
+      await this.refreshAdminSummaries();
+      if (typeof Router !== 'undefined') Router.refresh();
+      return true;
+    } catch (e) {
+      UI.showToast((e && e.message) || 'Erro ativar usuário', 'error');
+      return false;
+    }
+  },
+
+  async adminDeactivateUser(profileIdOrUsername) {
+    if (!window.SupabaseOK || !window.SupabaseOK()) { UI.showToast('Conecte-se primeiro.', 'warning'); return false; }
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var r = await sb.from('profiles').select('id').or('id.eq.' + profileIdOrUsername + ',username.ilike.%25' + String(profileIdOrUsername).replace(/^@/,'') + '%25').limit(1).maybeSingle();
+      if (!r || !r.data) { UI.showToast('Usuário não encontrado.', 'warning'); return false; }
+      await sb.from('profiles').update({ status: 'INACTIVE', updated_at: new Date().toISOString() }).eq('id', r.data.id);
+      UI.showToast('Usuário marcado inativo.', 'success');
+      await this.refreshAdminUsersList();
+      await this.refreshAdminSummaries();
+      if (typeof Router !== 'undefined') Router.refresh();
+      return true;
+    } catch (e) {
+      UI.showToast((e && e.message) || 'Erro desativar usuário', 'error');
       return false;
     }
   },

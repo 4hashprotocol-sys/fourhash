@@ -1583,9 +1583,29 @@ const Views = {
         </div>
 
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono" data-i18n="totalReferrals">Gerenciamento de Usuários</h3>
-            <span class="text-xs text-gray-400 font-mono">Total: ${(AppState.adminUsersList || []).length} cadastro${(AppState.adminUsersList || []).length === 1 ? '' : 's'}</span>
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+            <div class="flex flex-col gap-1">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono" data-i18n="totalReferrals">Gerenciamento de Usuários</h3>
+              <span class="text-xs text-gray-400 font-mono">Total: ${(AppState.adminUsersList || []).length} cadastro${(AppState.adminUsersList || []).length === 1 ? '' : 's'} · ${((AppState.adminSummaries||{}).users||{}).active||0} ativos · ${((AppState.adminSummaries||{}).users||{}).pending||0} pendentes</span>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-gray-500 uppercase">Buscar</label>
+                <div class="relative">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[11px]"></i>
+                  <input id="admin-search-user" type="text" placeholder="Username, email, patrocinador..."
+                    value="${AppState.adminUserSearch || ''}"
+                    oninput="AppState.adminUserSearch=this.value; clearTimeout(window.__admSearchT); window.__admSearchT=setTimeout(function(){ Router.refreshCurrentView(); document.getElementById('admin-search-user')?.focus(); var el=document.getElementById('admin-search-user'); if(el){ el.selectionStart=el.selectionEnd=el.value.length; }}, 220);"
+                    class="w-full sm:w-72 bg-brand-surface border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-brand transition">
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-gray-500 uppercase">Status</label>
+                <div class="flex gap-1 p-1 rounded-xl bg-brand-surface border border-white/10 text-[10px] font-bold font-mono">
+                  ${(()=>{ var cur=(AppState.adminUserStatusFilter||'Todos'); var btns=[['Todos','Todos'],['Ativos','Ativos'],['Pendentes','Pendentes'],['Inativos','Inativos']]; return btns.map(function(b){ var k=b[0], lbl=b[1]; var act=(cur===k); return `<button onclick="AppState.adminUserStatusFilter='${k}'; Router.refreshCurrentView();" class="px-2.5 py-1.5 rounded-lg transition ${act?'bg-gradient-to-r from-brand to-brand-glow text-black':'text-gray-400 hover:text-white hover:bg-white/5'}">${lbl}</button>`; }).join(''); })()}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
@@ -1596,6 +1616,8 @@ const Views = {
                   <th class="py-2.5" data-i18n="myPosition">POSIÇÃO</th>
                   <th class="py-2.5" data-i18n="currentLevel">NÍVEL</th>
                   <th class="py-2.5" data-i18n="mySponsor">PATROCINADOR</th>
+                  <th class="py-2.5 text-right">SALDO $</th>
+                  <th class="py-2.5 text-right">DEPOSITADO</th>
                   <th class="py-2.5" data-i18n="myStatus">STATUS</th>
                   <th class="py-2.5 text-right">AÇÕES</th>
                 </tr>
@@ -1605,33 +1627,62 @@ const Views = {
                   var rows = '';
                   try {
                     var list = AppState.adminUsersList || [];
-                    if (!list.length) return `<tr><td colspan="6" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>Nenhum usuário cadastrado ainda. Aguarde os primeiros registros.</td></tr>`;
+                    var search = String(AppState.adminUserSearch || '').trim().toLowerCase();
+                    var stFilter = AppState.adminUserStatusFilter || 'Todos';
+                    if (search.length) {
+                      list = list.filter(function(u){
+                        var uname = String(u.username || '').toLowerCase();
+                        var em = String(u.email || '').toLowerCase();
+                        var sp = String(u.sponsor || '').toLowerCase();
+                        var full = String(u.fullName || '').toLowerCase();
+                        return uname.indexOf(search) >= 0 || em.indexOf(search) >= 0 || sp.indexOf(search) >= 0 || full.indexOf(search) >= 0;
+                      });
+                    }
+                    if (stFilter !== 'Todos') {
+                      list = list.filter(function(u){
+                        var s = String(u.status || '').toLowerCase();
+                        if (stFilter === 'Ativos') return (s === 'active' || s === 'ativo');
+                        if (stFilter === 'Pendentes') return (s === 'pending' || s === 'pendente');
+                        if (stFilter === 'Inativos') return (s === 'inactive' || s === 'inativo' || s === 'suspended' || s === 'banido');
+                        return true;
+                      });
+                    }
+                    if (!list.length) return `<tr><td colspan="8" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>${search || stFilter !== 'Todos' ? 'Nenhum usuário corresponde ao filtro.' : 'Nenhum usuário cadastrado ainda.'}</td></tr>`;
+                    var fmtUSD = function(n){ try { return '$ ' + Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch(e){ return '$ ' + Number(n||0).toFixed(2); } };
                     list.forEach(function(u){
-                      var isPending = (u.status === 'pending' || u.status === 'PENDING');
-                      var isActive = (u.status === 'active' || u.status === 'ACTIVE');
-                      var statusClass = isActive ? 'bg-brand/10 text-brand' : (isPending ? 'bg-amber-400/10 text-amber-400' : 'bg-gray-500/10 text-gray-400');
+                      var isPending = (u.status === 'pending' || u.status === 'PENDING' || u.status === 'pendente');
+                      var isActive = (u.status === 'active' || u.status === 'ACTIVE' || u.status === 'ativo');
+                      var statusClass = isActive ? 'bg-brand/10 text-brand border border-brand/20' : (isPending ? 'bg-amber-400/10 text-amber-400 border border-amber-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-500/20');
                       var statusLabel = isActive ? I18n.t('active') : (isPending ? I18n.t('pending') : (u.status || '-'));
                       var posClass = isActive ? 'text-brand' : (isPending ? 'text-amber-400' : 'text-gray-400');
-                      var safeUser = (u.username || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                      var safeUser = String(u.id || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                      var saldo = (u.wallet && typeof u.wallet.available_balance === 'number') ? u.wallet.available_balance : 0;
+                      var depos = (u.wallet && typeof u.wallet.total_deposited === 'number') ? u.wallet.total_deposited : 0;
                       var actionBtn = '';
                       if (isPending) {
-                        actionBtn = `<button onclick="UI.showToast('Usuário @${safeUser} ativado manualmente pelo admin.', 'success')" class="text-amber-400 hover:underline mr-2">Ativar</button>`;
+                        actionBtn = `<button onclick="(async function(){ try { await AppState.adminActivateUser('${safeUser}'); } catch(e){ UI.showToast('Erro','error'); } })();" class="text-amber-400 hover:underline mr-2 font-bold">Ativar</button>`;
+                      } else if (isActive) {
+                        actionBtn = `<button onclick="(async function(){ if(confirm('Desativar @${(u.username||'').replace(/'/g,'')}?')){ try { await AppState.adminDeactivateUser('${safeUser}'); } catch(e){ UI.showToast('Erro','error'); } } })();" class="text-gray-400 hover:underline mr-2">Desativar</button>`;
+                      } else {
+                        actionBtn = `<button onclick="(async function(){ try { await AppState.adminActivateUser('${safeUser}'); } catch(e){ UI.showToast('Erro','error'); } })();" class="text-brand hover:underline mr-2 font-bold">Reativar</button>`;
                       }
-                      actionBtn += `<button onclick="UI.showToast('Perfil de @${safeUser} aberto para auditoria.', 'info')" class="text-brand hover:underline">Editar</button>`;
+                      actionBtn += `<button onclick="UI.showToast('Perfil aberto p/ auditoria', 'info')" class="text-brand hover:underline">Editar</button>`;
                       rows += `
                         <tr>
                           <td class="py-3 font-bold text-white">@${u.username || 'user'}</td>
                           <td class="py-3 font-mono ${posClass}">${u.positionNumber || '-'}</td>
                           <td class="py-3 font-mono">${u.levelLabel || 'Level 00'}</td>
                           <td class="py-3 font-mono text-gray-300">@${u.sponsor || '-'}</td>
+                          <td class="py-3 font-mono text-right ${saldo>0?'text-white font-bold':'text-gray-500'}">${fmtUSD(saldo)}</td>
+                          <td class="py-3 font-mono text-right ${depos>0?'text-green-400 font-bold':'text-gray-500'}">${fmtUSD(depos)}</td>
                           <td class="py-3"><span class="px-2 py-0.5 rounded ${statusClass} text-[10px] font-mono">${statusLabel}</span></td>
-                          <td class="py-3 text-right">
+                          <td class="py-3 text-right whitespace-nowrap">
                             ${actionBtn}
                           </td>
                         </tr>`;
                     });
                   } catch(e) {}
-                  return rows || `<tr><td colspan="6" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>Nenhum usuário cadastrado ainda.</td></tr>`;
+                  return rows || `<tr><td colspan="8" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-database mr-2 text-gray-600"></i>Nenhum usuário cadastrado ainda.</td></tr>`;
                 })()}
               </tbody>
             </table>
