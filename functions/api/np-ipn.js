@@ -442,8 +442,23 @@ async function doPost(context) {
       return json(401, { ok: false, error: 'invalid_signature', profile_id: profileId, order_id: orderId });
     }
 
+    function isPaidAmountOk(statusStr, amountReceived, expectedUsd) {
+      const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled'];
+      const st = String(statusStr || '').toLowerCase().trim();
+      let full = false;
+      if (finalStates.indexOf(st) >= 0) full = true;
+      else if (/(paid|finish|confirm|complete|success|settle|received)/i.test(st)) full = true;
+      if (!full) return false;
+      const ex = Number(expectedUsd || 0) > 0 ? Number(expectedUsd) : 10;
+      const recv = Number(amountReceived || 0);
+      if (recv <= 0) return true;
+      return recv >= Number((ex * 0.985).toFixed(6));
+    }
+
+    const amountReceived = Number(body.amount_received || body.pay_amount || body.outcome_amount || body.amount || amountPaid || 0);
+    const expectedAmount = Number(body.price_amount || body.expected_amount || amountPaid || (body && body.order_id && /^4H-(activation|deposit)-/.test(body.order_id) ? 10 : 0)) || 10;
     const finalStates = ['finished','confirmed','completed','success','partially_paid','wrong_asset','paid','payment_received','settled'];
-    const isPaid = finalStates.indexOf(payStatus) >= 0 || /(paid|finish|confirm|complete|success|settle|wrong.?asset|received)/i.test(payStatus);
+    const isPaid = isPaidAmountOk(payStatus, amountReceived, expectedAmount);
     const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
 
     const parentPaymentId = String(body && (body.parent_payment_id || body.original_payment_id || body.original_id || body.payment_id_of_failed_tx || '') || '').trim();

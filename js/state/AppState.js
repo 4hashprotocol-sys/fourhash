@@ -18,7 +18,44 @@ const AppState = {
 
   PAYMENT_LIFETIME_MS: 15 * 60 * 1000,
 
+  _paymentStorageKey() {
+    const uid = (this.currentUser && this.currentUser.id) ? this.currentUser.id : 'guest';
+    return 'fh_pay_' + String(uid).replace(/[^a-zA-Z0-9]/g, '_');
+  },
+
+  _persistCurrentPayment() {
+    try {
+      const key = this._paymentStorageKey();
+      if (!this.currentPayment || !this.currentPayment.payment_id) {
+        try { localStorage.removeItem(key); } catch(_) {}
+        return;
+      }
+      const toSave = Object.assign({}, this.currentPayment, {
+        _persistedAt: Date.now(),
+        _paymentStartedAtSaved: this._paymentStartedAt || null
+      });
+      localStorage.setItem(key, JSON.stringify(toSave));
+    } catch(e) {}
+  },
+
+  _restoreCurrentPayment() {
+    try {
+      if (this.currentPayment && this.currentPayment.payment_id) return true;
+      const key = this._paymentStorageKey();
+      const raw = localStorage.getItem(key);
+      if (!raw || raw.length < 10) return false;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.payment_id) return false;
+      this.currentPayment = obj;
+      if (obj._paymentStartedAtSaved) this._paymentStartedAt = obj._paymentStartedAtSaved;
+      return true;
+    } catch(e) { return false; }
+  },
+
   hasOpenPayment() {
+    if (!this.currentPayment || !this.currentPayment.payment_id) {
+      try { this._restoreCurrentPayment(); } catch(_) {}
+    }
     var p = this.currentPayment;
     if (!p || !p.payment_id) return false;
     var st = String(p.status || 'waiting').toLowerCase();
@@ -35,6 +72,9 @@ const AppState = {
   },
 
   getOpenPaymentRemainingMs() {
+    if (!this.currentPayment || !this.currentPayment.payment_id) {
+      try { this._restoreCurrentPayment(); } catch(_) {}
+    }
     var p = this.currentPayment; if (!p) return 0;
     var createdAt = p.created_at || p.createdAt || p.created || this._paymentStartedAt || null;
     if (!createdAt) return this.PAYMENT_LIFETIME_MS;
@@ -45,11 +85,18 @@ const AppState = {
   },
 
   setCurrentPayment(payData, kind) {
-    if (!payData) { this.currentPayment = null; this._paymentStartedAt = null; this.stopPaymentPolling(); return; }
+    if (!payData) {
+      this.currentPayment = null;
+      this._paymentStartedAt = null;
+      this.stopPaymentPolling();
+      try { this._persistCurrentPayment(); } catch(_) {}
+      return;
+    }
     if (!this._paymentStartedAt || !payData._reused) this._paymentStartedAt = Date.now();
     payData.status = String(payData.status || 'waiting').toLowerCase();
     if (kind) payData.kind = kind;
     this.currentPayment = payData;
+    try { this._persistCurrentPayment(); } catch(_) {}
   },
 
   stopPaymentPolling() {
@@ -71,11 +118,14 @@ const AppState = {
           var changed = (newSt !== pay.status) || (d.pay_amount && Number(d.pay_amount) !== Number(pay.pay_amount)) || (d.pay_address && String(d.pay_address) !== String(pay.pay_address));
           if (newSt === 'finished' || newSt === 'confirmed' || newSt === 'paid' || newSt === 'success') {
             self.stopPaymentPolling();
+            try { self.setCurrentPayment(null); } catch(_) {}
             try { if (typeof onChangeCb === 'function') onChangeCb('finished', d, pay); } catch(_) {}
             return;
           }
           if (newSt === 'expired' || newSt === 'cancelled' || newSt === 'canceled' || newSt === 'refunded' || newSt === 'closed') {
             pay.status = newSt;
+            self.currentPayment = pay;
+            try { self._persistCurrentPayment(); } catch(_) {}
             self.stopPaymentPolling();
             try { if (typeof onChangeCb === 'function') onChangeCb(newSt, d, pay); } catch(_) {}
             if (typeof Router !== 'undefined') Router.refreshCurrentView();
@@ -85,6 +135,7 @@ const AppState = {
             Object.assign(pay, d);
             pay.status = newSt;
             self.currentPayment = pay;
+            try { self._persistCurrentPayment(); } catch(_) {}
             try { if (typeof onChangeCb === 'function') onChangeCb('updated', d, pay); } catch(_) {}
             if (typeof Router !== 'undefined') Router.refreshCurrentView();
           }

@@ -166,17 +166,20 @@ async function doPost(context) {
     const NP_API_KEY = getEnv(context, 'NOWPAYMENTS_API_KEY', '');
 
     let np = null, npStatus = 500, npText = '', npOk = false;
-    if (NP_API_KEY) {
+    const triedPayloads = [];
+    const tryPayload = async (extra = {}, idx = 0) => {
+      const payload = Object.assign({
+        price_amount: Number(amount),
+        price_currency: currency.toLowerCase(),
+        pay_currency: payCurrency,
+        order_id: orderId,
+        order_description: orderDesc,
+        fixed_rate: true,
+        is_fee_paid_by_user: false
+      }, extra || {});
+      if (email) payload.customer_email = email;
+      triedPayloads.push(payload);
       try {
-        const payload = {
-          price_amount: Number(amount),
-          price_currency: currency.toLowerCase(),
-          pay_currency: payCurrency,
-          order_id: orderId,
-          order_description: orderDesc,
-          fixed_rate: (payCurrency === 'usdterc20')
-        };
-        if (email) payload.customer_email = email;
         const u = NP_API_URL.endsWith('/') ? (NP_API_URL + 'payment') : (NP_API_URL + '/payment');
         const npRes = await fetch(u, {
           method: 'POST',
@@ -187,11 +190,37 @@ async function doPost(context) {
         npText = await npRes.text();
         try { np = JSON.parse(npText); } catch(e) { np = { raw: npText }; }
         npOk = npRes.ok && np && np.payment_id;
+        return { ok: !!npOk, np, npStatus };
       } catch(err) {
         const netErr = (err && (err.message || String(err))) || String(err);
         let rsn = 'network';
         if (/timeout|abort/i.test(netErr)) rsn = 'timeout';
-        return json(502, { ok: false, error: rsn, _np_raw: { network_message: netErr } });
+        return { ok: false, np: null, npStatus: 0, error: rsn, network_message: netErr };
+      }
+    };
+    if (NP_API_KEY) {
+      const r1 = await tryPayload({}, 0);
+      if (!r1.ok) {
+        const r2 = await tryPayload({ fixed_rate: true, price_amount: Number((Number(amount) * 1.005).toFixed(6)) }, 1);
+        if (!r2.ok) {
+          const r3 = await tryPayload({ fixed_rate: false, price_amount: Number(amount) }, 2);
+          if (!r3.ok) {
+            if (r1.error) {
+              return json(502, { ok: false, error: r1.error, _np_raw: { network_message: r1.network_message } });
+            }
+            const rawMsg = np && (np.message || np.error) ? String(np.message || np.error).toLowerCase() : '';
+            let reason = 'gateway_error';
+            if (/pay.?currency|not.enabled|not.allowed|invalid.*currency|unsupported/i.test(rawMsg)) reason = 'code_not_allowed';
+            else if (/quota|rate|limit/i.test(rawMsg)) reason = 'rate_limited';
+            else if (/network|fetch|econnrefused|timeout/i.test(rawMsg)) reason = 'network';
+            return json(502, {
+              ok: false, error: reason,
+              status_code: npStatus,
+              _np_raw: np,
+              _tried_payloads: triedPayloads.length
+            });
+          }
+        }
       }
     }
 

@@ -38,12 +38,18 @@ function sbHeaders(c) {
   };
 }
 
-function isPaidStatus(s) {
+function isPaidStatus(s, amountReceived, expectedUsd) {
   const st = String(s || '').toLowerCase().trim();
   if (!st) return false;
-  const finalStates = ['finished','confirmed','completed','success','partially_paid','wrong_asset','paid','payment_received','settled'];
-  if (finalStates.indexOf(st) >= 0) return true;
-  return /(paid|finish|confirm|complete|success|settle|wrong.?asset|received)/i.test(st);
+  const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled'];
+  let full = false;
+  if (finalStates.indexOf(st) >= 0) full = true;
+  else if (/(paid|finish|confirm|complete|success|settle|received)/i.test(st)) full = true;
+  if (!full) return false;
+  const ex = Number(expectedUsd || 0) > 0 ? Number(expectedUsd) : 10;
+  const recv = Number(amountReceived || 0);
+  if (recv <= 0) return true;
+  return recv >= Number((ex * 0.985).toFixed(6));
 }
 
 function isFailedStatus(s) {
@@ -415,8 +421,11 @@ async function doReconcile(context) {
       const parent = String(np.body.parent_payment_id || np.body.original_payment_id || '').trim() || null;
       if (parent) info.parent_payment_id = parent;
       const amt = Number(np.body.price_amount || np.body.pay_amount || r.amount || 10) || 10;
-
-      if (isPaidStatus(status)) {
+      const expected = Number(np.body && (Number(np.body.price_amount) > 0 ? Number(np.body.price_amount) : Number(r.amount || 10))) || 10;
+      const received = Number(np.body.amount_received || np.body.pay_amount || np.body.outcome_amount || 0);
+      info.expected_amount = expected;
+      info.amount_received_np = received;
+      if (isPaidStatus(status, received, expected)) {
         let netw = null;
         try {
           const netRaw = String(np.body.network || np.body.payin_network || np.body.pay_network || r.network || '').toLowerCase();
