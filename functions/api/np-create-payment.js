@@ -107,6 +107,24 @@ async function rpcAddMissingTxColumns(c, msg) {
   try { return false; } catch(_) { return false; }
 }
 
+async function sbFailAllPendingDepositsForProfile(c, profileId, excludeNowPaymentsIdOrNull) {
+  try {
+    if (!profileId || /^anon-/.test(String(profileId))) return false;
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    let path = base + '/rest/v1/transactions?kind=eq.deposit&status=eq.pending&profile_id=eq.' + encodeURIComponent(profileId);
+    if (excludeNowPaymentsIdOrNull) {
+      path += '&nowpayments_id=not.eq.' + encodeURIComponent(String(excludeNowPaymentsIdOrNull));
+    }
+    const h = Object.assign({}, sbHeaders(c), { 'Prefer': 'return=minimal' });
+    const patch = {
+      status: 'failed',
+      note: '[auto-clean] Depósito órfão cancelado porque usuário gerou novo pagamento (agora=' + new Date().toISOString() + ').'
+    };
+    const r = await fetch(path, { method: 'PATCH', headers: h, body: JSON.stringify(patch) });
+    return r.ok;
+  } catch(_) { return false; }
+}
+
 export async function onRequest(context) {
   const m = (context.request.method || 'GET').toUpperCase();
   if (m === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
@@ -281,6 +299,9 @@ async function doPost(context) {
             bio: note
           });
         } catch(_) {}
+        try {
+          await sbFailAllPendingDepositsForProfile(context, safeProfileId, paymentId || null);
+        } catch(_clean) {}
         try {
           const payCurr = String(np.pay_currency || payCurrency || '').toLowerCase();
           let netFinal = 'BEP20';

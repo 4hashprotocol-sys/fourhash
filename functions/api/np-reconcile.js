@@ -247,20 +247,36 @@ async function sbInsertOrIgnorePosition(c, profileId) {
   try {
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
     const H = sbHeaders(c);
-    const exists = await sbGet(c, 'rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&level_number=eq.1&select=id&limit=1');
-    if (Array.isArray(exists) && exists.length && exists[0].id) return true;
-    let seat = 1;
-    try {
-      const tops = await sbGet(c, 'rest/v1/linear_network?level_number=eq.1&select=seat_number&order=seat_number.desc&limit=1');
-      if (Array.isArray(tops) && tops.length && Number(tops[0].seat_number) >= 1) seat = Number(tops[0].seat_number) + 1;
-    } catch(_) {}
+    const exists = await sbGet(c, 'rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&select=profile_id&limit=1');
+    if (Array.isArray(exists) && exists.length && exists[0] && exists[0].profile_id) return true;
+
     const now = new Date().toISOString();
-    const r = await fetch(base + '/rest/v1/linear_network', {
-      method: 'POST',
-      headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
-      body: JSON.stringify({ profile_id: profileId, level_number: 1, seat_number: seat, row_number: 1, filled_at: now })
-    });
-    return r.ok;
+    const baseObj = { profile_id: profileId, level_number: 1, created_at: now, updated_at: now };
+
+    // ============================================================
+    //  FIX 42703 SSOT: Tenta várias combinações de nomes de colunas.
+    //  NÃO causar crash se alguma migration antiga usou nomes diferentes.
+    //  Apenas 2 colunas SÃO GARANTIDAS: level_number + profile_id.
+    // ============================================================
+    const attempts = [
+      Object.assign({}, baseObj, { seat_number: 1, row_number: 1, filled_at: now }),
+      Object.assign({}, baseObj, { seat: 1, row: 1, filled_at: now }),
+      Object.assign({}, baseObj, { position_index: 1, line_row: 1, line_seat: 1 }),
+      Object.assign({}, baseObj, { seat_number: 1 }),
+      Object.assign({}, baseObj)
+    ];
+
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        const r = await fetch(base + '/rest/v1/linear_network', {
+          method: 'POST',
+          headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
+          body: JSON.stringify(attempts[i])
+        });
+        if (r.ok) return true;
+      } catch(_) {}
+    }
+    return false;
   } catch(_) { return false; }
 }
 

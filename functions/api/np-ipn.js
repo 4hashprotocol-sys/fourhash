@@ -89,49 +89,82 @@ async function sbGetTransactions(c, q) {
   } catch(_) { return []; }
 }
 
-async function sbInsertPositionIfMissing(c, profileId) {
+async function sbInsertOrIgnorePosition(c, profileId) {
   try {
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
     const H = sbHeaders(c);
-    const listUrl = base + '/rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&level_number=eq.1&select=id&limit=1';
-    const lr = await fetch(listUrl, { headers: H });
-    const ld = lr.ok ? await lr.json() : [];
-    if (Array.isArray(ld) && ld.length) return { already: true };
+    const exists = await sbGetTransactions(c, 'rest/v1/linear_network?profile_id=eq.' + encodeURIComponent(profileId) + '&select=profile_id&limit=1');
+    if (Array.isArray(exists) && exists.length && exists[0] && exists[0].profile_id) return true;
+
     const now = new Date().toISOString();
-    let seat = 1;
-    try {
-      const seatUrl = base + '/rest/v1/linear_network?level_number=eq.1&select=seat_number&order=seat_number.desc&limit=1';
-      const sr = await fetch(seatUrl, { headers: H });
-      if (sr.ok) {
-        const sd = await sr.json();
-        if (Array.isArray(sd) && sd.length && Number(sd[0].seat_number) >= 1) seat = Number(sd[0].seat_number) + 1;
-      }
-    } catch(_) {}
+    const baseObj = { profile_id: profileId, level_number: 1, created_at: now, updated_at: now };
+    const attempts = [
+      Object.assign({}, baseObj, { seat_number: 1, row_number: 1, filled_at: now, filled_by: null, commission_paid: false, commission_tx: null }),
+      Object.assign({}, baseObj, { seat: 1, row: 1, filled_at: now }),
+      Object.assign({}, baseObj, { position_index: 1, line_row: 1, line_seat: 1 }),
+      Object.assign({}, baseObj, { seat_number: 1 }),
+      Object.assign({}, baseObj)
+    ];
     const insertUrl = base + '/rest/v1/linear_network';
-    const ir = await fetch(insertUrl, {
-      method: 'POST', headers: H,
-      body: JSON.stringify({
-        profile_id: profileId,
-        level_number: 1,
-        seat_number: seat,
-        row_number: 1,
-        filled_at: now,
-        filled_by: null,
-        commission_paid: false,
-        commission_tx: null
-      })
-    });
-    if (ir.ok) return true;
-    try {
-      const t = await ir.text();
-      if (/42703|column .* of relation.*linear_network.*does not exist|unique constraint.*linear_network/i.test(t)) {
-        const mini = { profile_id: profileId, level_number: 1, seat_number: seat };
-        const ir2 = await fetch(insertUrl, { method: 'POST', headers: H, body: JSON.stringify(mini) });
-        return ir2.ok;
-      }
-    } catch(_) {}
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        const r = await fetch(insertUrl, {
+          method: 'POST',
+          headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
+          body: JSON.stringify(attempts[i])
+        });
+        if (r.ok) return true;
+      } catch(_) {}
+    }
     return false;
   } catch(_) { return false; }
+}
+
+async function ensureActivated(c, profileId, amount) {
+  let changes = 0;
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const H = sbHeaders(c);
+    const now = new Date().toISOString();
+    const patchProfile = { status: 'active', level_number: 1, updated_at: now };
+    try {
+      const cur = await sbGetTransactions(c, 'rest/v1/profiles?id=eq.' + encodeURIComponent(profileId) + '&select=status,activated_at,level_number&limit=1');
+      if (Array.isArray(cur) && cur.length && cur[0]) {
+        const st = String(cur[0].status || 'pending').toUpperCase();
+        if (st !== 'ACTIVE' && st !== 'ATIVO') patchProfile.activated_at = cur[0].activated_at || now;
+        else patchProfile.activated_at = cur[0].activated_at || now;
+      } else {
+        patchProfile.activated_at = now;
+      }
+    } catch(_) { patchProfile.activated_at = now; }
+    const rp = await fetch(base + '/rest/v1/profiles?id=eq.' + encodeURIComponent(profileId), {
+      method: 'PATCH', headers: H, body: JSON.stringify(patchProfile)
+    });
+    if (rp.ok) changes++;
+
+    try {
+      const wlist = await sbGetTransactions(c, 'rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId) + '&select=profile_id,total_deposited&limit=1');
+      const amt = Number(amount || 0) > 0 ? Number(amount) : 10;
+      if (Array.isArray(wlist) && wlist.length && wlist[0].profile_id) {
+        const curTot = Number(wlist[0].total_deposited || 0);
+        if (curTot < amt) {
+          const rw = await fetch(base + '/rest/v1/wallets?profile_id=eq.' + encodeURIComponent(profileId), {
+            method: 'PATCH', headers: H, body: JSON.stringify({ total_deposited: amt, updated_at: now })
+          });
+          if (rw.ok) changes++;
+        } else changes++;
+      } else {
+        const ri = await fetch(base + '/rest/v1/wallets', {
+          method: 'POST', headers: Object.assign({}, H, { 'Prefer': 'return=minimal,resolution=ignore-duplicates' }),
+          body: JSON.stringify({ profile_id: profileId, total_deposited: amt, total_bonus_team: 0, total_bonus_matrix: 0, total_withdrawn: 0, updated_at: now })
+        });
+        if (ri.ok) changes++;
+      }
+    } catch(_) {}
+
+    if (await sbInsertOrIgnorePosition(c, profileId)) changes++;
+  } catch(_) {}
+  return changes;
 }
 
 async function sbRpc(c, name, params) {
@@ -581,24 +614,14 @@ async function doPost(context) {
         if (isPaid && profileId && profileId.length >= 10) {
           const amount = amountPaid || amountQs || Number(body.outcome_amount || body.pay_amount || 0) || 10;
           try {
-            const now = new Date().toISOString();
-            const note = '[' + now.slice(0,16) + '] Conta ativada via Gateway #' + (paymentId || orderId) + ' US$' + amount + ' (NowPayments).';
-            const patchProfile = {
-              status: 'active',
-              level_number: 1,
-              activated_at: now,
-              last_active_at: now,
-              updated_at: now,
-              bio: note
-            };
-            const okUp = await sbUpdateProfile(context, profileId, patchProfile);
             let okInc = await sbRpc(context, 'increment_wallet_balance', {
               target_profile_id: profileId, add_amount: amount
             });
             if (!okInc) okInc = await sbWalletFallback(context, profileId, amount);
             walletUpdated = !!okInc;
-            try { await sbInsertPositionIfMissing(context, profileId); } catch(_) {}
-            activation = okUp;
+
+            const c = await ensureActivated(context, profileId, amount);
+            activation = (c >= 2);
           } catch(_act) {}
         }
       }
