@@ -768,11 +768,137 @@ const AppState = {
         this.refreshAdminSummaries(),
         this.refreshAdminUsersList(),
         this.refreshReferrals(),
-        this.refreshTreeNetwork()
+        this.refreshTreeNetwork(),
+        this.refreshBonusNotifications()
       ]);
       return true;
     } catch (e) {
       this.sbError = (e && e.message) ? e.message : String(e);
+      return false;
+    }
+  },
+
+  async refreshBonusNotifications() {
+    try {
+      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) return false;
+      if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+      var sb = this._sb(); if (!sb) return false;
+      var me = this.currentUser.id;
+
+      var bonusRows = [];
+      try {
+        var r = await sb.from('transactions')
+          .select('id, kind, amount, status, level_reference, created_at, note, related_profile_id, related:related_profile_id(username,full_name)')
+          .eq('profile_id', me)
+          .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5','bonus_matrix','bonus_team'])
+          .eq('status', 'confirmed')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (r && Array.isArray(r.data)) bonusRows = r.data;
+      } catch(_bt) {
+        try {
+          var r2 = await sb.from('transactions')
+            .select('id, kind, amount, status, level_reference, created_at, note, related_profile_id')
+            .eq('profile_id', me)
+            .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5','bonus_matrix','bonus_team'])
+            .eq('status', 'confirmed')
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (r2 && Array.isArray(r2.data)) bonusRows = r2.data;
+        } catch(_bt2) { bonusRows = []; }
+      }
+
+      if (!bonusRows || bonusRows.length === 0) return true;
+
+      var self = this;
+      var titlesUsados = {};
+      (this.notifications || []).forEach(function(n){
+        if (n && n.title) titlesUsados[String(n.title)] = true;
+      });
+
+      bonusRows.forEach(function(tx){
+        try {
+          var amt  = Number(tx.amount || 0).toFixed(2);
+          if (!(amt && Number(amt) > 0)) return;
+          var nivel = tx.level_reference || 0;
+          var labelNivel = '';
+          var k = String(tx.kind || '').toLowerCase();
+          if (k === 'bonus_sponsor' || nivel === 1) { labelNivel = 'Nível 1'; nivel = 1; }
+          else if (k === 'bonus_level2' || nivel === 2) labelNivel = 'Nível 2';
+          else if (k === 'bonus_level3' || nivel === 3) labelNivel = 'Nível 3';
+          else if (k === 'bonus_level4' || nivel === 4) labelNivel = 'Nível 4';
+          else if (k === 'bonus_level5' || nivel === 5) labelNivel = 'Nível 5';
+          else if (k === 'bonus_matrix') labelNivel = 'Matrix';
+          else labelNivel = 'Rede';
+
+          var ativadorNome = '';
+          if (tx && tx.related && typeof tx.related === 'object' && (tx.related.username || tx.related.full_name)) {
+            ativadorNome = tx.related.username || tx.related.full_name || '';
+          } else if (tx && tx._raw && tx._raw.related_username) {
+            ativadorNome = tx._raw.related_username;
+          }
+          if (!ativadorNome && tx.note) {
+            try {
+              var m = (tx.note || '').match(/@([a-zA-Z0-9_\-]+)/);
+              if (m && m[1]) ativadorNome = m[1];
+            } catch(_mm) {}
+          }
+          if (ativadorNome) ativadorNome = String(ativadorNome).replace(/^@+/, '');
+
+          var title = '💰 Bônus ' + labelNivel + ' recebido · $' + amt;
+          if (titlesUsados[String(title)]) return;
+
+          var msg = 'Ganhou $' + amt + ' USD de bônus ' + labelNivel + ' pela ativação';
+          if (ativadorNome) msg += ' de @' + ativadorNome;
+          msg += '.';
+          if (tx.note) msg = tx.note;
+
+          var icon = 'fa-gem';
+          if (nivel === 1) icon = 'fa-user-check';
+          else if (k === 'bonus_matrix') icon = 'fa-sitemap';
+
+          var opts = {
+            type: 'success',
+            icon: icon,
+            createdAt: tx.created_at || null,
+            tx_id: tx.id || null
+          };
+          self.pushNotification(title, msg, opts);
+          titlesUsados[String(title)] = true;
+        } catch(_itx) {}
+      });
+
+      try {
+        var rNotif = await sb.from('notifications')
+          .select('id, title, message, type, icon, read, created_at, tx_id, related_profile_id')
+          .eq('profile_id', me)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (rNotif && Array.isArray(rNotif.data)) {
+          rNotif.data.forEach(function(n){
+            try {
+              if (!n || !n.title) return;
+              var key = 'SB#' + String(n.id || n.title);
+              if (titlesUsados[key]) return;
+              var msg2 = n.message || '';
+              if (titlesUsados[String(n.title)] && !msg2) return;
+              var opts2 = {
+                type: n.type || 'info',
+                icon: n.icon || 'fa-bell',
+                createdAt: n.created_at || null,
+                tx_id: n.tx_id || null,
+                sb_notification_id: n.id || null
+              };
+              self.pushNotification(n.title, msg2, opts2);
+              titlesUsados[key] = true;
+            } catch(_in2) {}
+          });
+        }
+      } catch(_nr) {}
+
+      return true;
+    } catch(e) {
+      try { console.log('[bonus-notif] erro:', (e && e.message) ? e.message : String(e)); } catch(_) {}
       return false;
     }
   },
