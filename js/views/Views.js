@@ -733,7 +733,7 @@ const Views = {
                       </span>
                     </button>
 
-                    ${(u.role === 'admin' || AppState.isAdmin) ? `
+                    ${(u.id === '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f' || u.role === 'superadmin') ? `
                     <div class="pt-1 border-t border-white/5">
                       <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
                         <i class="fa-solid fa-user-shield text-amber-400"></i>
@@ -960,7 +960,7 @@ const Views = {
                       </span>
                     </button>
 
-                    ${(u.role === 'admin' || AppState.isAdmin) ? `
+                    ${(u.id === '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f' || u.role === 'superadmin') ? `
                     <div class="pt-1 border-t border-white/5">
                       <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
                         <i class="fa-solid fa-user-shield text-amber-400"></i>
