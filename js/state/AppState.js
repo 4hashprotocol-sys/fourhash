@@ -2161,7 +2161,10 @@ const AppState = {
         try { if (typeof Router !== 'undefined' && Router.refresh) Router.refresh(); } catch(_) {}
         try {
           if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
-            UI.showToast('Sistema verificou pagamentos pendentes · ' + Number(data.activated || 0) + ' ativação(ões) aplicadas.', 'success', 'fa-circle-check', 4500);
+            const isAdmin = (this.userRole === 'admin') || (this.isAdmin === true) || (this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin'));
+            if (isAdmin) {
+              UI.showToast('Sistema verificou pagamentos pendentes · ' + Number(data.activated || 0) + ' ativação(ões) aplicadas.', 'success', 'fa-circle-check', 4500);
+            }
           }
         } catch(_) {}
       }
