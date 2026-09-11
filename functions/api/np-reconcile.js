@@ -345,7 +345,7 @@ async function doReconcile(context) {
   const result = { ok: true, started_at: nowIso, total_scanned: 0, checked: 0, activated: 0, already_confirmed: 0, failed_or_expired: 0, still_pending: 0, items: [] };
 
   try {
-    let rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=eq.pending&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
+    let rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&or=(status.eq.pending,status.eq.created)&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
     result.total_scanned = Array.isArray(rows) ? rows.length : 0;
     if (!Array.isArray(rows)) rows = [];
 

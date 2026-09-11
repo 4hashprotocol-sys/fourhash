@@ -149,20 +149,19 @@ async function internalReconcileSafe(context) {
     };
     const isFail = (s) => ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(String(s || '').toLowerCase().trim()) >= 0;
 
-    const rows = await g('rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=eq.pending&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
+    const rows = await g('rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&or=(status.eq.pending,status.eq.created)&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
     result.total_scanned = Array.isArray(rows) ? rows.length : 0;
     if (!Array.isArray(rows) || rows.length === 0) { result.msg = 'Nenhum pagamento pendente.'; result.finished_at = new Date().toISOString(); return result; }
     const seen = new Set();
     for (let i = 0; i < rows.length; i++) {
-      let r = null; let info = null; try {
-      r = rows[i]; if (!r) continue;
+      const r = rows[i]; if (!r) continue;
       const ageMs = Date.now() - new Date(r.created_at || nowIso).getTime();
       if (ageMs < minAgeMs) { result.still_pending++; continue; }
-      const cands = [String(r.nowpayments_id || ''), String(r.tx_hash || '')].map(s => s.trim()).filter(s => s.length >= 4 && /\d/.test(s));
+      const cands = [String(r.nowpayments_id || ''), String(r.tx_hash || '')].map(s => s.trim()).filter(s => /^\d{6,20}$/.test(s));
       if (!cands.length) { result.still_pending++; continue; }
-      const paymentId = String(cands[0]); if (seen.has(paymentId)) continue; seen.add(paymentId);
+      const paymentId = cands[0]; if (seen.has(paymentId)) continue; seen.add(paymentId);
       result.checked++;
-      info = { id: r.id, profile_id: r.profile_id, payment_id: paymentId };
+      const info = { id: r.id, profile_id: r.profile_id, payment_id };
       const np = await npGet(paymentId);
       info.np_ok = np && !!np.ok;
       const st = String(((np && np.body) ? (np.body.payment_status || np.body.status || '') : '')).toLowerCase().trim();
@@ -184,14 +183,14 @@ async function internalReconcileSafe(context) {
         if (np.body.payin_hash) patch.tx_hash = String(np.body.payin_hash);
         try {
           const all = [paymentId, parent].filter(Boolean);
-          const orIds = [];
-          all.forEach(x => { orIds.push('nowpayments_id.eq.' + encodeURIComponent(x)); orIds.push('tx_hash.eq.' + encodeURIComponent(x)); });
-          if (r.id) orIds.push('id.eq.' + encodeURIComponent(r.id));
-          const q = 'and=(or=(' + orIds.join(',') + ')' + (r.profile_id ? ',profile_id.eq.' + encodeURIComponent(r.profile_id) : '') + ')';
-          await p('rest/v1/transactions?' + q, patch);
+          const q = [];
+          all.forEach(x => { q.push('nowpayments_id=eq.' + encodeURIComponent(x)); q.push('tx_hash=eq.' + encodeURIComponent(x)); });
+          if (r.id) q.push('id=eq.' + encodeURIComponent(r.id));
+          if (r.profile_id) q.push('profile_id=eq.' + encodeURIComponent(r.profile_id));
+          await p('rest/v1/transactions?' + q.slice(0, 8).join(','), patch);
         } catch(_) {}
         if (r.profile_id) {
-          try { const act = await activate(r.profile_id, amt); info.activation = act; if (act && (act.profile || act.wallet || act.position)) result.activated++; }
+          try { const act = await activate(r.profile_id, amt); info.activation = act; if (act.profile) result.activated++; }
           catch(e) { info.error = 'activation: ' + String((e && e.message) || e); }
         }
         info.result = 'activated_or_confirmed';
@@ -200,12 +199,6 @@ async function internalReconcileSafe(context) {
         result.failed_or_expired++; info.result = 'failed';
       } else { result.still_pending++; info.result = 'still_waiting'; }
       result.items.push(info);
-      } catch (loopErr) {
-        const badInfo = Object.assign({ row_id: (r && r.id) || null, profile_id: (r && r.profile_id) || null, payment_id: null }, (info || {}));
-        badInfo.error = 'row: ' + String((loopErr && loopErr.message) || loopErr);
-        badInfo.result = 'row_error';
-        result.items.push(badInfo);
-      }
     }
     result.finished_at = new Date().toISOString();
     return result;

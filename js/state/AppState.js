@@ -106,7 +106,7 @@ const AppState = {
   startPaymentPolling(onChangeCb) {
     var self = this;
     this.stopPaymentPolling();
-    var __doPoll = async function() {
+    this._paymentPollTimer = setInterval(async function(){
       if (!self.hasOpenPayment()) { self.stopPaymentPolling(); return; }
       try {
         var pay = self.currentPayment; if (!pay || !pay.payment_id) return;
@@ -141,9 +141,7 @@ const AppState = {
           }
         }
       } catch(_pollErr) {}
-    };
-    try { setTimeout(__doPoll, 10); } catch(_) {}
-    this._paymentPollTimer = setInterval(__doPoll, 5000);
+    }, 5000);
   },
 
   isValidEvmAddress(addr) {
@@ -823,7 +821,6 @@ const AppState = {
         this.refreshReferrals(),
         this.refreshTreeNetwork(),
         this.refreshBonusNotifications(),
-        this.refreshTeamBonusReport(),
         this.npReconcilePendingPayments({ force: false })
       ]);
       return true;
@@ -954,146 +951,6 @@ const AppState = {
       return true;
     } catch(e) {
       try { console.log('[bonus-notif] erro:', (e && e.message) ? e.message : String(e)); } catch(_) {}
-      return false;
-    }
-  },
-
-  async refreshTeamBonusReport() {
-    try {
-      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) {
-        this.teamBonusReport = { summary: [], details: [], totals: null, hasMigration: false };
-        return false;
-      }
-      if (!window.SupabaseOK || !window.SupabaseOK()) return false;
-      var sb = this._sb(); if (!sb) return false;
-      var me = this.currentUser.id;
-      var s = { summary: [], details: [], totals: null, hasMigration: false };
-      var summaryRows = [];
-      var detailRows = [];
-
-      try {
-        var rSumRpc = await sb.rpc('get_my_team_bonus_summary', { me: me });
-        var rDetRpc = await sb.rpc('get_my_team_bonus_details', { me: me });
-        if (rSumRpc && Array.isArray(rSumRpc.data)) {
-          summaryRows = rSumRpc.data;
-          s.hasMigration = true;
-        }
-        if (rDetRpc && Array.isArray(rDetRpc.data)) detailRows = rDetRpc.data;
-      } catch(_rpcErr) { s.hasMigration = false; }
-
-      if (!summaryRows || summaryRows.length === 0) {
-        var pct = this.projectSettings || {};
-        var entryAmt = Number(pct.entry_amount || 10);
-        var pctN1  = Number(pct.sponsor_percentage != null ? pct.sponsor_percentage : 50);
-        var pctNx  = Number(pct.level2_percentage != null ? pct.level2_percentage : 2.5);
-        var ruleAmt = [
-          { n:1,  pct:pctN1, amt: entryAmt*(pctN1/100),  active:true,  note:'Sponsor Direto · 50% entrada' },
-          { n:2,  pct:pctNx, amt: entryAmt*(pctNx/100),  active:true,  note:'Upline Indireto · 2.5%' },
-          { n:3,  pct:pctNx, amt: entryAmt*(pctNx/100),  active:true,  note:'Upline Indireto · 2.5%' },
-          { n:4,  pct:pctNx, amt: entryAmt*(pctNx/100),  active:true,  note:'Upline Indireto · 2.5%' },
-          { n:5,  pct:pctNx, amt: entryAmt*(pctNx/100),  active:true,  note:'Upline Indireto · 2.5%' },
-          { n:6,  pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:7,  pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:8,  pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:9,  pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:10, pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:11, pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-          { n:12, pct:0, amt:0, active:false, note:'Fase 2 · Bônus Linear · Em breve' },
-        ];
-        var txBonuses = [];
-        try {
-          var rTx = await sb.from('transactions')
-            .select('id, kind, amount, status, level_reference, created_at, confirmed_at, note, nowpayments_id, related_profile_id, related:profiles!transactions_related_profile_id_fkey(username,full_name)')
-            .eq('profile_id', me)
-            .eq('status', 'confirmed')
-            .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
-            .order('created_at', { ascending: false });
-          if (rTx && Array.isArray(rTx.data)) txBonuses = rTx.data;
-        } catch(_txErr1) {
-          try {
-            var rTx2 = await sb.from('transactions')
-              .select('id, kind, amount, status, level_reference, created_at, confirmed_at, note, nowpayments_id, related_profile_id')
-              .eq('profile_id', me)
-              .eq('status', 'confirmed')
-              .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
-              .order('created_at', { ascending: false });
-            if (rTx2 && Array.isArray(rTx2.data)) txBonuses = rTx2.data;
-          } catch(_txErr2) { txBonuses = []; }
-        }
-
-        var amtByLevel = { 1:0, 2:0, 3:0, 4:0, 5:0 };
-        var cntByLevel = { 1:0, 2:0, 3:0, 4:0, 5:0 };
-        (txBonuses || []).forEach(function(tx){
-          var lvl = Number(tx.level_reference || 0);
-          if (lvl < 1) {
-            var k = String(tx.kind || '').toLowerCase();
-            if (k === 'bonus_sponsor') lvl = 1;
-            else if (k === 'bonus_level2') lvl = 2;
-            else if (k === 'bonus_level3') lvl = 3;
-            else if (k === 'bonus_level4') lvl = 4;
-            else if (k === 'bonus_level5') lvl = 5;
-          }
-          if (lvl >= 1 && lvl <= 5) {
-            amtByLevel[lvl] = Number(amtByLevel[lvl] || 0) + Number(tx.amount || 0);
-            cntByLevel[lvl] = Number(cntByLevel[lvl] || 0) + 1;
-          }
-          var relUser = '';
-          try {
-            if (tx.related && typeof tx.related === 'object' && (tx.related.username || tx.related.full_name)) {
-              relUser = tx.related.username || tx.related.full_name || '';
-            }
-          } catch(_ru) {}
-          if (!relUser && tx.note) {
-            try { var m = (tx.note || '').match(/@([a-zA-Z0-9_\-]+)/); if (m && m[1]) relUser = m[1]; } catch(_) {}
-          }
-          detailRows.push({
-            level_number: lvl,
-            level_label: (lvl >= 1 && lvl <= 12) ? 'N' + String(lvl) : '',
-            kind: tx.kind || '',
-            bonus_amount: Number(tx.amount || 0),
-            related_username: relUser ? String(relUser).replace(/^@+/, '') : '',
-            related_profile: tx.related_profile_id || null,
-            note_tx: tx.note || '',
-            nowpayments_id: tx.nowpayments_id || null,
-            tx_id: tx.id || null,
-            created_at: tx.created_at || null,
-            confirmed_at: tx.confirmed_at || null
-          });
-        });
-        ruleAmt.forEach(function(r){
-          summaryRows.push({
-            level_number: r.n,
-            level_label: 'N' + String(r.n),
-            rule_percentage: Number(r.pct || 0),
-            rule_amount_usd: Number(r.amt || 0),
-            earned_total: Number(amtByLevel[r.n] || 0),
-            activations_count: Number(cntByLevel[r.n] || 0),
-            is_active_now: !!r.active,
-            phase_note: r.note || ''
-          });
-        });
-      }
-
-      s.summary = summaryRows || [];
-      s.details = detailRows || [];
-      var totalAtv = 0, totalAmt = 0, totalActive = 0, totalLocked = 0;
-      (s.summary || []).forEach(function(row){
-        totalAtv += Number(row.activations_count || 0);
-        totalAmt += Number(row.earned_total || 0);
-        if (row.is_active_now) totalActive += Number(row.rule_amount_usd || 0);
-        else totalLocked += Number(row.rule_amount_usd || 0);
-      });
-      s.totals = {
-        activations: totalAtv,
-        earned_team: totalAmt,
-        rulesum_active_usd: totalActive,
-        rulesum_locked_usd: totalLocked,
-        entry_amount: Number((this.projectSettings && this.projectSettings.entry_amount) ? this.projectSettings.entry_amount : 10)
-      };
-      this.teamBonusReport = s;
-      return true;
-    } catch (e) {
-      try { console.log('[team-bonus-report] erro:', (e && e.message) ? e.message : String(e)); } catch(_) {}
       return false;
     }
   },
@@ -2161,10 +2018,7 @@ const AppState = {
         try { if (typeof Router !== 'undefined' && Router.refresh) Router.refresh(); } catch(_) {}
         try {
           if (typeof UI !== 'undefined' && typeof UI.showToast === 'function') {
-            const isAdmin = (this.userRole === 'admin') || (this.isAdmin === true) || (this.currentUser && (this.currentUser.role === 'admin' || this.currentUser.role === 'superadmin'));
-            if (isAdmin) {
-              UI.showToast('Sistema verificou pagamentos pendentes · ' + Number(data.activated || 0) + ' ativação(ões) aplicadas.', 'success', 'fa-circle-check', 4500);
-            }
+            UI.showToast('Sistema verificou pagamentos pendentes · ' + Number(data.activated || 0) + ' ativação(ões) aplicadas.', 'success', 'fa-circle-check', 4500);
           }
         } catch(_) {}
       }

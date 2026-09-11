@@ -20,7 +20,6 @@ const I18n = {
 
     document.getElementById('lang-dropdown').classList.add('hidden');
     this.updatePageTranslations();
-    Router.renderNav();
     Router.refreshCurrentView();
     UI.showToast(`${I18n.t('languageChanged')}: ${langCode.toUpperCase()}`, 'success');
 

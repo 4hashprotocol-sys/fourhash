@@ -559,7 +559,7 @@ async function doPost(context) {
         if (!txMatched) {
           try {
             const qFallback = (profileId ? ('and=(profile_id.eq.' + encodeURIComponent(profileId) + ',') : 'and=(') +
-              'kind=in.(deposit,adjustment_credit),status=eq.pending,created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
+              'kind=in.(deposit,adjustment_credit),or=(status.eq.pending,status.eq.created),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
             const okFb = await sbUpdateTransactions(context, qFallback, patchTx);
             if (okFb) txMatched = true;
           } catch(_) {}

@@ -87,8 +87,8 @@ const Router = {
       const lock = (activated ? '' : ' opacity-40 pointer-events-none grayscale cursor-not-allowed');
       const lockedMsg = (activated ? '' : ' onclick=\"event.stopPropagation(); event.preventDefault(); UI.showToast(\\\'Ative sua conta primeiro para desbloquear.\\\',\\\'warning\\\',\\\'fa-lock\\\'); return false;\"');
       const statusBadge = activated
-        ? `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand/10 border border-brand/40 text-brand text-[10px] font-black font-mono uppercase tracking-wider shadow-neon-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>${I18n.t('active')}</span>`
-        : `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] font-black font-mono uppercase tracking-wider"><i class="fa-solid fa-clock text-[10px]"></i>${I18n.t('pending')}</span>`;
+        ? `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand/10 border border-brand/40 text-brand text-[10px] font-black font-mono uppercase tracking-wider shadow-neon-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>ATIVO</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] font-black font-mono uppercase tracking-wider"><i class="fa-solid fa-clock text-[10px]"></i>AGUARDA ATIVAÇÃO</span>`;
 
       let links = `
         <button onclick="Router.navigate('dashboard')" class="hover:text-brand transition${lock}${this.currentRoute === 'dashboard' ? ' text-brand font-bold' : ''}">${I18n.t('navDashboard')}</button>
@@ -137,7 +137,7 @@ const Router = {
           <button onclick="Router.navigate('referrals')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5${mLock}"${mDisabled}><i class="fa-solid fa-users mr-2 text-brand"></i>${I18n.t('navReferrals')}</button>
           <button onclick="Router.navigate('security')" class="p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5"><i class="fa-solid fa-shield-halved mr-2 text-brand"></i>${I18n.t('navSecurity')}</button>
         </div>
-        ${this.isAdmin() ? `<button onclick="Router.navigate('admin')" class="w-full mt-2 py-2 text-center text-xs font-bold text-amber-400 border border-amber-500/30 rounded-lg bg-amber-500/5 hover:bg-amber-500/10"><i class="fa-solid fa-crown mr-1"></i>${I18n.t('navAdminPanel')}</button>` : ''}
+        ${this.isAdmin() ? `<button onclick="Router.navigate('admin')" class="w-full mt-2 py-2 text-center text-xs font-bold text-amber-400 border border-amber-500/30 rounded-lg bg-amber-500/5 hover:bg-amber-500/10"><i class="fa-solid fa-crown mr-1"></i>Painel Admin</button>` : ''}
         <button onclick="Router.logout()" class="w-full mt-2 py-2 text-center text-xs text-red-400 hover:text-red-300 font-medium border border-red-500/20 rounded-lg"><i class="fa-solid fa-right-from-bracket mr-1"></i>${I18n.t('logout')}</button>
       `;
 

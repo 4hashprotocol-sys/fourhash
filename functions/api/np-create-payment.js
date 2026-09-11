@@ -226,9 +226,9 @@ async function doPost(context) {
     if (NP_API_KEY) {
       const r1 = await tryPayload({}, 0);
       if (!r1.ok) {
-        const r2 = await tryPayload({ fixed_rate: true }, 1);
+        const r2 = await tryPayload({ fixed_rate: true, price_amount: Number((Number(amount) * 1.005).toFixed(6)) }, 1);
         if (!r2.ok) {
-          const r3 = await tryPayload({ fixed_rate: false }, 2);
+          const r3 = await tryPayload({ fixed_rate: false, price_amount: Number(amount) }, 2);
           if (!r3.ok) {
             if (r1.error) {
               return json(502, { ok: false, error: r1.error, _np_raw: { network_message: r1.network_message } });

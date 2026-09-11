@@ -63,8 +63,8 @@ const UI = {
       list.innerHTML = `
         <div class="px-4 py-10 text-center space-y-2">
           <div class="text-3xl opacity-40">📭</div>
-          <p class="text-[11px] text-gray-500 font-medium">${I18n.t('notifEmpty')}</p>
-          <p class="text-[9px] text-gray-600">${I18n.t('notifEmptyHint')}</p>
+          <p class="text-[11px] text-gray-500 font-medium">Sem notificações no momento</p>
+          <p class="text-[9px] text-gray-600">Quando houver novidades, aparecerão aqui.</p>
         </div>
       `;
       return;
