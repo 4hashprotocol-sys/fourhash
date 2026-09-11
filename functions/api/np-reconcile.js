@@ -214,15 +214,22 @@ async function activateProfile(c, profileId, amount) {
 }
 
 export async function onRequest(context) {
-  const m = (context.request.method || 'GET').toUpperCase();
-  if (m === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
-  if (m !== 'POST' && m !== 'GET') return json(405, { ok: false, error: 'method_not_allowed' });
-  return doReconcile(context);
+  try {
+    const req = context && context.request;
+    const m = (req && (req.method || 'GET') || 'GET').toUpperCase();
+    if (m === 'OPTIONS') { try { return new Response(null, { status: 204, headers: corsHeaders() }); } catch(_) { return new Response(null, { status: 204 }); } }
+    if (m !== 'POST' && m !== 'GET') return json(405, { ok: false, error: 'method_not_allowed' });
+    try { return await doReconcile(context); }
+    catch (innerErr) { try { return json(500, { ok: false, error: 'doReconcile_error', message: String((innerErr && (innerErr.message || String(innerErr))) || String(innerErr)) }); } catch(_) { return new Response('{"ok":false,"error":"doReconcile_fail"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); } }
+  } catch(outerErr) {
+    try { return new Response(JSON.stringify({ ok: false, error: 'fatal', message: String((outerErr && outerErr.message) || outerErr) }), { status: 500, headers: corsHeaders() }); }
+    catch(_) { return new Response('{"ok":false,"error":"fatal"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); }
+  }
 }
 
-export async function onRequestPost(context) { return doReconcile(context); }
-export async function onRequestGet(context)  { return doReconcile(context); }
-export async function onRequestOptions(context) { return new Response(null, { status: 204, headers: corsHeaders() }); }
+export async function onRequestPost(context) { try { return onRequest(context); } catch(e){ try{ return json(500,{ok:false,error:String(e.message||e)});}catch(_){return new Response('err',{status:500});} } }
+export async function onRequestGet(context)  { try { return onRequest(context); } catch(e){ try{ return json(500,{ok:false,error:String(e.message||e)});}catch(_){return new Response('err',{status:500});} } }
+export async function onRequestOptions(context) { try { return new Response(null, { status: 204, headers: corsHeaders() }); } catch(_){ return new Response(null,{status:204});} }
 
 async function npListRecentPayments(c, limit) {
   const NP_API_URL = getEnv(c, 'NOWPAYMENTS_API_URL', 'https://api.nowpayments.io/v1');
@@ -338,7 +345,7 @@ async function doReconcile(context) {
   const result = { ok: true, started_at: nowIso, total_scanned: 0, checked: 0, activated: 0, already_confirmed: 0, failed_or_expired: 0, still_pending: 0, items: [] };
 
   try {
-    let rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=in.(pending,created,waiting)&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
+    let rows = await sbGet(context, 'rest/v1/transactions?select=id,profile_id,amount,nowpayments_id,tx_hash,status,kind,created_at,currency,network&status=eq.pending&kind=in.(deposit,adjustment_credit)&created_at=gt.' + encodeURIComponent(twoDaysAgo) + '&order=created_at.desc&limit=100');
     result.total_scanned = Array.isArray(rows) ? rows.length : 0;
     if (!Array.isArray(rows)) rows = [];
 

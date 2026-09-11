@@ -5,7 +5,58 @@
 
 const Views = {
 
+  __mountHookStarted: false,
+  __bootGlobalMountHooks() {
+    if (this.__mountHookStarted) return;
+    this.__mountHookStarted = true;
+    try {
+      setInterval(function() {
+        try {
+          var timerEl = document.getElementById('deposit-open-timer');
+          if (timerEl && !timerEl.dataset.fhStarted) {
+            timerEl.dataset.fhStarted = '1';
+            try {
+              var dataEntry = Number(timerEl.dataset.entryAmount || 10);
+              var dataKind = String(timerEl.dataset.kind || 'activation');
+              var dataRemainMs = Number(timerEl.dataset.remainMs || String(timerEl.textContent || '').replace(/[^\d:]/g, '').split(':').reduce(function(a,v,i){return a + (Number(v) || 0) * Math.pow(60, 1-i);}, 0) * 1000) || 900000;
+              var remain = dataRemainMs;
+              var started = Date.now();
+              var iv = setInterval(function(){
+                try {
+                  var el = document.getElementById('deposit-open-timer');
+                  if (!el) { clearInterval(iv); return; }
+                  var left = remain - (Date.now() - started);
+                  if (left <= 0) { clearInterval(iv); el.innerText = 'EXPIRADO'; el.className = 'flex items-center gap-1.5 font-mono text-[11px] font-bold text-red-400'; return; }
+                  var s = Math.floor(left/1000); var m = Math.floor(s/60); s = s % 60;
+                  el.innerText = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+                } catch(_) {}
+              }, 1000);
+            } catch(_timerErr) {}
+            if (typeof AppState !== 'undefined' && typeof AppState.startPaymentPolling === 'function') {
+              try {
+                AppState.startPaymentPolling(function(ev, d, pay) {
+                  if (ev === 'finished') {
+                    try {
+                      if (typeof PaymentVault !== 'undefined' && PaymentVault._onPaymentFinished) {
+                        PaymentVault._onPaymentFinished(pay, (pay && String(pay.kind || '').toLowerCase() === 'deposit') ? 'deposit' : 'activation', dataEntry);
+                      }
+                    } catch(_cbErr1) {}
+                  } else if (ev === 'expired' || ev === 'cancelled' || ev === 'canceled' || ev === 'closed') {
+                    try { if (typeof Router !== 'undefined' && Router.refreshCurrentView) Router.refreshCurrentView(); } catch(_cbErr2) {}
+                  } else if (ev === 'updated') {
+                    try { if (typeof Router !== 'undefined' && Router.refreshCurrentView) Router.refreshCurrentView(); } catch(_cbErr3) {}
+                  }
+                });
+              } catch(_pollErr) {}
+            }
+          }
+        } catch(_e) {}
+      }, 250);
+    } catch(_) {}
+  },
+
   Landing() {
+    this.__bootGlobalMountHooks();
     return `
       <div class="space-y-16 py-6">
         <div class="relative overflow-hidden rounded-3xl border border-brand-border bg-gradient-to-b from-brand-card to-black p-8 sm:p-14 text-center">
@@ -408,6 +459,7 @@ const Views = {
     const s = AppState.projectSettings;
     const u = AppState.currentUser;
     const activated = (typeof Router !== 'undefined' && Router.isActivated) ? Router.isActivated() : (String(u.status || '').toUpperCase() === 'ACTIVE');
+    this.__bootGlobalMountHooks();
     const entryAmount = Number(s.entryAmount || 10);
     const addrRaw = s.depositAddress || '';
     const addrValid = AppState && typeof AppState.isValidEvmAddress === 'function' ? AppState.isValidEvmAddress(addrRaw) : false;
@@ -444,7 +496,7 @@ const Views = {
           </div>
           <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-400">
             <i class="fa-regular fa-clock"></i>
-            <span id="deposit-open-timer">${_msMMSS(openPayRemainMs)}</span>
+            <span id="deposit-open-timer" data-entryamount="${entryAmount}" data-kind="${hasOpen && openPay && openPay.kind ? openPay.kind : 'activation'}" data-remainms="${openPayRemainMs}">${_msMMSS(openPayRemainMs)}</span>
           </div>
         </div>
 
@@ -491,31 +543,7 @@ const Views = {
           </div>
         </div>
       </div>
-      <script>
-        (function(){
-          try {
-            var el = document.getElementById('deposit-open-timer');
-            if (!el) return;
-            var remain = ${openPayRemainMs};
-            var started = Date.now();
-            var iv = setInterval(function(){
-              try {
-                var left = remain - (Date.now() - started);
-                if (left <= 0) { clearInterval(iv); el.innerText = 'EXPIRADO'; el.className = 'flex items-center gap-1.5 font-mono text-[11px] font-bold text-red-400'; return; }
-                var s = Math.floor(left/1000); var m = Math.floor(s/60); s = s % 60;
-                el.innerText = (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
-              } catch(_) {}
-            }, 1000);
-            if (typeof AppState !== 'undefined' && typeof AppState.startPaymentPolling === 'function') {
-              AppState.startPaymentPolling(function(ev, d, pay) {
-                if (ev === 'finished') { try { PaymentVault && PaymentVault._onPaymentFinished && PaymentVault._onPaymentFinished(pay, (pay && pay.kind === 'deposit' ? 'deposit' : 'activation'), ${entryAmount}); } catch(_) {} }
-                else if (ev === 'expired' || ev === 'cancelled' || ev === 'canceled' || ev === 'closed') { try { Router && Router.refreshCurrentView && Router.refreshCurrentView(); } catch(_) {} }
-                else if (ev === 'updated')  { try { Router && Router.refreshCurrentView && Router.refreshCurrentView(); } catch(_) {} }
-              });
-            }
-          } catch(_) {}
-        })();
-      </script>`;
+      `;
     } else if (openPayExpired || (openPay && String(openPay.status||'').toLowerCase() === 'expired')) {
       OPEN_PAYMENT_BLOCK = `
       <div class="rounded-2xl border border-gray-500/30 bg-gray-500/5 p-4 sm:p-5">
@@ -1237,15 +1265,41 @@ const Views = {
     `;
   },
 
+  __referralsTab: 'overview',
+  setReferralsTab(t) {
+    this.__referralsTab = String(t || 'overview');
+    if (typeof Router !== 'undefined' && Router.refreshCurrentView) try { Router.refreshCurrentView(); } catch(_) {}
+  },
+
   Referrals() {
     const u = AppState.currentUser;
     const rStatus = (s) => s === 'ATIVO' ? I18n.t('active') : s === 'INATIVO' ? I18n.t('statusInactive') : I18n.t('pending');
+    const tab = String(this.__referralsTab || 'overview');
+    const $fmt = (n) => '$ ' + Number(n || 0).toFixed(2).replace('.', ',');
+    const report = AppState.teamBonusReport || { summary: [], details: [], totals: null, hasMigration: false };
+    const summaryRows = report.summary || [];
+    const detailRows = report.details || [];
+    const totals = report.totals || {};
+
     return `
       <div class="space-y-6">
-        <div>
-          <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="referralsTitle">Minhas Indicações</h2>
-          <p class="text-xs text-gray-400" data-i18n="referralsSubtitle">Regra equipe 60/40: Ganhe US$ 5.00 por indicação direta (N1) + US$ 0.25 p/ ativação nos níveis 2→5</p>
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="referralsTitle">Indicações & Bônus de Equipe</h2>
+            <p class="text-xs text-gray-400" data-i18n="referralsSubtitle">Regra equipe 60/40: Ganhe US$ 5.00 por indicação direta (N1) + US$ 0.25 p/ ativação nos níveis 2→5. Níveis 6→12: Ativação na fase 2.</p>
+          </div>
+
+          <div class="inline-flex p-1 rounded-2xl border border-white/10 bg-brand-surface/60 backdrop-blur-sm">
+            <button onclick="Views.setReferralsTab('overview')" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider transition ${tab === 'overview' ? 'bg-brand text-black shadow-neon-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}">
+              <i class="fa-solid fa-house-chimney-window mr-1.5"></i> Visão Geral
+            </button>
+            <button onclick="Views.setReferralsTab('report')" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider transition ${tab === 'report' ? 'bg-brand text-black shadow-neon-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}">
+              <i class="fa-solid fa-chart-column mr-1.5"></i> Relatório
+            </button>
+          </div>
         </div>
+
+        ${tab === 'overview' ? `
 
         <div class="rounded-2xl border border-brand/30 bg-gradient-to-r from-brand-card via-black to-brand-card p-6">
           <div class="text-xs font-mono text-brand font-bold uppercase tracking-wider mb-2" data-i18n="regTeamTitle">Estrutura de Divisão — Fase 1 Lançamento</div>
@@ -1360,6 +1414,165 @@ const Views = {
             </table>
           </div>
         </div>
+
+        ` : `
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-2xl border border-brand/40 bg-brand/5 p-5">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-brand font-bold">Ganhos Equipe (N1→N5)</div>
+            <div class="mt-2 text-3xl font-black text-white font-mono">${$fmt(totals.earned_team || 0)}</div>
+            <div class="mt-1 text-[11px] text-gray-400 font-mono">${totals.activations || 0} ativações geraram bônus até hoje</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-brand-card p-5">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">Bônus Regra Ativa (Fase 1)</div>
+            <div class="mt-2 text-3xl font-black text-brand font-mono">${$fmt(totals.rulesum_active_usd || 6)} / ativação</div>
+            <div class="mt-1 text-[11px] text-gray-400 font-mono">Equipe 60% (N1 50% · N2-N5 2,5% cada)</div>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-brand-card p-5">
+            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">Próxima Fase · 12 Níveis</div>
+            <div class="mt-2 text-3xl font-black text-gray-400 font-mono">N6 → N12</div>
+            <div class="mt-1 text-[11px] text-amber-300 font-mono"><i class="fa-solid fa-lock mr-1"></i> Em breve · Bônus Linear Posicionamento</div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">Mapa de Ganhos · 12 Níveis Protocolo</h3>
+              <p class="text-[11px] text-gray-400 font-mono mt-1">Níveis N1→N5 ativos no pré-cadastro. Níveis N6→N12: travados na fase de posicionamento linear (regras liberadas após lançamento oficial).</p>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] font-mono">
+              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-brand/40 bg-brand/10 text-brand"><i class="fa-solid fa-circle-check"></i> ATIVO HOJE</span>
+              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-gray-400"><i class="fa-solid fa-lock"></i> FASE 2</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            ${summaryRows.map(function(row){
+              const isAct = !!row.is_active_now;
+              const earned = Number(row.earned_total || 0);
+              const count  = Number(row.activations_count || 0);
+              const pct    = Number(row.rule_percentage || 0);
+              const ruleAmt= Number(row.rule_amount_usd || 0);
+              const lvlTxt = row.level_label || ('N' + row.level_number);
+              const cardCls = isAct
+                ? (earned > 0
+                    ? 'border-brand/50 bg-brand/10 shadow-[0_0_40px_-12px_rgba(0,255,102,0.4)]'
+                    : 'border-brand/25 bg-brand/5')
+                : 'border-white/10 bg-black/30 opacity-75';
+              const amtCls = earned > 0 ? 'text-brand font-black' : (isAct ? 'text-white font-bold' : 'text-gray-500 line-through');
+              const titleCls = isAct ? 'text-brand font-black' : 'text-gray-500 font-bold';
+              return `
+                <div class="rounded-2xl border p-4 sm:p-5 relative overflow-hidden transition ${cardCls}">
+                  <div class="flex items-center justify-between mb-2.5">
+                    <div class="${titleCls} font-mono text-base tracking-widest">${lvlTxt}</div>
+                    ${isAct
+                      ? (earned > 0
+                          ? '<i class="fa-solid fa-circle-check text-brand text-xs"></i>'
+                          : '<i class="fa-solid fa-bolt text-brand/70 text-xs"></i>')
+                      : '<i class="fa-solid fa-lock text-gray-500 text-xs"></i>'}
+                  </div>
+                  <div class="text-[10px] uppercase tracking-wider font-mono ${isAct ? 'text-gray-300' : 'text-gray-500'} mb-1">
+                    ${isAct ? 'Regra ' + (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1)) + '% · ' + $fmt(ruleAmt) + '/ativação' : 'Bônus Linear · Fase 2'}
+                  </div>
+                  <div class="text-2xl font-mono mt-1 mb-1 ${amtCls}">${isAct ? $fmt(earned) : '—'}</div>
+                  <div class="flex items-center justify-between text-[10px] font-mono mt-2 pt-2 border-t border-white/5">
+                    <div class="${isAct ? 'text-gray-300' : 'text-gray-500'}">${isAct ? (count + ' ativaç.') : '0 ativações'}</div>
+                    ${earned > 0 && isAct ? '<div class="text-brand font-bold">+US$ ' + earned.toFixed(2) + '</div>' : ''}
+                  </div>
+                  ${!isAct ? '<div class="text-[9px] text-gray-500 font-mono mt-1 leading-relaxed">' + (row.phase_note || 'Em breve') + '</div>' : ''}
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">Histórico Detalhado de Ganhos</h3>
+              <p class="text-[11px] text-gray-400 font-mono mt-1">Todos os bônus recebidos por ativações na sua rede · ordem decrescente por data.</p>
+            </div>
+            <button onclick="AppState.refreshTeamBonusReport().then(function(_){ Router.refreshCurrentView(); }); UI.showToast('Relatório atualizado ✓', 'success');" class="px-3.5 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate"></i> Atualizar Relatório
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono">
+                  <th class="py-3">NÍVEL</th>
+                  <th class="py-3">BÔNUS RECEBIDO</th>
+                  <th class="py-3">QUEM ATIVOU</th>
+                  <th class="py-3">VALOR</th>
+                  <th class="py-3">ID PAGAMENTO</th>
+                  <th class="py-3 text-right">DATA / HORA</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${(function(){
+                  var rowsHtml = '';
+                  try {
+                    var list = detailRows || [];
+                    if (!list || !list.length) {
+                      rowsHtml = `<tr><td colspan="6" class="py-14 text-center text-gray-500 font-mono text-[11px] leading-relaxed">
+                        <i class="fa-solid fa-hand-holding-dollar mr-2 text-gray-600 text-sm"></i>
+                        Sem ganhos de rede ainda.<br/><br/>
+                        Compartilhe seu link de indicação. Quando alguém da sua rede (N1→N5) ativar a conta de US$ 10, o bônus aparece aqui automaticamente.<br/>
+                        <span class="text-brand">N1 = $5,00 · N2 a N5 = $0,25 cada ativação.</span>
+                      </td></tr>`;
+                    } else {
+                      list.forEach(function(r){
+                        var lvl = Number(r.level_number || 0);
+                        var lvlLabel = r.level_label || (lvl ? ('N'+lvl) : '');
+                        var lvlCls = '';
+                        if (lvl === 1) lvlCls = 'bg-brand/15 border-brand/40 text-brand';
+                        else if (lvl >= 2 && lvl <= 5) lvlCls = 'bg-brand/8 border-brand/25 text-brand';
+                        else lvlCls = 'bg-white/5 border-white/10 text-gray-300';
+
+                        var amt = Number(r.bonus_amount || 0);
+                        var valTxt = amt ? ('<span class="font-black text-brand">+US$ ' + amt.toFixed(2) + '</span>') : 'US$ 0,00';
+
+                        var whoName = '';
+                        try { whoName = String(r.related_username || '').trim(); } catch(_) {}
+                        if (!whoName && r.note_tx) {
+                          try { var mm = (r.note_tx || '').match(/@([a-zA-Z0-9_\-]+)/); if (mm && mm[1]) whoName = mm[1]; } catch(_) {}
+                        }
+                        if (!whoName) whoName = '(ativo da sua rede)';
+
+                        var dtTxt = '';
+                        try {
+                          if (r.created_at) dtTxt = new Date(r.created_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                          else if (r.confirmed_at) dtTxt = new Date(r.confirmed_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        } catch(_) {}
+
+                        var npId = r.nowpayments_id ? String(r.nowpayments_id) : '';
+
+                        var titleMsg = '<span class="text-white font-bold">Bônus ' + lvlLabel + ' recebido</span>';
+                        if (lvl === 1) titleMsg += ' · <span class="text-gray-400">Indicação Direta</span>';
+                        else if (lvl >= 2 && lvl <= 5) titleMsg += ' · <span class="text-gray-400">Upline Indireto</span>';
+
+                        rowsHtml += `
+                          <tr>
+                            <td class="py-3"><span class="px-2 py-1 rounded-lg border ${lvlCls} text-[10px] font-black font-mono tracking-widest">${lvlLabel || '-'}</span></td>
+                            <td class="py-3">${titleMsg}</td>
+                            <td class="py-3"><span class="font-bold text-white font-mono">@${whoName}</span></td>
+                            <td class="py-3 font-mono">${valTxt}</td>
+                            <td class="py-3 font-mono text-gray-400">${npId ? '#' + npId : '-'}</td>
+                            <td class="py-3 text-right font-mono text-gray-400">${dtTxt || '-'}</td>
+                          </tr>`;
+                      });
+                    }
+                  } catch(e) {
+                    rowsHtml = `<tr><td colspan="6" class="py-8 text-center text-gray-500 font-mono text-[11px]">A carregar… atualize a página.</td></tr>`;
+                  }
+                  return rowsHtml;
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        `}
       </div>
     `;
   },

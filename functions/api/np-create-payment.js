@@ -126,14 +126,21 @@ async function sbFailAllPendingDepositsForProfile(c, profileId, excludeNowPaymen
 }
 
 export async function onRequest(context) {
-  const m = (context.request.method || 'GET').toUpperCase();
-  if (m === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
-  if (m !== 'POST') return json(405, { ok: false, error: 'method_not_allowed', method: m });
-  return doPost(context);
+  try {
+    const m = ((context && context.request && context.request.method) || 'GET').toUpperCase();
+    if (m === 'OPTIONS') { try { return new Response(null, { status: 204, headers: corsHeaders() }); } catch(_) { return new Response(null, { status: 204 }); } }
+    if (m !== 'POST') return json(405, { ok: false, error: 'method_not_allowed', method: m });
+    try { return await doPost(context); }
+    catch (innerErr) { try { return json(500, { ok: false, error: 'doPost_error', message: String((innerErr && (innerErr.message || String(innerErr))) || String(innerErr)) }); } catch(_) { return new Response('{"ok":false,"error":"doPost_fail"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); } }
+  } catch(outerErr) {
+    try { return new Response(JSON.stringify({ ok: false, error: 'fatal', message: String((outerErr && outerErr.message) || outerErr) }), { status: 500, headers: corsHeaders() }); }
+    catch(_) { return new Response('{"ok":false,"error":"fatal"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); }
+  }
 }
 
 export async function onRequestOptions(context) {
-  return new Response(null, { status: 204, headers: corsHeaders() });
+  try { return new Response(null, { status: 204, headers: corsHeaders() }); }
+  catch(_) { return new Response(null, { status: 204 }); }
 }
 
 async function doPost(context) {
@@ -219,9 +226,9 @@ async function doPost(context) {
     if (NP_API_KEY) {
       const r1 = await tryPayload({}, 0);
       if (!r1.ok) {
-        const r2 = await tryPayload({ fixed_rate: true, price_amount: Number((Number(amount) * 1.005).toFixed(6)) }, 1);
+        const r2 = await tryPayload({ fixed_rate: true }, 1);
         if (!r2.ok) {
-          const r3 = await tryPayload({ fixed_rate: false, price_amount: Number(amount) }, 2);
+          const r3 = await tryPayload({ fixed_rate: false }, 2);
           if (!r3.ok) {
             if (r1.error) {
               return json(502, { ok: false, error: r1.error, _np_raw: { network_message: r1.network_message } });

@@ -202,7 +202,23 @@
 
       const payAddress = useNowPayments ? String(np.pay_address || '') : net.address;
       const payAmountRaw = useNowPayments ? Number(np.pay_amount || entryAmount) : entryAmount;
-      const payAmount = Number(Number(payAmountRaw).toFixed(Math.max(2, (np.pay_currency === 'btc' || np.pay_currency === 'eth' ? 8 : 6))));
+      const _isStandardActivation = (kind === 'activation') && Number(entryAmount) >= 9.99 && Number(entryAmount) <= 10.01;
+      let payAmount = Number(Number(payAmountRaw).toFixed(Math.max(2, (np.pay_currency === 'btc' || np.pay_currency === 'eth' ? 8 : 6))));
+      let displayAmount = payAmount;
+      let copyAmount = payAmount;
+      if (_isStandardActivation) {
+        displayAmount = Number(Number(10.0).toFixed(Math.max(2, (np.pay_currency === 'btc' || np.pay_currency === 'eth' ? 8 : 2))));
+      }
+      const instructionCopyAmount = _isStandardActivation && useNowPayments ? copyAmount : displayAmount;
+      if (_isStandardActivation && useNowPayments) {
+        try {
+          const el = document.getElementById('pv-amount');
+          if (el) setTimeout(function(){ try { el.innerText = String(displayAmount); } catch(_){} }, 50);
+          const el2 = document.getElementById('pv-copy-amount-hidden');
+          if (el2) setTimeout(function(){ try { el2.innerText = String(copyAmount); } catch(_){} }, 50);
+        } catch(_) {}
+      }
+      const instructionAmount = _isStandardActivation ? displayAmount : payAmount;
       const paymentId = String(np.payment_id || '');
       const paymentUrl = String(np.payment_url || '');
       const netTag = useNowPayments ? (String(np.network || net.short || '').toUpperCase()) : net.short;
@@ -267,11 +283,12 @@
                 <div class="flex-1 min-w-0">
                   <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">USDT ` + netTag + `</div>
                   <div class="font-black font-mono text-2xl sm:text-3xl text-white leading-none">
-                    <span id="pv-amount" class="text-white">` + String(payAmount) + `</span>
+                    <span id="pv-amount" class="text-white">` + String(displayAmount) + `</span>
+                    <span id="pv-copy-amount-hidden" style="display:none">` + String(copyAmount) + `</span>
                     <span class="ml-1.5 text-base text-gray-400 font-bold align-middle">USDT</span>
                   </div>
                 </div>
-                <button onclick="PaymentVault.copy(document.getElementById('pv-amount').innerText, 'Valor copiado ✓')" class="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition text-xs font-bold inline-flex items-center gap-1.5">
+                <button onclick="PaymentVault.copy((document.getElementById('pv-copy-amount-hidden') && document.getElementById('pv-copy-amount-hidden').innerText) || document.getElementById('pv-amount').innerText, 'Valor copiado ✓')" class="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition text-xs font-bold inline-flex items-center gap-1.5">
                   <i class="fa-regular fa-copy"></i> Copiar
                 </button>
               </div>
@@ -329,7 +346,7 @@
               </div>
               <div class="text-[11px] text-amber-200/90 leading-relaxed space-y-1">
                 <div class="font-black uppercase tracking-wider text-amber-300 text-[11px]">Instruções Obrigatórias</div>
-                <div><span class="font-black">1. Envie EXATAMENTE ` + String(payAmount) + ` USDT</span> pela rede <span class="font-black uppercase">` + netTag + `</span> para o endereço acima.</div>
+                <div><span class="font-black">1. Clique em <span class="text-white">Copiar</span> acima</span> para obter o valor exato em cripto (USDT ` + netTag + `) exigido pelo gateway, e envie EXATAMENTE ` + (_isStandardActivation ? ('<span class="text-white">' + String(displayAmount) + ' USD</span>') : ('<span class="text-white">' + String(payAmount) + ' USDT</span>')) + ` pela rede <span class="font-black uppercase">` + netTag + `</span> para o endereço acima.</div>
                 <div><span class="font-black">2. Confirme SEMPRE a rede antes de autorizar.</span> Envios em redes erradas (ex: USDT BEP20 para TRC20) resultam em perda irreversível e não são creditados.</div>
                 <div>3. Após 12 confirmações on-chain, a validação automática credita o valor. Se demorar >30min, cole o TXID acima e clique em Confirmar ou abra ticket de suporte.</div>
               </div>
@@ -486,10 +503,13 @@
         var pill = document.getElementById('pv-status-pill');
         if (pill) {
           pill.className = 'flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-brand/40 bg-brand/10 text-brand font-black text-xs sm:text-sm font-mono uppercase tracking-[0.18em]';
-          pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Pagamento Recebido · Validando ativação…';
+          pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> ATIVADO · Pagamento Confirmado ✓';
         }
       } catch(_) {}
-      UI.showToast('Pagamento confirmado! Conta a ser atualizada em 2 segundos…', 'success', 'fa-circle-check', 3000);
+      UI.showToast('ATIVADO! Pagamento confirmado. Fechando em 1 segundo…', 'success', 'fa-circle-check', 2500);
+      setTimeout(function(){
+        try { UI.closeModal(); } catch(_) {}
+      }, 1000);
       setTimeout(async function(){
         try {
           if (typeof AppState !== 'undefined' && typeof AppState.refreshFromSupabase === 'function') {

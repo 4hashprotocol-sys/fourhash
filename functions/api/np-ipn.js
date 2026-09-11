@@ -533,7 +533,7 @@ async function doPost(context) {
         }
         const filters = [];
         if (paymentId) {
-          filters.unshift('nowpayments_id=eq.' + encodeURIComponent(paymentId));
+          filters.push('nowpayments_id=eq.' + encodeURIComponent(paymentId));
           filters.push('tx_hash=eq.' + encodeURIComponent(paymentId));
         }
         if (parentPaymentId) {
@@ -542,13 +542,24 @@ async function doPost(context) {
         }
         if (body && body.payin_hash) filters.push('tx_hash=eq.' + encodeURIComponent(String(body.payin_hash)));
         if (orderId) filters.push('or=(nowpayments_id.eq.' + encodeURIComponent(orderId) + ',metadata->>order_id.eq.' + encodeURIComponent(orderId) + ')');
-        if (profileId) filters.push('profile_id=eq.' + encodeURIComponent(profileId));
-        let q = filters.length ? filters.slice(0, 8).join(',') : ('id=is.null');
+        let q = '';
+        if (filters.length) {
+          const idOr = 'or=(' + filters.join(',') + ')';
+          if (profileId) {
+            q = 'and=(' + idOr + ',profile_id=eq.' + encodeURIComponent(profileId) + ')';
+          } else {
+            q = idOr;
+          }
+        } else if (profileId) {
+          q = 'profile_id=eq.' + encodeURIComponent(profileId);
+        } else {
+          q = 'id=is.null';
+        }
         try { txMatched = Boolean(await sbUpdateTransactions(context, q, patchTx)); } catch(_) { txMatched = false; }
         if (!txMatched) {
           try {
             const qFallback = (profileId ? ('and=(profile_id.eq.' + encodeURIComponent(profileId) + ',') : 'and=(') +
-              'kind=in.(deposit,adjustment_credit),status=in.(pending),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
+              'kind=in.(deposit,adjustment_credit),status=eq.pending,created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
             const okFb = await sbUpdateTransactions(context, qFallback, patchTx);
             if (okFb) txMatched = true;
           } catch(_) {}
@@ -653,3 +664,20 @@ async function doPost(context) {
     return json(500, { ok: false, error: 'internal_error', message: (err && (err.message || String(err))) || String(err) });
   }
 }
+
+export async function onRequest(context) {
+  try {
+    const req = context && context.request;
+    const m = (req && (req.method || 'GET') || 'GET').toUpperCase();
+    if (m === 'OPTIONS') { try { return new Response(null, { status: 204, headers: corsHeaders() }); } catch(_) { return new Response(null, { status: 204 }); } }
+    if (m !== 'POST') return json(405, { ok: false, error: 'method_not_allowed', method: m });
+    try { return await doPost(context); }
+    catch (innerErr) { try { return json(500, { ok: false, error: 'doPost_error', message: String((innerErr && (innerErr.message || String(innerErr))) || String(innerErr)) }); } catch(_) { return new Response('{"ok":false,"error":"doPost_fail"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); } }
+  } catch(outerErr) {
+    try { return new Response(JSON.stringify({ ok: false, error: 'fatal', message: String((outerErr && outerErr.message) || outerErr) }), { status: 500, headers: corsHeaders() }); }
+    catch(_) { return new Response('{"ok":false,"error":"fatal"}', { status: 500, headers: { 'Content-Type':'application/json','Access-Control-Allow-Origin':'*' } }); }
+  }
+}
+
+export async function onRequestOptions(context) { try { return new Response(null, { status: 204, headers: corsHeaders() }); } catch(_){ return new Response(null,{status:204});} }
+export async function onRequestPost(context) { try { return onRequest(context); } catch(e){ try{ return json(500,{ok:false,error:String(e.message||e)});}catch(_){return new Response('err',{status:500});} } }
