@@ -49,9 +49,9 @@ const TreeEngine = {
             <div class="flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-brand shadow-neon-sm"></span>
               <span class="text-xs font-bold text-white">@${self.username}</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-brand text-black font-bold">VOCÊ</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-brand text-black font-bold">${I18n.t('treeBadgeYou')}</span>
             </div>
-            <div class="text-[10px] font-mono text-gray-400">${self.positionNumber} • Tronco</div>
+            <div class="text-[10px] font-mono text-gray-400">${self.positionNumber} • ${I18n.t('treeTrunk')}</div>
           </div>
         </div>
       </div>
@@ -64,7 +64,7 @@ const TreeEngine = {
           <div class="flex items-center gap-3 mb-4 z-10">
             <button onclick="TreeEngine.toggleLevel(${lvl.level})" class="px-4 py-1 rounded-full border border-brand/30 bg-black/80 hover:border-brand text-brand font-mono text-xs font-bold flex items-center gap-2 backdrop-blur-md shadow-neon-sm transition">
               <span>${lvl.name}</span>
-              <span class="text-[10px] text-gray-400 font-normal">(${lvl.positions.length} posições)</span>
+              <span class="text-[10px] text-gray-400 font-normal">(${lvl.positions.length} ${I18n.t('treeLevelPositionsCount')})</span>
               <i class="fa-solid ${lvl.expanded ? 'fa-chevron-up' : 'fa-chevron-down'} text-[10px]"></i>
             </button>
           </div>
@@ -220,9 +220,9 @@ const TreeEngine = {
           setTimeout(() => target.classList.remove('ring-4', 'ring-brand', 'animate-bounce'), 3000);
         }
       }, 100);
-      UI.showToast(`Usuário @${query} localizado no organograma!`, 'success');
+      UI.showToast(I18n.t('treeToastUserFound').replace('{u}', query), 'success');
     } else {
-      UI.showToast(`Usuário @${query} não encontrado na sua rede.`, 'error');
+      UI.showToast(I18n.t('treeToastUserNotFound').replace('{u}', query), 'error');
     }
   },
 
@@ -230,8 +230,8 @@ const TreeEngine = {
     var lv = String(level || '0').trim();
     var isSelf = (lv === '0' || lv === '00');
     var levelLabel = isSelf
-      ? 'Tronco (referencial, não conta como nível)'
-      : ('Nível ' + (lv.length === 1 ? '0' + lv : lv) + ' / 12');
+      ? I18n.t('treeLevelSelfLabel')
+      : I18n.t('treeLevelFormat').replace('{n}', (lv.length === 1 ? '0' + lv : lv));
     const content = `
       <div class="space-y-4">
         <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -241,7 +241,7 @@ const TreeEngine = {
             </div>
             <div>
               <h3 class="text-base font-bold text-white">@${username}</h3>
-              <div class="text-xs font-mono text-gray-400">Posição: ${position}</div>
+              <div class="text-xs font-mono text-gray-400">${I18n.t('treeDetailsPosition')} ${position}</div>
             </div>
           </div>
           <span class="px-2.5 py-1 rounded-full ${status === 'ACTIVE' ? 'bg-brand/20 text-brand border border-brand/40' : 'bg-amber-400/20 text-amber-300'} text-xs font-mono font-bold">
@@ -251,18 +251,18 @@ const TreeEngine = {
 
         <div class="grid grid-cols-2 gap-3 text-xs font-mono">
           <div class="p-3 rounded-xl bg-brand-surface border border-white/5">
-            <div class="text-gray-400 text-[10px]">NÍVEL NA REDE</div>
+            <div class="text-gray-400 text-[10px]">${I18n.t('treeDetailsLevel')}</div>
             <div class="text-white font-bold text-sm mt-0.5">${levelLabel}</div>
           </div>
           <div class="p-3 rounded-xl bg-brand-surface border border-white/5">
-            <div class="text-gray-400 text-[10px]">DATA DE ENTRADA</div>
+            <div class="text-gray-400 text-[10px]">${I18n.t('treeDetailsEntry')}</div>
             <div class="text-white font-bold text-sm mt-0.5">${date}</div>
           </div>
         </div>
 
         <div class="pt-2 flex justify-end">
           <button onclick="UI.closeModal()" class="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs">
-            Fechar Detalhes
+            ${I18n.t('treeDetailsClose')}
           </button>
         </div>
       </div>

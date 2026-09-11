@@ -250,18 +250,18 @@ const Views = {
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-mono text-gray-300 mb-1">Senha</label>
+                <label class="block text-xs font-mono text-gray-300 mb-1">${I18n.t('pwdNew')}</label>
                 <div class="relative">
-                  <input id="reg-pass" type="password" required minlength="6" placeholder="Mínimo 6 dígitos" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
+                  <input id="reg-pass" type="password" required minlength="6" placeholder="${I18n.t('pwdMinChar')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
                   <button type="button" onclick="UI.togglePasswordVisibility('reg-pass', this)" class="absolute right-2.5 top-3 text-gray-400">
                     <i class="fa-solid fa-eye text-xs"></i>
                   </button>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-mono text-gray-300 mb-1">Confirmar Senha</label>
+                <label class="block text-xs font-mono text-gray-300 mb-1">${I18n.t('pwdNewConfirm')}</label>
                 <div class="relative">
-                  <input id="reg-pass-confirm" type="password" required minlength="6" placeholder="Repita a senha" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
+                  <input id="reg-pass-confirm" type="password" required minlength="6" placeholder="${I18n.t('pwdRepeat')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
                   <button type="button" onclick="UI.togglePasswordVisibility('reg-pass-confirm', this)" class="absolute right-2.5 top-3 text-gray-400">
                     <i class="fa-solid fa-eye text-xs"></i>
                   </button>
@@ -330,7 +330,7 @@ const Views = {
             <div class="text-xs text-gray-400 font-mono mb-1" data-i18n="availableBalance">Saldo Disponível</div>
             <div class="text-base sm:text-lg font-mono font-extrabold ${hasBonusToWithdraw ? 'text-emerald-400' : 'text-gray-500'}">$ ${uiAvailable.toFixed(2)}</div>
             <div class="text-[10px] mt-1 font-mono ${hasBonusToWithdraw ? 'text-emerald-300/90' : 'text-gray-500'}" data-i18n="bonusOnlyHintShort">Apenas bônus de rede (N1 → N5)</div>
-            ${uiBlocked > 0 && !hasBonusToWithdraw ? `<div class="text-[9px] mt-1 text-red-400/90 font-mono"><i class="fa-solid fa-lock mr-1"></i>Ativação bloqueada: $${uiBlocked.toFixed(2)} (não-sacável)</div>` : ''}
+            ${uiBlocked > 0 && !hasBonusToWithdraw ? `<div class="text-[9px] mt-1 text-red-400/90 font-mono"><i class="fa-solid fa-lock mr-1"></i>${I18n.t('walletBlockedHintInline').replace('{v}', uiBlocked.toFixed(2))}</div>` : ''}
           </div>
 
         </div>
@@ -492,7 +492,7 @@ const Views = {
         <div class="flex items-start justify-between gap-3 mb-3 flex-wrap">
           <div class="flex items-center gap-2">
             <div class="w-2 h-2 rounded-full bg-brand animate-ping"></div>
-            <span class="px-2.5 py-1 rounded-lg border border-brand/40 bg-brand/10 text-brand font-black font-mono text-[10px] uppercase tracking-[0.18em]">Pagamento · Em Aberto</span>
+            <span class="px-2.5 py-1 rounded-lg border border-brand/40 bg-brand/10 text-brand font-black font-mono text-[10px] uppercase tracking-[0.18em]">${I18n.t('depOpenBadge')}</span>
           </div>
           <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-amber-400">
             <i class="fa-regular fa-clock"></i>
@@ -503,42 +503,42 @@ const Views = {
         <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 items-start">
           <div class="sm:col-span-2 flex flex-col items-center gap-2">
             <div class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl bg-white p-2.5 border border-white/10 shadow-[0_0_25px_rgba(0,255,102,0.12)]">
-              <img src="${_pvQr(openPayQR, 220)}" alt="QR Code Pagamento USDT ${openPayNetwork}" class="w-full h-full object-contain select-none" draggable="false" />
+              <img src="${_pvQr(openPayQR, 220)}" alt="QR Code USDT ${openPayNetwork}" class="w-full h-full object-contain select-none" draggable="false" />
             </div>
             ${openPayUrl ? `<a href="${openPayUrl}" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition">
-              <i class="fa-solid fa-up-right-from-square text-brand"></i> Abrir link do pagamento
+              <i class="fa-solid fa-up-right-from-square text-brand"></i> ${I18n.t('depOpenLinkPayment')}
             </a>` : ''}
           </div>
 
           <div class="sm:col-span-3 space-y-3 min-w-0">
             <div class="rounded-xl border border-white/10 bg-black/30 p-3">
-              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Valor a Enviar (EXATO)</div>
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">${I18n.t('depOpenAmountSend')}</div>
               <div class="flex items-center gap-2">
                 <div class="font-black font-mono text-2xl text-white" id="deposit-open-amount">${_fmtUSD(openPayAmt).replace('$ ','')}</div>
                 <span class="text-sm text-gray-400 font-bold">USDT</span>
                 <span class="ml-auto px-2 py-0.5 rounded-md border border-white/10 bg-white/5 text-gray-300 text-[10px] font-bold font-mono uppercase">${openPayNetwork}</span>
-                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-amount').innerText, 'Valor copiado ✓')" class="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition">
+                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-amount').innerText, I18n.t('depValueCopied'))" class="px-2 py-1 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition">
                   <i class="fa-regular fa-copy"></i>
                 </button>
               </div>
             </div>
 
             <div class="rounded-xl border border-white/10 bg-black/30 p-3 space-y-1.5">
-              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">Endereço do Vault (envie aqui)</div>
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-0.5">${I18n.t('depOpenVaultAddr')}</div>
               <div id="deposit-open-addr" class="w-full break-all px-2.5 py-2 rounded-lg border border-brand/30 bg-black/60 text-brand font-mono text-[11px] leading-relaxed select-all">${openPayQR}</div>
               <div class="grid grid-cols-2 gap-2 pt-1">
-                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-addr').innerText, 'Endereço copiado ✓')" class="py-2 rounded-xl bg-brand/15 border border-brand/30 hover:bg-brand/25 text-brand font-black text-xs tracking-wider transition inline-flex items-center justify-center gap-1.5">
-                  <i class="fa-regular fa-copy"></i> Copiar Endereço
+                <button onclick="PaymentVault.copy(document.getElementById('deposit-open-addr').innerText, I18n.t('depAddrCopied'))" class="py-2 rounded-xl bg-brand/15 border border-brand/30 hover:bg-brand/25 text-brand font-black text-xs tracking-wider transition inline-flex items-center justify-center gap-1.5">
+                  <i class="fa-regular fa-copy"></i> ${I18n.t('depOpenCopyAddr')}
                 </button>
-                <button onclick="AppState.startPaymentPolling(function(ev,d,p){ if(ev==='finished'){ PaymentVault._onPaymentFinished(p, (p.kind==='deposit'?'deposit':'activation'), ${entryAmount}); } else if(ev==='expired' || ev==='cancelled' || ev==='canceled') { Router.refreshCurrentView(); } }); UI.showToast('A verificar pagamento… Refresh em 5 segundos.', 'info');" class="py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white font-bold text-xs transition inline-flex items-center justify-center gap-1.5">
-                  <i class="fa-solid fa-rotate"></i> Verificar Agora
+                <button onclick="AppState.startPaymentPolling(function(ev,d,p){ if(ev==='finished'){ PaymentVault._onPaymentFinished(p, (p.kind==='deposit'?'deposit':'activation'), ${entryAmount}); } else if(ev==='expired' || ev==='cancelled' || ev==='canceled') { Router.refreshCurrentView(); } }); UI.showToast(I18n.t('depOpenCheckToast'), 'info');" class="py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white font-bold text-xs transition inline-flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-rotate"></i> ${I18n.t('depOpenVerifyNow')}
                 </button>
               </div>
             </div>
 
             <div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-2.5 text-[10.5px] text-amber-200/90 leading-relaxed">
-              <span class="font-black text-amber-300 uppercase tracking-wide"><i class="fa-solid fa-shield-halved mr-1"></i> Validação automática 3 camadas</span><br/>
-              Quando enviares: <b>Camada A (IPN 0-2s) • Camada B (Cron 1min) • Camada C (Watchdog 12s)</b>. A conta fica ativa automaticamente em &lt; 60 segundos. <b>Não é necessário colar TXID.</b>
+              <span class="font-black text-amber-300 uppercase tracking-wide"><i class="fa-solid fa-shield-halved mr-1"></i> ${I18n.t('depOpenValidation3L')}</span><br/>
+              ${I18n.t('depOpenValidationDesc')}
             </div>
           </div>
         </div>
@@ -548,13 +548,13 @@ const Views = {
       OPEN_PAYMENT_BLOCK = `
       <div class="rounded-2xl border border-gray-500/30 bg-gray-500/5 p-4 sm:p-5">
         <div class="flex items-center gap-2 mb-3">
-          <span class="px-2.5 py-1 rounded-lg border border-gray-500/40 bg-gray-500/10 text-gray-300 font-black font-mono text-[10px] uppercase tracking-[0.18em]"><i class="fa-regular fa-clock mr-1"></i> Pagamento Expirado</span>
+          <span class="px-2.5 py-1 rounded-lg border border-gray-500/40 bg-gray-500/10 text-gray-300 font-black font-mono text-[10px] uppercase tracking-[0.18em]"><i class="fa-regular fa-clock mr-1"></i> ${I18n.t('depExpiredBadge')}</span>
         </div>
         <div class="text-[11px] text-gray-400 mb-3">
-          Este pagamento expirou. Por favor gere um novo pagamento QR (a cotação on-chain é atualizada a cada 15 minutos para garantir o valor exato).
+          ${I18n.t('depExpiredDesc')}
         </div>
-        <button onclick="AppState.setCurrentPayment(null); Router.refreshCurrentView(); UI.showToast('Pagamento antigo removido. Gere um novo QR abaixo.', 'success');" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-glow text-black font-black text-xs tracking-wider inline-flex items-center gap-1.5">
-          <i class="fa-solid fa-trash-can"></i> Limpar e Gerar Novo QR
+        <button onclick="AppState.setCurrentPayment(null); Router.refreshCurrentView(); UI.showToast(I18n.t('depExpiredClearToast'), 'success');" class="px-3 py-2 rounded-xl bg-brand hover:bg-brand-glow text-black font-black text-xs tracking-wider inline-flex items-center gap-1.5">
+          <i class="fa-solid fa-trash-can"></i> ${I18n.t('depExpiredClearBtn')}
         </button>
       </div>`;
     }
@@ -571,10 +571,10 @@ const Views = {
           <div class="relative p-5 sm:p-8 lg:p-10">
             <div class="flex items-center justify-between gap-3 flex-wrap mb-6">
               <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono">
-                <i class="fa-solid fa-triangle-exclamation animate-bounce"></i> Conta Pendente de Ativação
+                <i class="fa-solid fa-triangle-exclamation animate-bounce"></i> ${I18n.t('depBadgePendingActivation')}
               </span>
               <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono shadow-neon-sm">
-                <i class="fa-solid fa-rocket"></i> Pré-Venda Lançamento
+                <i class="fa-solid fa-rocket"></i> ${I18n.t('depBadgePresale')}
               </span>
             </div>
 
@@ -583,38 +583,36 @@ const Views = {
               <div class="lg:col-span-5 space-y-4 sm:space-y-5">
                 <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] text-gray-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-                  Utilizador: <span class="text-brand font-bold">@${u.username || ''}</span>
+                  ${I18n.t('depUserLabel')} <span class="text-brand font-bold">@${u.username || ''}</span>
                   <span class="text-gray-500">•</span>
-                  <span class="text-gray-400">Posição</span>
+                  <span class="text-gray-400">${I18n.t('depPositionLabel')}</span>
                   <span class="text-white font-bold">${u.positionNumber || '-'}</span>
                 </div>
 
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-['Space_Grotesk'] leading-tight">
-                  Ative a sua<br/>
-                  <span class="bg-gradient-to-r from-brand via-emerald-300 to-brand bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(0,255,102,0.3)]">Posição Linear 12 Níveis</span>
+                  ${I18n.t('depHeroTitle1')}<br/>
+                  <span class="bg-gradient-to-r from-brand via-emerald-300 to-brand bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(0,255,102,0.3)]">${I18n.t('depHeroTitle2')}</span>
                 </h1>
 
                 <p class="text-sm sm:text-base text-gray-400 max-w-xl leading-relaxed">
-                  Para desbloquear o Dashboard, a sua Árvore, a Carteira, as Indicações e todos os bónus do protocolo,
-                  confirme o depósito único de ativação. A sua posição na rede é vitalícia e garante o lugar para todos
-                  os seus indicados nas próximas semanas.
+                  ${I18n.t('depHeroDesc')}
                 </p>
 
                 <div class="grid grid-cols-3 gap-2 sm:gap-3 max-w-lg">
                   <div class="rounded-xl border border-white/10 bg-black/30 backdrop-blur p-2.5 sm:p-3 text-center">
-                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">Taxa Entrada</div>
+                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">${I18n.t('depCardEntryFee')}</div>
                     <div class="text-lg sm:text-2xl font-black text-white font-mono">US$ ${entryAmount}</div>
-                    <div class="text-[9px] font-mono text-gray-500">USDT BEP20</div>
+                    <div class="text-[9px] font-mono text-gray-500">${I18n.t('depCardEntryNetwork')}</div>
                   </div>
                   <div class="rounded-xl border border-brand/30 bg-brand/10 backdrop-blur p-2.5 sm:p-3 text-center shadow-neon-sm">
-                    <div class="text-[10px] font-mono text-brand uppercase tracking-wider mb-0.5">Bónus N1</div>
+                    <div class="text-[10px] font-mono text-brand uppercase tracking-wider mb-0.5">${I18n.t('depCardBonusN1')}</div>
                     <div class="text-lg sm:text-2xl font-black text-brand font-mono">50%</div>
-                    <div class="text-[9px] font-mono text-gray-500">Direto • Imediato</div>
+                    <div class="text-[9px] font-mono text-gray-500">${I18n.t('depCardBonusDirect')}</div>
                   </div>
                   <div class="rounded-xl border border-white/10 bg-black/30 backdrop-blur p-2.5 sm:p-3 text-center">
-                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">Níveis</div>
+                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">${I18n.t('depCardLevels')}</div>
                     <div class="text-lg sm:text-2xl font-black text-white font-mono">12</div>
-                    <div class="text-[9px] font-mono text-gray-500">Lineares • 60% Equipa</div>
+                    <div class="text-[9px] font-mono text-gray-500">${I18n.t('depCardLevelsLinear')}</div>
                   </div>
                 </div>
 
@@ -623,8 +621,8 @@ const Views = {
                     <i class="fa-solid fa-bolt"></i>
                   </div>
                   <div class="text-xs sm:text-sm text-amber-200/90 leading-relaxed">
-                    <strong class="font-black text-amber-300 uppercase tracking-wide text-[11px]">Apenas após a ativação</strong>
-                    <div class="text-amber-200/70 mt-1 text-[11px] sm:text-xs">As suas indicações começam a gerar bónus, a sua posição linear fica gravada e o saldo da carteira fica disponível para saques em USDT BEP20.</div>
+                    <strong class="font-black text-amber-300 uppercase tracking-wide text-[11px]">${I18n.t('depOnlyAfterTitle')}</strong>
+                    <div class="text-amber-200/70 mt-1 text-[11px] sm:text-xs">${I18n.t('depOnlyAfterDesc')}</div>
                   </div>
                 </div>
               </div>
@@ -636,7 +634,7 @@ const Views = {
                   <div class="relative space-y-4">
                     <div class="flex items-center justify-between">
                       <div>
-                        <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor de Ativação</div>
+                        <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">${I18n.t('depActivationAmount')}</div>
                         <div class="text-3xl sm:text-4xl font-black font-mono text-brand neon-text-glow">US$ ${entryAmount}<span class="text-base text-gray-400 ml-1 font-bold">USD</span></div>
                       </div>
                       <div class="w-12 h-12 rounded-2xl bg-brand/15 border border-brand/40 flex items-center justify-center shadow-neon-sm">
@@ -650,16 +648,16 @@ const Views = {
                           <i class="fa-solid fa-network-wired"></i>
                         </div>
                         <div class="space-y-1.5 min-w-0 flex-1">
-                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
-                          <div class="text-[10px] text-gray-400 leading-relaxed">Recebimento reservado e processado apenas em USDT estável. <span class="text-brand font-bold">3 redes disponíveis neste lançamento</span>. O QR Code e o endereço do vault do protocolo são exibidos logo após clicar em "Ativar Conta". Confirme SEMPRE a rede antes de enviar. <span class="text-amber-300 font-bold">⚠ TRC-20 (Tron): valor mínimo operacional US$ 15.</span></div>
+                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">${I18n.t('depSelectNetworkTitle')}</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">${I18n.t('depSelectNetworkDescActivation')}</div>
                         </div>
                       </div>
 
                       <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-2.5 md:gap-3">
                         ${[
-                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
-                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
-                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedTxt:'Segura', feeTxt:'Taxa média', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
+                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedKey:'depNetSpeedFast', feeKey:'depNetFeeLow', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
+                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedKey:'depNetSpeedInstant', feeKey:'depNetFeeZero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
+                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedKey:'depNetSpeedSecure', feeKey:'depNetFeeAvg', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
                         ].map(function(n){
                           return '<label class="group cursor-pointer relative">'+
                             '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
@@ -676,9 +674,9 @@ const Views = {
                               '</div>'+
                               '<div class="h-px w-full bg-white/[0.06] hidden sm:block"></div>'+
                               '<div class="flex flex-wrap items-center gap-x-2.5 sm:gap-x-3 gap-y-1 text-[9px] sm:text-[10px] font-mono text-gray-400">'+
-                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+n.speedTxt+'</span>'+
-                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+n.feeTxt+'</span>'+
-                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>Mín. '+n.minTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+I18n.t(n.speedKey)+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+I18n.t(n.feeKey)+'</span>'+
+                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>'+I18n.t('depNetMinPrefix')+' '+n.minTxt+'</span>'+
                               '</div>'+
                             '</div>'+
                           '</label>';
@@ -688,41 +686,41 @@ const Views = {
 
                     <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
-                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token Fixo</div>
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">${I18n.t('depTokenFixedLabel')}</div>
                         <div class="text-[12px] sm:text-[13px] font-black font-mono text-white flex items-center gap-1.5">
                           <i class="fa-solid fa-t-sign text-brand"></i>
                           USDT (Tether)
                         </div>
                       </div>
                       <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
-                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Método Confirmação</div>
-                        <div class="text-[12px] sm:text-[13px] font-black font-mono text-white">12 blocos on-chain</div>
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">${I18n.t('depMethodLabel')}</div>
+                        <div class="text-[12px] sm:text-[13px] font-black font-mono text-white">${I18n.t('depMethodValue')}</div>
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-brand/20 bg-brand/5 p-3 flex items-start gap-2.5">
                       <i class="fa-solid fa-network-wired text-brand mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-brand-200/90 leading-relaxed">
-                        <span class="font-black">3 Redes Operacionais:</span>
-                        <span class="block mt-0.5">• <span class="font-black text-yellow-300">BEP-20 (BNB Chain)</span> · US$ 10 (minimo) · Taxa baixa</span>
-                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span> · US$ 15 (mínimo operador, ajuste automático) · Taxa quase zero</span>
-                        <span class="block mt-0.5">• <span class="font-black text-blue-300">ERC-20 (Ethereum)</span> · US$ 10 · Segura</span>
+                        <span class="font-black">${I18n.t('dep3NetworksTitle')}</span>
+                        <span class="block mt-0.5">• <span class="font-black text-yellow-300">BEP-20 (BNB Chain)</span> ${I18n.t('depNetBep20Note')}</span>
+                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span> ${I18n.t('depNetTrc20Note')}</span>
+                        <span class="block mt-0.5">• <span class="font-black text-blue-300">ERC-20 (Ethereum)</span> ${I18n.t('depNetErc20Note')}</span>
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5 mt-3">
                       <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-amber-200/80 leading-relaxed">
-                        Confirme sempre a <span class="font-black text-white">rede selecionada</span> antes de concluir. O QR e endereço gerados são exclusivos da rede que escolheste.
-                        <span class="block mt-1"><span class="font-black text-red-300">⚠ Aviso Crítico:</span> enviar USDT por rede incorreta (ex: enviar BEP-20 para contrato ERC-20) resulta em <span class="font-black text-red-300">perda TOTAL e IRREVERSÍVEL dos fundos, sem possibilidade de recuperação.</span></span>
+                        ${I18n.t('depAlwaysConfirmNet')}
+                        <span class="block mt-1">${I18n.t('depCriticalWarning')}</span>
                       </div>
                     </div>
 
                     <div class="flex items-start gap-2">
                       <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
                       <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">
-                        Li e concordo com os <span class="text-brand font-bold hover:underline cursor-pointer" onclick="UI.showToast('Termos de Ativação FourHash: (1) depósito único vitalício de entrada, (2) sem reembolso após 12 confirmações on-chain irreversíveis, (3) valor de ativação permanece em cofre multi-sig do protocolo para garantia da estrutura linear e saques dos participantes, (4) confirmação on-chain é obrigatória para crédito automático.', 'info');">Termos de Ativação</span>
-                        e confirmo que compreendo a obrigação de enviar EXATAMENTE o valor e pela rede selecionada.
+                        <span class="text-brand font-bold hover:underline cursor-pointer" onclick="UI.showToast(I18n.t('depTermsToast'), 'info');">${I18n.t('depTermsTitle')}</span>
+                        ${I18n.t('depTermsAgree').replace(I18n.t('depTermsTitle'),'').replace(/^[\s·,]+/,'')}
                       </label>
                     </div>
 
@@ -731,7 +729,7 @@ const Views = {
                       <span class="relative inline-flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
                         <i class="fa-solid fa-qrcode"></i>
-                        Ativar Conta · Gerar QR Code & Endereço
+                        ${I18n.t('depBtnActivate')}
                       </span>
                     </button>
 
@@ -739,7 +737,7 @@ const Views = {
                     <div class="pt-1 border-t border-white/5">
                       <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
                         <i class="fa-solid fa-user-shield text-amber-400"></i>
-                        <span class="text-amber-400 font-black">ADMIN</span> · Simular Ativação (Sem confirmação on-chain)
+                        ${I18n.t('depAdminSimulate')}
                       </button>
                     </div>
                     ` : ''}
@@ -748,7 +746,7 @@ const Views = {
                       <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                       <span class="text-[9px] font-mono text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                         <i class="fa-solid fa-vault text-gray-600"></i>
-                        FourHash Vault Multi-Rede · Confirmação On-Chain · Sem Gateways Terceiros
+                        ${I18n.t('depVaultFooter')}
                       </span>
                       <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
@@ -768,9 +766,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-wallet"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 01</div>
-                  <div class="font-bold text-white text-sm mb-1">Deposite US$ ${entryAmount} USDT</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Clique em "Ativar Conta" acima, gere o QR Code único do vault e envie exatamente ${entryAmount}.00 USDT pela rede selecionada (BEP20/TRC20/ERC20) para o endereço exibido.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStep1Label')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depActivationStep1Title').replace('{v}', entryAmount)}</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">${I18n.t('depActivationStep1Desc').replace(/\{v\}/g, entryAmount)}</div>
                 </div>
               </div>` : `
             <div class="mt-6"></div>
@@ -782,9 +780,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-link"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
-                  <div class="font-bold text-white text-sm mb-1">Confirmação On-Chain Automática</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Validação 3 camadas automática: (A) Confirmação IPN · (B) Cron 1 minuto · (C) Watchdog UI 12s. Não precisa submeter TXID manualmente — tudo é automático.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStep2Label')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depActivationStep2Title')}</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">${I18n.t('depActivationStep2Desc')}</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
@@ -793,9 +791,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand border border-white/20 flex items-center justify-center text-black mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-trophy"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 03</div>
-                  <div class="font-bold text-white text-sm mb-1">Posição Liberada 🎉</div>
-                  <div class="text-[11px] text-gray-300 leading-relaxed">Dashboard, Árvore, Carteira e Indicações ficam liberados automaticamente em < 2 minutos. Bónus N1 = 50% creditado em tempo real para o seu patrocinador.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStep3Label')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depActivationStep3Title')}</div>
+                  <div class="text-[11px] text-gray-300 leading-relaxed">${I18n.t('depActivationStep3Desc')}</div>
                 </div>
               </div>
             </div>
@@ -817,10 +815,10 @@ const Views = {
           <div class="relative p-5 sm:p-8 lg:p-10">
             <div class="flex items-center justify-between gap-3 flex-wrap mb-6">
               <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 border border-brand/40 text-brand text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono shadow-neon-sm">
-                <i class="fa-solid fa-wallet"></i> Conta Ativa · Depósito Adicional
+                <i class="fa-solid fa-wallet"></i> ${I18n.t('depAdditionalBadgeActive')}
               </span>
               <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] font-mono">
-                <i class="fa-solid fa-arrow-trend-up"></i> Ampliar Posição Linear
+                <i class="fa-solid fa-arrow-trend-up"></i> ${I18n.t('depAdditionalBadgeExpand')}
               </span>
             </div>
 
@@ -829,32 +827,31 @@ const Views = {
               <div class="lg:col-span-5 space-y-4 sm:space-y-5">
                 <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 font-mono text-[10px] text-gray-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-brand animate-ping"></span>
-                  Utilizador: <span class="text-brand font-bold">@${u.username || ''}</span>
+                  ${I18n.t('depUserLabel')}: <span class="text-brand font-bold">@${u.username || ''}</span>
                   <span class="text-gray-500">•</span>
-                  <span class="text-gray-400">Posição</span>
+                  <span class="text-gray-400">${I18n.t('depPositionLabel')}</span>
                   <span class="text-white font-bold">${u.positionNumber || '-'}</span>
                 </div>
 
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-['Space_Grotesk'] leading-tight">
-                  Adicione Capital<br/>
-                  <span class="bg-gradient-to-r from-brand via-emerald-300 to-brand bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(0,255,102,0.3)]">Amplie os seus Bónus</span>
+                  ${I18n.t('depAdditionalHero1')}<br/>
+                  <span class="bg-gradient-to-r from-brand via-emerald-300 to-brand bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(0,255,102,0.3)]">${I18n.t('depAdditionalHero2')}</span>
                 </h1>
 
                 <p class="text-sm sm:text-base text-gray-400 max-w-xl leading-relaxed">
-                  Conta ativada com sucesso. Realize depósitos adicionais para reforçar o seu posicionamento na estrutura linear,
-                  aumentar bónus de indicação direta e acelerar a sua progressão pelos 12 níveis do protocolo.
+                  ${I18n.t('depAdditionalHeroDesc')}
                 </p>
 
                 <div class="grid grid-cols-2 gap-2 sm:gap-3 max-w-lg">
                   <div class="rounded-xl border border-white/10 bg-black/30 backdrop-blur p-2.5 sm:p-3 text-center">
-                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">Depósito Mínimo</div>
+                    <div class="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-0.5">${I18n.t('depAdditionalMinDeposit')}</div>
                     <div class="text-lg sm:text-2xl font-black text-white font-mono">US$ ${entryAmount}</div>
-                    <div class="text-[9px] font-mono text-gray-500">Agora · Lançamento</div>
+                    <div class="text-[9px] font-mono text-gray-500">${I18n.t('depAdditionalNowLaunch')}</div>
                   </div>
                   <div class="rounded-xl border border-brand/30 bg-brand/10 backdrop-blur p-2.5 sm:p-3 text-center shadow-neon-sm">
-                    <div class="text-[10px] font-mono text-brand uppercase tracking-wider mb-0.5">Retorno N1</div>
+                    <div class="text-[10px] font-mono text-brand uppercase tracking-wider mb-0.5">${I18n.t('depAdditionalReturnN1')}</div>
                     <div class="text-lg sm:text-2xl font-black text-brand font-mono">50%</div>
-                    <div class="text-[9px] font-mono text-gray-500">Direto · Imediato</div>
+                    <div class="text-[9px] font-mono text-gray-500">${I18n.t('depDirectImmediate')}</div>
                   </div>
                 </div>
 
@@ -868,7 +865,7 @@ const Views = {
                   <div class="relative space-y-4">
                     <div class="flex items-center justify-between">
                       <div>
-                        <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor do Depósito</div>
+                        <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">${I18n.t('depAdditionalDepositAmount')}</div>
                         <div class="text-3xl sm:text-4xl font-black font-mono text-brand neon-text-glow">US$ ${entryAmount}<span class="text-base text-gray-400 ml-1 font-bold">USD</span></div>
                       </div>
                       <div class="w-12 h-12 rounded-2xl bg-brand/15 border border-brand/40 flex items-center justify-center shadow-neon-sm">
@@ -882,16 +879,16 @@ const Views = {
                           <i class="fa-solid fa-network-wired"></i>
                         </div>
                         <div class="space-y-1.5 min-w-0 flex-1">
-                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">Selecione a Rede do USDT</div>
-                          <div class="text-[10px] text-gray-400 leading-relaxed">Depósitos adicionais reservados e creditados apenas em USDT. <span class="text-brand font-bold">3 redes disponíveis</span>. Clique em "Depósito On-Chain" para abrir o QR Code do vault da rede selecionada. A confirmação on-chain (12 blocos) credita automaticamente. <span class="text-amber-300 font-bold">⚠ TRC-20: valor mínimo US$ 15.</span></div>
+                          <div class="text-[11px] font-black font-mono uppercase tracking-wider text-brand">${I18n.t('depSelectNetworkTitle')}</div>
+                          <div class="text-[10px] text-gray-400 leading-relaxed">${I18n.t('depAdditionalSelectNetDesc')}</div>
                         </div>
                       </div>
 
                       <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-2.5 md:gap-3">
                         ${[
-                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedTxt:'Rápida', feeTxt:'Taxa baixa', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
-                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedTxt:'Instantânea', feeTxt:'Taxa ≈ zero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
-                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedTxt:'Segura', feeTxt:'Taxa média', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
+                          {code:'bep20', name:'BNB CHAIN', sub:'Smart Chain', short:'BEP-20', icon:'fa-brands fa-btc', speedKey:'depNetSpeedFast', feeKey:'depNetFeeLow', minTxt:'US$ 10', minWarn:false, checked:false, disabled:false, tagColor:'bg-yellow-500/15 text-yellow-400 border-yellow-500/30', border:'peer-checked:border-yellow-500/50 peer-checked:bg-yellow-500/10 peer-checked:shadow-[0_0_20px_rgba(234,179,8,0.2)] hover:border-yellow-500/30', iconChecked:'peer-checked:text-yellow-400'},
+                          {code:'trc20', name:'TRON', sub:'Mainnet', short:'TRC-20', icon:'fa-solid fa-bolt-lightning', speedKey:'depNetSpeedInstant', feeKey:'depNetFeeZero', minTxt:'US$ 15', minWarn:true, checked:false, disabled:false, tagColor:'bg-red-500/15 text-red-400 border-red-500/30', border:'peer-checked:border-red-500/50 peer-checked:bg-red-500/10 peer-checked:shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:border-red-500/30', iconChecked:'peer-checked:text-red-400'},
+                          {code:'erc20', name:'ETHEREUM', sub:'Mainnet', short:'ERC-20', icon:'fa-brands fa-ethereum', speedKey:'depNetSpeedSecure', feeKey:'depNetFeeMedium', minTxt:'US$ 10', minWarn:false, checked:true, disabled:false, tagColor:'bg-blue-500/15 text-blue-400 border-blue-500/30', border:'peer-checked:border-blue-500/50 peer-checked:bg-blue-500/10 peer-checked:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:border-blue-500/30', iconChecked:'peer-checked:text-blue-400'}
                         ].map(function(n){
                           return '<label class="group cursor-pointer relative">'+
                             '<input type="radio" name="vault-network" value="'+n.code+'" '+(n.checked?'checked':'')+' class="peer sr-only">'+
@@ -908,9 +905,9 @@ const Views = {
                               '</div>'+
                               '<div class="h-px w-full bg-white/[0.06] hidden sm:block"></div>'+
                               '<div class="flex flex-wrap items-center gap-x-2.5 sm:gap-x-3 gap-y-1 text-[9px] sm:text-[10px] font-mono text-gray-400">'+
-                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+n.speedTxt+'</span>'+
-                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+n.feeTxt+'</span>'+
-                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>Mín. '+n.minTxt+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px] sm:text-[9px] text-gray-500"></i>'+I18n.t(n.speedKey)+'</span>'+
+                                '<span class="inline-flex items-center gap-1"><i class="fa-solid fa-coins text-[8px] sm:text-[9px] text-gray-500"></i>'+I18n.t(n.feeKey)+'</span>'+
+                                '<span class="inline-flex items-center gap-1 '+(n.minWarn?'text-red-400 font-bold':'text-gray-400')+'"><i class="fa-solid '+(n.minWarn?'fa-triangle-exclamation':'fa-sack-dollar')+' text-[8px] sm:text-[9px] '+(n.minWarn?'text-red-400':'text-gray-500')+'"></i>'+I18n.t('depNetMinPrefix')+' '+n.minTxt+'</span>'+
                               '</div>'+
                             '</div>'+
                           '</label>';
@@ -920,23 +917,23 @@ const Views = {
 
                     <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
-                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Token</div>
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">${I18n.t('depTokenFixedLabel')}</div>
                         <div class="text-[12px] sm:text-[13px] font-black font-mono text-white flex items-center gap-1.5">
                           <i class="fa-solid fa-t-sign text-brand"></i> USDT (Tether)
                         </div>
                       </div>
                       <div class="rounded-2xl border border-white/10 bg-black/30 p-3 sm:p-4">
-                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">Método Confirmação</div>
-                        <div class="text-[12px] sm:text-[13px] font-bold font-mono text-white">12 blocos on-chain</div>
+                        <div class="text-[9px] font-mono text-gray-500 uppercase tracking-widest mb-1">${I18n.t('depMethodLabel')}</div>
+                        <div class="text-[12px] sm:text-[13px] font-bold font-mono text-white">${I18n.t('depMethodValue')}</div>
                       </div>
                     </div>
 
                     <div class="rounded-2xl border border-brand/20 bg-brand/5 p-3 flex items-start gap-2.5 mt-3">
                       <i class="fa-solid fa-network-wired text-brand mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-brand-200/90 leading-relaxed">
-                        <span class="font-black">Mínimos por rede:</span>
+                        <span class="font-black">${I18n.t('depAdditionalMinByNet')}</span>
                         <span class="block mt-0.5">• <span class="font-black text-yellow-300">BEP-20 (BNB)</span>: US$ 9</span>
-                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span>: US$ 15 (operador)</span>
+                        <span class="block mt-0.5">• <span class="font-black text-red-300">TRC-20 (Tron)</span>: US$ 15 (${I18n.t('depOperatorLabel')})</span>
                         <span class="block mt-0.5">• <span class="font-black text-blue-300">ERC-20 (ETH)</span>: US$ 9.5</span>
                       </div>
                     </div>
@@ -944,14 +941,14 @@ const Views = {
                     <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3 flex items-start gap-2.5 mt-3">
                       <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0 text-sm"></i>
                       <div class="text-[10px] text-amber-200/80 leading-relaxed">
-                        Envie <span class="font-black text-white">o valor EXATO mostrado no modal</span> <span class="font-black text-white">pela rede que selecionaste</span>.
-                        <span class="block mt-1">Se introduzires um valor abaixo do mínimo para TRC-20, o pedido é automaticamente ajustado para US$ 15. <span class="font-black text-red-300">Rede errada = perda PERMANENTE.</span></span>
+                        ${I18n.t('depAdditionalExactValue')}
+                        <span class="block mt-1">${I18n.t('depAdditionalTrcAdjust')}</span>
                       </div>
                     </div>
 
                     <div class="flex items-start gap-2">
                       <input id="deposit-check" type="checkbox" class="mt-0.5 rounded border-white/20 bg-brand-surface text-brand focus:ring-brand">
-                      <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">Li e concordo que depósitos adicionais serão creditados como reforço de posição linear, e confirmo que <span class="text-white font-bold">transações on-chain são irreversíveis</span> após 12 confirmações de bloco.</label>
+                      <label for="deposit-check" class="text-xs text-gray-400 cursor-pointer select-none leading-relaxed">${I18n.t('depAdditionalTermsAgree')}</label>
                     </div>
 
                     <button id="deposit-activate-btn" onclick="PaymentVault.startAdditionalDepositFlow(${entryAmount})" class="relative w-full overflow-hidden py-3.5 sm:py-4 rounded-2xl bg-brand hover:bg-brand-glow text-black font-black text-sm sm:text-base tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 group">
@@ -959,7 +956,7 @@ const Views = {
                       <span class="relative inline-flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-black/40 animate-ping group-hover:bg-black"></span>
                         <i class="fa-solid fa-qrcode"></i>
-                        Depósito On-Chain · Gerar QR Code Vault
+                        ${I18n.t('depAdditionalBtnOnChain')}
                       </span>
                     </button>
 
@@ -967,7 +964,7 @@ const Views = {
                     <div class="pt-1 border-t border-white/5">
                       <button onclick="PaymentVault.simulateActivationOnly(${entryAmount})" class="w-full inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] text-gray-500 hover:text-white border border-white/5 hover:border-white/20 bg-white/0 hover:bg-white/5 transition font-mono">
                         <i class="fa-solid fa-user-shield text-amber-400"></i>
-                        <span class="text-amber-400 font-black">ADMIN</span> · Simular Crédito Manual
+                        ${I18n.t('depAdditionalAdminSimulate')}
                       </button>
                     </div>
                     ` : ''}
@@ -976,7 +973,7 @@ const Views = {
                       <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                       <span class="text-[9px] font-mono text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                         <i class="fa-solid fa-vault text-gray-600"></i>
-                        FourHash Vault Multi-Rede · Confirmação On-Chain · Sem Gateways Terceiros
+                        ${I18n.t('depVaultFooter')}
                       </span>
                       <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
@@ -993,9 +990,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-network-wired"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 01</div>
-                  <div class="font-bold text-white text-sm mb-1">Selecione Rede (USDT)</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Escolha uma das 3 redes suportadas: BEP-20 (BNB), TRC-20 (Tron) ou ERC-20 (Ethereum). O valor de depósito é fixo em US$ ${entryAmount.toFixed(2)} em USDT.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStepLabel').replace('{n}','01')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depAdditionalStep1Title')}</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">${I18n.t('depAdditionalStep1Desc').replace('{v}', entryAmount.toFixed(2))}</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-white/10 bg-brand-card/60 backdrop-blur p-4 overflow-hidden group hover:border-brand/40 transition">
@@ -1004,9 +1001,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-qrcode"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 02</div>
-                  <div class="font-bold text-white text-sm mb-1">Pague via QR / Endereço</div>
-                  <div class="text-[11px] text-gray-400 leading-relaxed">Abra o QR Code clicando no botão principal. Copie o endereço da rede selecionada e envie EXATAMENTE o valor indicado. Opcionalmente, informe o TXID para validação rápida.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStepLabel').replace('{n}','02')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depAdditionalStep2Title')}</div>
+                  <div class="text-[11px] text-gray-400 leading-relaxed">${I18n.t('depAdditionalStep2Desc')}</div>
                 </div>
               </div>
               <div class="relative rounded-2xl border border-brand/30 bg-brand/10 backdrop-blur p-4 overflow-hidden group shadow-neon-sm">
@@ -1015,9 +1012,9 @@ const Views = {
                   <div class="w-9 h-9 rounded-xl bg-brand border border-white/20 flex items-center justify-center text-black mb-3 shadow-neon-sm">
                     <i class="fa-solid fa-chart-line"></i>
                   </div>
-                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">Passo 03</div>
-                  <div class="font-bold text-white text-sm mb-1">Crédito Automático ✓</div>
-                  <div class="text-[11px] text-gray-300 leading-relaxed">Após 12 confirmações on-chain, o sistema FourHash valida e credita automaticamente o saldo na sua carteira. O bónus de reforço de posição entra em vigor imediatamente.</div>
+                  <div class="text-[11px] font-mono text-brand uppercase tracking-wider font-black mb-1">${I18n.t('depStepLabel').replace('{n}','03')}</div>
+                  <div class="font-bold text-white text-sm mb-1">${I18n.t('depAdditionalStep3Title')}</div>
+                  <div class="text-[11px] text-gray-300 leading-relaxed">${I18n.t('depAdditionalStep3Desc')}</div>
                 </div>
               </div>
             </div>
@@ -1073,7 +1070,7 @@ const Views = {
             <div class="flex items-start justify-between gap-2 mb-1">
               <div class="text-xs font-mono ${hasBonusToWithdraw ? 'text-emerald-300' : 'text-gray-400'}" data-i18n="availableBalance">Saldo Disponível</div>
               <div class="shrink-0 px-2 py-0.5 rounded-md border ${hasBonusToWithdraw ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-white/5 text-gray-500'} text-[10px] font-mono font-bold uppercase tracking-wider">
-                <i class="fa-solid ${hasBonusToWithdraw ? 'fa-circle-check mr-1' : 'fa-lock mr-1'}"></i>${hasBonusToWithdraw ? (I18n.t('readyToWithdraw') || 'Liberado') : (I18n.t('noBonusYet') || 'Aguardando rede')}
+                <i class="fa-solid ${hasBonusToWithdraw ? 'fa-circle-check mr-1' : 'fa-lock mr-1'}"></i>${hasBonusToWithdraw ? I18n.t('walletStatusReleased') : I18n.t('noBonusYet')}
               </div>
             </div>
             <div class="text-2xl font-black ${hasBonusToWithdraw ? 'text-emerald-400' : 'text-gray-400'} font-mono">$ ${uiAvailable.toFixed(2)}</div>
@@ -1084,7 +1081,7 @@ const Views = {
             <div class="flex items-start justify-between gap-2 mb-1">
               <div class="text-xs font-mono text-gray-400" data-i18n="pendingBalance">Bônus Pendente</div>
               <div class="shrink-0 px-2 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[10px] font-mono font-bold uppercase tracking-wider">
-                <i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('confirmingLabel') || 'Confirmando'}
+                <i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('walletStatusConfirming')}
               </div>
             </div>
             <div class="text-2xl font-black text-amber-400 font-mono">$ ${uiPending.toFixed(2)}</div>
@@ -1095,7 +1092,7 @@ const Views = {
             <div class="flex items-start justify-between gap-2 mb-1">
               <div class="text-xs font-mono text-red-300/90" data-i18n="blockedActivationLabel">Saldo de Ativação Bloqueado</div>
               <div class="shrink-0 px-2 py-0.5 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 text-[10px] font-mono font-bold uppercase tracking-wider">
-                <i class="fa-solid fa-lock mr-1"></i>${I18n.t('nonWithdrawable') || 'Não-sacável'}
+                <i class="fa-solid fa-lock mr-1"></i>${I18n.t('walletNotWithdrawable')}
               </div>
             </div>
             <div class="text-2xl font-black text-red-400 font-mono">$ ${uiBlockedActivation.toFixed(2)}</div>
@@ -1291,10 +1288,10 @@ const Views = {
 
           <div class="inline-flex p-1 rounded-2xl border border-white/10 bg-brand-surface/60 backdrop-blur-sm">
             <button onclick="Views.setReferralsTab('overview')" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider transition ${tab === 'overview' ? 'bg-brand text-black shadow-neon-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}">
-              <i class="fa-solid fa-house-chimney-window mr-1.5"></i> Visão Geral
+              <i class="fa-solid fa-house-chimney-window mr-1.5"></i> ${I18n.t('tabsOverview')}
             </button>
             <button onclick="Views.setReferralsTab('report')" class="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold font-mono uppercase tracking-wider transition ${tab === 'report' ? 'bg-brand text-black shadow-neon-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}">
-              <i class="fa-solid fa-chart-column mr-1.5"></i> Relatório
+              <i class="fa-solid fa-chart-column mr-1.5"></i> ${I18n.t('tabsReport')}
             </button>
           </div>
         </div>
@@ -1307,7 +1304,7 @@ const Views = {
             <div class="p-4 rounded-xl bg-brand-surface border border-white/5">
               <div class="text-[10px] text-gray-400 font-mono" data-i18n="regEntradaLabel">ENTRADA</div>
               <div class="text-2xl font-black text-white font-mono mt-1" data-i18n="regEntradaValue">US$ 10</div>
-              <div class="text-[9px] text-gray-500">100% USDT BEP20</div>
+              <div class="text-[9px] text-gray-500" data-i18n="entryNetworkBadge">100% USDT BEP20</div>
             </div>
 
             <div class="text-brand font-black text-2xl hidden md:flex items-center justify-center mx-0.5">➜</div>
@@ -1389,7 +1386,7 @@ const Views = {
                   var rows = '';
                   try {
                     var list = (AppState.referrals && AppState.referrals.direct && AppState.referrals.direct.length) ? AppState.referrals.direct : [];
-                    if (!list.length) return `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                    if (!list.length) return `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>${I18n.t('directRefEmpty')}</td></tr>`;
                     list.forEach(function(ref){
                       var isActive = (ref.status === 'ACTIVE' || ref.status === 'active');
                       var statusClass = isActive ? 'bg-brand/10 text-brand' : 'bg-amber-400/10 text-amber-400';
@@ -1408,7 +1405,7 @@ const Views = {
                         </tr>`;
                     });
                   } catch(e) {}
-                  return rows || `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                  return rows || `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>${I18n.t('directRefEmpty')}</td></tr>`;
                 })()}
               </tbody>
             </table>
@@ -1419,31 +1416,31 @@ const Views = {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="rounded-2xl border border-brand/40 bg-brand/5 p-5">
-            <div class="text-[10px] font-mono uppercase tracking-wider text-brand font-bold">Ganhos Equipe (N1→N5)</div>
+            <div class="text-[10px] font-mono uppercase tracking-wider text-brand font-bold">${I18n.t('reportKpiEarningsTitle')}</div>
             <div class="mt-2 text-3xl font-black text-white font-mono">${$fmt(totals.earned_team || 0)}</div>
-            <div class="mt-1 text-[11px] text-gray-400 font-mono">${totals.activations || 0} ativações geraram bônus até hoje</div>
+            <div class="mt-1 text-[11px] text-gray-400 font-mono">${totals.activations || 0} ${I18n.t('reportKpiEarningsActivations')}</div>
           </div>
           <div class="rounded-2xl border border-white/10 bg-brand-card p-5">
-            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">Bônus Regra Ativa (Fase 1)</div>
-            <div class="mt-2 text-3xl font-black text-brand font-mono">${$fmt(totals.rulesum_active_usd || 6)} / ativação</div>
-            <div class="mt-1 text-[11px] text-gray-400 font-mono">Equipe 60% (N1 50% · N2-N5 2,5% cada)</div>
+            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">${I18n.t('reportKpiRuleActiveTitle')}</div>
+            <div class="mt-2 text-3xl font-black text-brand font-mono">${$fmt(totals.rulesum_active_usd || 6)}${I18n.t('reportKpiRulePerActivation')}</div>
+            <div class="mt-1 text-[11px] text-gray-400 font-mono">${I18n.t('reportKpiRuleActiveNote')}</div>
           </div>
           <div class="rounded-2xl border border-white/10 bg-brand-card p-5">
-            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">Próxima Fase · 12 Níveis</div>
+            <div class="text-[10px] font-mono uppercase tracking-wider text-gray-400 font-bold">${I18n.t('reportKpiNextPhaseTitle')}</div>
             <div class="mt-2 text-3xl font-black text-gray-400 font-mono">N6 → N12</div>
-            <div class="mt-1 text-[11px] text-amber-300 font-mono"><i class="fa-solid fa-lock mr-1"></i> Em breve · Bônus Linear Posicionamento</div>
+            <div class="mt-1 text-[11px] text-amber-300 font-mono"><i class="fa-solid fa-lock mr-1"></i> ${I18n.t('reportKpiNextPhaseSoon')}</div>
           </div>
         </div>
 
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
           <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
             <div>
-              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">Mapa de Ganhos · 12 Níveis Protocolo</h3>
-              <p class="text-[11px] text-gray-400 font-mono mt-1">Níveis N1→N5 ativos no pré-cadastro. Níveis N6→N12: travados na fase de posicionamento linear (regras liberadas após lançamento oficial).</p>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">${I18n.t('reportMapTitle')}</h3>
+              <p class="text-[11px] text-gray-400 font-mono mt-1">${I18n.t('reportMapSubtitle')}</p>
             </div>
             <div class="flex items-center gap-2 text-[10px] font-mono">
-              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-brand/40 bg-brand/10 text-brand"><i class="fa-solid fa-circle-check"></i> ATIVO HOJE</span>
-              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-gray-400"><i class="fa-solid fa-lock"></i> FASE 2</span>
+              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-brand/40 bg-brand/10 text-brand"><i class="fa-solid fa-circle-check"></i> ${I18n.t('reportMapLegendActive')}</span>
+              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-white/10 bg-white/5 text-gray-400"><i class="fa-solid fa-lock"></i> ${I18n.t('reportMapLegendLocked')}</span>
             </div>
           </div>
 
@@ -1473,14 +1470,14 @@ const Views = {
                       : '<i class="fa-solid fa-lock text-gray-500 text-xs"></i>'}
                   </div>
                   <div class="text-[10px] uppercase tracking-wider font-mono ${isAct ? 'text-gray-300' : 'text-gray-500'} mb-1">
-                    ${isAct ? 'Regra ' + (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1)) + '% · ' + $fmt(ruleAmt) + '/ativação' : 'Bônus Linear · Fase 2'}
+                    ${isAct ? (I18n.t('reportMapRulePrefix') + (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1)) + '% · ' + $fmt(ruleAmt) + I18n.t('reportKpiRulePerActivation')) : I18n.t('reportMapLinearPhase')}
                   </div>
                   <div class="text-2xl font-mono mt-1 mb-1 ${amtCls}">${isAct ? $fmt(earned) : '—'}</div>
                   <div class="flex items-center justify-between text-[10px] font-mono mt-2 pt-2 border-t border-white/5">
-                    <div class="${isAct ? 'text-gray-300' : 'text-gray-500'}">${isAct ? (count + ' ativaç.') : '0 ativações'}</div>
+                    <div class="${isAct ? 'text-gray-300' : 'text-gray-500'}">${isAct ? (count + ' ' + I18n.t('reportMapActivationsShort')) : I18n.t('reportMapActivationsZero')}</div>
                     ${earned > 0 && isAct ? '<div class="text-brand font-bold">+US$ ' + earned.toFixed(2) + '</div>' : ''}
                   </div>
-                  ${!isAct ? '<div class="text-[9px] text-gray-500 font-mono mt-1 leading-relaxed">' + (row.phase_note || 'Em breve') + '</div>' : ''}
+                  ${!isAct ? '<div class="text-[9px] text-gray-500 font-mono mt-1 leading-relaxed">' + (row.phase_note || I18n.t('reportKpiNextPhaseSoon')) + '</div>' : ''}
                 </div>`;
             }).join('')}
           </div>
@@ -1489,23 +1486,23 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
           <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
             <div>
-              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">Histórico Detalhado de Ganhos</h3>
-              <p class="text-[11px] text-gray-400 font-mono mt-1">Todos os bônus recebidos por ativações na sua rede · ordem decrescente por data.</p>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">${I18n.t('reportHistoryTitle')}</h3>
+              <p class="text-[11px] text-gray-400 font-mono mt-1">${I18n.t('reportHistorySubtitle')}</p>
             </div>
-            <button onclick="AppState.refreshTeamBonusReport().then(function(_){ Router.refreshCurrentView(); }); UI.showToast('Relatório atualizado ✓', 'success');" class="px-3.5 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition inline-flex items-center gap-1.5">
-              <i class="fa-solid fa-rotate"></i> Atualizar Relatório
+            <button onclick="AppState.refreshTeamBonusReport().then(function(_){ Router.refreshCurrentView(); }); UI.showToast(I18n.t('reportHistoryRefreshed'), 'success');" class="px-3.5 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white text-[10px] font-bold font-mono transition inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate"></i> ${I18n.t('reportHistoryRefreshBtn')}
             </button>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-white/10 text-gray-400 font-mono">
-                  <th class="py-3">NÍVEL</th>
-                  <th class="py-3">BÔNUS RECEBIDO</th>
-                  <th class="py-3">QUEM ATIVOU</th>
-                  <th class="py-3">VALOR</th>
-                  <th class="py-3">ID PAGAMENTO</th>
-                  <th class="py-3 text-right">DATA / HORA</th>
+                  <th class="py-3">${I18n.t('reportHistColLevel')}</th>
+                  <th class="py-3">${I18n.t('reportHistColBonus')}</th>
+                  <th class="py-3">${I18n.t('reportHistColWho')}</th>
+                  <th class="py-3">${I18n.t('reportHistColAmount')}</th>
+                  <th class="py-3">${I18n.t('reportHistColPayment')}</th>
+                  <th class="py-3 text-right">${I18n.t('reportHistColDate')}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
@@ -1516,9 +1513,9 @@ const Views = {
                     if (!list || !list.length) {
                       rowsHtml = `<tr><td colspan="6" class="py-14 text-center text-gray-500 font-mono text-[11px] leading-relaxed">
                         <i class="fa-solid fa-hand-holding-dollar mr-2 text-gray-600 text-sm"></i>
-                        Sem ganhos de rede ainda.<br/><br/>
-                        Compartilhe seu link de indicação. Quando alguém da sua rede (N1→N5) ativar a conta de US$ 10, o bônus aparece aqui automaticamente.<br/>
-                        <span class="text-brand">N1 = $5,00 · N2 a N5 = $0,25 cada ativação.</span>
+                        ${I18n.t('reportHistoryEmptyTitle')}<br/><br/>
+                        ${I18n.t('reportHistoryEmptyHint1')}<br/>
+                        <span class="text-brand">${I18n.t('reportHistoryEmptyHint2')}</span>
                       </td></tr>`;
                     } else {
                       list.forEach(function(r){
@@ -1537,7 +1534,7 @@ const Views = {
                         if (!whoName && r.note_tx) {
                           try { var mm = (r.note_tx || '').match(/@([a-zA-Z0-9_\-]+)/); if (mm && mm[1]) whoName = mm[1]; } catch(_) {}
                         }
-                        if (!whoName) whoName = '(ativo da sua rede)';
+                        if (!whoName) whoName = I18n.t('reportHistoryUnknownUser');
 
                         var dtTxt = '';
                         try {
@@ -1547,9 +1544,9 @@ const Views = {
 
                         var npId = r.nowpayments_id ? String(r.nowpayments_id) : '';
 
-                        var titleMsg = '<span class="text-white font-bold">Bônus ' + lvlLabel + ' recebido</span>';
-                        if (lvl === 1) titleMsg += ' · <span class="text-gray-400">Indicação Direta</span>';
-                        else if (lvl >= 2 && lvl <= 5) titleMsg += ' · <span class="text-gray-400">Upline Indireto</span>';
+                        var titleMsg = '<span class="text-white font-bold">' + I18n.t('reportHistoryBonusTitle') + ' ' + lvlLabel + '</span>';
+                        if (lvl === 1) titleMsg += ' · <span class="text-gray-400">' + I18n.t('reportHistoryDirect') + '</span>';
+                        else if (lvl >= 2 && lvl <= 5) titleMsg += ' · <span class="text-gray-400">' + I18n.t('reportHistoryIndirect') + '</span>';
 
                         rowsHtml += `
                           <tr>
@@ -1586,10 +1583,10 @@ const Views = {
         ${showAdminBtn ? `
         <div class="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xl">
           <div>
-            <div class="text-amber-400 font-black text-sm sm:text-base tracking-wide font-['Space_Grotesk']"><i class="fa-solid fa-crown mr-2"></i>ACESSO ADMINISTRADOR MASTER</div>
-            <div class="text-[11px] text-gray-400 mt-1 font-mono">Acesso total ao backoffice, financeiro e suporte.</div>
+            <div class="text-amber-400 font-black text-sm sm:text-base tracking-wide font-['Space_Grotesk']"><i class="fa-solid fa-crown mr-2"></i>${I18n.t('masterAdminTitle')}</div>
+            <div class="text-[11px] text-gray-400 mt-1 font-mono">${I18n.t('masterAdminSubtitle')}</div>
           </div>
-          <button onclick="Router.navigate('admin')" class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm tracking-wider shadow-neon-sm transition whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>ABRIR PAINEL ADMIN</button>
+          <button onclick="Router.navigate('admin')" class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm tracking-wider shadow-neon-sm transition whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>${I18n.t('masterAdminBtn')}</button>
         </div>
         ` : ''}
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl">
@@ -1604,36 +1601,36 @@ const Views = {
             </div>
           </div>
 
-          <form onsubmit="event.preventDefault(); UI.showToast('Alterações salvas com sucesso!', 'success');" class="space-y-4">
+          <form onsubmit="event.preventDefault(); UI.showToast(I18n.t('profileToastSaved'), 'success');" class="space-y-4">
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">Nome Completo</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileLblFullName')}</label>
               <input type="text" value="${u.fullName || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-mono text-gray-400 mb-1">Username (Fixo)</label>
+                <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileLblUsernameFixed')}</label>
                 <input type="text" readonly disabled value="@${u.username || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-gray-500 font-mono cursor-not-allowed">
               </div>
               <div>
-                <label class="block text-xs font-mono text-gray-400 mb-1">Patrocinador</label>
+                <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileLblSponsor')}</label>
                 <input type="text" readonly disabled value="@${u.sponsor || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-brand font-mono cursor-not-allowed">
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">E-mail</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileLblEmail')}</label>
               <input type="email" value="${u.email || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">Telefone</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileLblPhone')}</label>
               <input type="tel" value="${u.phone || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="pt-4">
               <button type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs tracking-wider shadow-neon transition">
-                SALVAR ALTERAÇÕES
+                ${I18n.t('profileBtnSave')}
               </button>
             </div>
           </form>
@@ -1648,45 +1645,45 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl">
           <h2 class="text-xl font-bold text-white font-['Space_Grotesk'] mb-6" data-i18n="navSecurity">Segurança da Conta</h2>
 
-          <form onsubmit="event.preventDefault(); UI.showToast('Senha alterada com sucesso!', 'success');" class="space-y-4 pb-6 border-b border-white/10">
-            <h3 class="text-xs font-mono text-brand font-bold uppercase">Alterar Senha de Acesso</h3>
+          <form onsubmit="event.preventDefault(); UI.showToast(I18n.t('pwdSuccess'), 'success');" class="space-y-4 pb-6 border-b border-white/10">
+            <h3 class="text-xs font-mono text-brand font-bold uppercase">${I18n.t('pwdChangeTitle')}</h3>
             <div>
-              <label class="block text-xs text-gray-400 mb-1 font-mono">Senha Atual</label>
+              <label class="block text-xs text-gray-400 mb-1 font-mono">${I18n.t('pwdCurrent')}</label>
               <input type="password" required placeholder="••••••••" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand">
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs text-gray-400 mb-1 font-mono">Nova Senha</label>
-                <input type="password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand">
+                <label class="block text-xs text-gray-400 mb-1 font-mono">${I18n.t('pwdNew')}</label>
+                <input type="password" required minlength="6" placeholder="${I18n.t('pwdMinChar')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand">
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1 font-mono">Confirmar Nova Senha</label>
-                <input type="password" required minlength="6" placeholder="Repita a nova senha" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand">
+                <label class="block text-xs text-gray-400 mb-1 font-mono">${I18n.t('pwdNewConfirm')}</label>
+                <input type="password" required minlength="6" placeholder="${I18n.t('pwdRepeat')}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand">
               </div>
             </div>
             <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand text-black font-bold text-xs hover:bg-brand-glow shadow-neon-sm transition">
-              Atualizar Senha
+              ${I18n.t('pwdUpdateBtn')}
             </button>
           </form>
 
           <div class="pt-6 space-y-4">
             <div class="flex items-center justify-between p-4 rounded-xl bg-brand-surface border border-white/5">
               <div>
-                <div class="text-xs font-bold text-white">Autenticação de Dois Fatores (2FA)</div>
-                <div class="text-[11px] text-gray-400">Proteja saques e acessos com Google Authenticator</div>
+                <div class="text-xs font-bold text-white">${I18n.t('sec2faTitle')}</div>
+                <div class="text-[11px] text-gray-400">${I18n.t('sec2faHint')}</div>
               </div>
-              <button onclick="UI.showToast('2FA preparado para ativação na Fase 2 com Supabase Auth.', 'info')" class="px-3.5 py-1.5 rounded-lg border border-brand/40 bg-brand/10 text-brand font-bold text-xs">
-                Configurar
+              <button onclick="UI.showToast(I18n.t('sec2faPhase2'), 'info')" class="px-3.5 py-1.5 rounded-lg border border-brand/40 bg-brand/10 text-brand font-bold text-xs">
+                ${I18n.t('sec2faConfigBtn')}
               </button>
             </div>
 
             <div class="p-4 rounded-xl bg-brand-surface border border-white/5 text-xs font-mono space-y-1">
-              <div class="text-gray-400 uppercase text-[10px]">Sessão Atual</div>
+              <div class="text-gray-400 uppercase text-[10px]">${I18n.t('secSessionCurrent')}</div>
               <div class="text-white flex items-center justify-between">
                 <span>IP: 187.54.210.12 (Maceió, Brasil)</span>
-                <span class="text-brand">● Ativo agora</span>
+                <span class="text-brand">${I18n.t('secSessionActive')}</span>
               </div>
-              <div class="text-gray-500 text-[11px]">Dispositivo: Chrome no Windows Desktop</div>
+              <div class="text-gray-500 text-[11px]">${I18n.t('secSessionDevice')}: Chrome no Windows Desktop</div>
             </div>
           </div>
 
