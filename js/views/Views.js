@@ -12,7 +12,7 @@ const Views = {
           <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
 
           <div class="mx-auto h-24 sm:h-28 mb-6 relative flex items-center justify-center animate-pulse">
-            <img src="/assets/logo/Logo_4h_solo.png" alt="FourHash Logo 4#" class="h-24 sm:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,102,0.8)]">
+            <img src="/Logo_4h_solo.png" alt="FourHash Logo 4#" onerror="var _i=this; _i.onerror=null; _i.src='/assets/logo/Logo_4h_solo.png'; setTimeout(function(){try{if(!_i.naturalWidth){_i.src='/logo/Logo_4h_solo.png';_i.onerror=null;}}catch(_e){}},50);" class="h-24 sm:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,102,0.8)]">
           </div>
 
           <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white font-['Space_Grotesk']">
