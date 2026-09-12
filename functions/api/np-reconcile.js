@@ -38,10 +38,10 @@ function sbHeaders(c) {
   };
 }
 
-function isPaidStatus(s, amountReceived, expectedUsd) {
+function isPaidStatus(s, amountReceived, expectedUsd, orderId) {
   const st = String(s || '').toLowerCase().trim();
   if (!st) return false;
-  const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled'];
+  const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled','partially_paid','wrong_asset'];
   let full = false;
   if (finalStates.indexOf(st) >= 0) full = true;
   else if (/(paid|finish|confirm|complete|success|settle|received)/i.test(st)) full = true;
@@ -49,7 +49,12 @@ function isPaidStatus(s, amountReceived, expectedUsd) {
   const ex = Number(expectedUsd || 0) > 0 ? Number(expectedUsd) : 10;
   const recv = Number(amountReceived || 0);
   if (recv <= 0) return true;
-  return recv >= Number((ex * 0.985).toFixed(6));
+  let minPct = 0.985;
+  if (st === 'partially_paid' || st === 'wrong_asset' || st === 'payment_received') minPct = 0.93;
+  const isActivationFixed10 = orderId && /^4H-(activation|deposit)-/.test(String(orderId || ''));
+  if (isActivationFixed10) minPct = 0.90;
+  if (ex <= 10 && (st === 'partially_paid' || st === 'wrong_asset')) minPct = Math.min(minPct, 0.90);
+  return recv >= Number((ex * minPct).toFixed(6));
 }
 
 function isFailedStatus(s) {
@@ -148,6 +153,35 @@ async function sbRpcIncrement(c, profileId, amount) {
     });
     return r.ok;
   } catch(_) { return false; }
+}
+
+async function sbRpcFull(c, name, params) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? base + 'rest/v1/rpc/' + name : base + '/rest/v1/rpc/' + name);
+    const r = await fetch(url, { method: 'POST', headers: sbHeaders(c), body: JSON.stringify(params || {}) });
+    if (!r.ok) return null;
+    try { return await r.json(); } catch(_) { return true; }
+  } catch(_e) { return null; }
+}
+
+async function callEnsureActivationRpc(c, opts) {
+  try {
+    const o = opts || {};
+    if (!o.payment_id && !o.profile_id && !o.username) return { ok: false, reason: 'no_identifiers' };
+    return await sbRpcFull(c, 'ensure_activation_by_payment', {
+      p_payment_id:          String(o.payment_id || o.paymentId || o.nowpayments_id || o.nowpaymentsId || '').slice(0,128),
+      p_order_id:            String(o.order_id || o.orderId || '').slice(0,256),
+      p_np_status:           String(o.np_status || o.status || o.payment_status || '').slice(0,64),
+      p_amount_received_usd: Number(o.amount_received || o.amountReceived || o.pay_amount || 0) || 0,
+      p_expected_usd:        Number(o.expected_usd || o.expectedUsd || o.price_amount || 10) || 10,
+      p_tx_hash:             String(o.tx_hash || o.txHash || o.payin_hash || '').slice(0,512),
+      p_profile_id:          o.profile_id || o.profileId || null,
+      p_username:            String(o.username || '').replace(/^@/,'').slice(0,128) || null,
+      p_currency:            String(o.currency || 'USDT').slice(0,32),
+      p_network:             String(o.network || o.payin_network || 'BSC').slice(0,32)
+    });
+  } catch(e) { return { ok: false, reason: 'exception:' + String((e && (e.message || String(e))) || '').slice(0,200) }; }
 }
 
 async function sbInsertPositionIfMissing(c, profileId) {
@@ -446,9 +480,11 @@ async function doReconcile(context) {
       const amt = Number(np.body.price_amount || np.body.pay_amount || r.amount || 10) || 10;
       const expected = Number(np.body && (Number(np.body.price_amount) > 0 ? Number(np.body.price_amount) : Number(r.amount || 10))) || 10;
       const received = Number(np.body.amount_received || np.body.pay_amount || np.body.outcome_amount || 0);
+      const orderIdStr = String(np.body.order_id || np.body.orderId || '');
       info.expected_amount = expected;
       info.amount_received_np = received;
-      if (isPaidStatus(status, received, expected)) {
+      info.order_id = orderIdStr;
+      if (isPaidStatus(status, received, expected, orderIdStr)) {
         let netw = null;
         try {
           const netRaw = String(np.body.network || np.body.payin_network || np.body.pay_network || r.network || '').toLowerCase();
@@ -484,6 +520,17 @@ async function doReconcile(context) {
             const c = await ensureActivated(context, r.profile_id, amt);
             if (c >= 2) info.profile_activated = true;
           } catch(_) {}
+          try {
+            info.rpc_fallback = await callEnsureActivationRpc(context, {
+              payment_id: paymentId, order_id: orderIdStr, np_status: status,
+              amountReceived: received, expectedUsd: expected,
+              txHash: (np.body && (np.body.payin_hash || np.body.tx_hash)) || null,
+              profile_id: r.profile_id,
+              currency: np.body && (np.body.price_currency || np.body.pay_currency) || 'USDT',
+              network: netw || (np.body && (np.body.network || np.body.payin_network)) || 'BSC'
+            });
+            if (info.rpc_fallback && info.rpc_fallback.ok === true) info.profile_activated = true;
+          } catch(_rpcErr) { info.rpc_fallback_error = String((_rpcErr && _rpcErr.message) || _rpcErr || '').slice(0,200); }
         }
 
         if (okPatch || (r.profile_id && info.profile_activated)) result.activated++;

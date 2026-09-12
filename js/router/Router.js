@@ -87,8 +87,8 @@ const Router = {
       const lock = (activated ? '' : ' opacity-40 pointer-events-none grayscale cursor-not-allowed');
       const lockedMsg = (activated ? '' : ' onclick=\"event.stopPropagation(); event.preventDefault(); UI.showToast(\\\'Ative sua conta primeiro para desbloquear.\\\',\\\'warning\\\',\\\'fa-lock\\\'); return false;\"');
       const statusBadge = activated
-        ? `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand/10 border border-brand/40 text-brand text-[10px] font-black font-mono uppercase tracking-wider shadow-neon-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>ATIVO</span>`
-        : `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] font-black font-mono uppercase tracking-wider"><i class="fa-solid fa-clock text-[10px]"></i>AGUARDA ATIVAÇÃO</span>`;
+        ? `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand/10 border border-brand/40 text-brand text-[10px] font-black font-mono uppercase tracking-wider shadow-neon-sm"><span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>${I18n.t('statusBadgeActive')}</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/40 text-amber-400 text-[10px] font-black font-mono uppercase tracking-wider"><i class="fa-solid fa-clock text-[10px]"></i>${I18n.t('statusBadgePending')}</span>`;
 
       let links = `
         <button onclick="Router.navigate('dashboard')" class="hover:text-brand transition${lock}${this.currentRoute === 'dashboard' ? ' text-brand font-bold' : ''}">${I18n.t('navDashboard')}</button>

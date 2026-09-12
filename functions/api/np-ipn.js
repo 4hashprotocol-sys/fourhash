@@ -176,6 +176,35 @@ async function sbRpc(c, name, params) {
   } catch(_e) { return false; }
 }
 
+async function sbRpcFull(c, name, params) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? base + 'rest/v1/rpc/' + name : base + '/rest/v1/rpc/' + name);
+    const r = await fetch(url, { method: 'POST', headers: sbHeaders(c), body: JSON.stringify(params || {}) });
+    if (!r.ok) return null;
+    try { return await r.json(); } catch(_) { return true; }
+  } catch(_e) { return null; }
+}
+
+async function callEnsureActivationRpc(c, opts) {
+  try {
+    const o = opts || {};
+    if (!o.payment_id && !o.profile_id && !o.username) return { ok: false, reason: 'no_identifiers' };
+    return await sbRpcFull(c, 'ensure_activation_by_payment', {
+      p_payment_id:          String(o.payment_id || o.paymentId || o.nowpayments_id || o.nowpaymentsId || '').slice(0,128),
+      p_order_id:            String(o.order_id || o.orderId || '').slice(0,256),
+      p_np_status:           String(o.np_status || o.status || o.payment_status || '').slice(0,64),
+      p_amount_received_usd: Number(o.amount_received || o.amountReceived || o.pay_amount || 0) || 0,
+      p_expected_usd:        Number(o.expected_usd || o.expectedUsd || o.price_amount || 10) || 10,
+      p_tx_hash:             String(o.tx_hash || o.txHash || o.payin_hash || '').slice(0,512),
+      p_profile_id:          o.profile_id || o.profileId || null,
+      p_username:            String(o.username || '').replace(/^@/,'').slice(0,128) || null,
+      p_currency:            String(o.currency || 'USDT').slice(0,32),
+      p_network:             String(o.network || o.payin_network || 'BSC').slice(0,32)
+    });
+  } catch(e) { return { ok: false, reason: 'exception:' + String((e && (e.message || String(e))) || '').slice(0,200) }; }
+}
+
 async function sbUpdateProfile(c, profileId, patch) {
   try {
     const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
@@ -531,7 +560,7 @@ async function doPost(context) {
       return json(401, { ok: false, error: 'invalid_signature', profile_id: profileId, order_id: orderId });
     }
 
-    function isPaidAmountOk(statusStr, amountReceived, expectedUsd) {
+    function isPaidAmountOk(statusStr, amountReceived, expectedUsd, orderId) {
       const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled','partially_paid','wrong_asset'];
       const st = String(statusStr || '').toLowerCase().trim();
       let full = false;
@@ -543,9 +572,11 @@ async function doPost(context) {
       if (recv <= 0) return true;
       let minPct = 0.985;
       if (st === 'partially_paid' || st === 'wrong_asset' || st === 'payment_received') {
-        minPct = 0.94;
+        minPct = 0.93;
       }
-      if (ex <= 10 && (st === 'partially_paid' || st === 'wrong_asset')) minPct = 0.93;
+      const isActivationFixed10 = orderId && /^4H-(activation|deposit)-/.test(String(orderId || ''));
+      if (isActivationFixed10) minPct = 0.90;
+      if (ex <= 10 && (st === 'partially_paid' || st === 'wrong_asset')) minPct = Math.min(minPct, 0.90);
       return recv >= Number((ex * minPct).toFixed(6));
     }
 
@@ -563,7 +594,7 @@ async function doPost(context) {
     } catch(_) { expectedAmount = 10; }
     expectedAmount = Number(expectedAmount) || 10;
     const finalStates = ['finished','confirmed','completed','success','partially_paid','wrong_asset','paid','payment_received','settled'];
-    const isPaid = isPaidAmountOk(payStatus, amountReceived, expectedAmount);
+    const isPaid = isPaidAmountOk(payStatus, amountReceived, expectedAmount, orderId);
     const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
 
     const parentPaymentId = String(body && (body.parent_payment_id || body.original_payment_id || body.original_id || body.payment_id_of_failed_tx || '') || '').trim();
@@ -575,6 +606,7 @@ async function doPost(context) {
     let activation = false;
     let walletUpdated = false;
     let txMatched = false;
+    let rpcFallbackStored = null;
     let attemptedMissing = null;
     try {
       if ((profileId && profileId.length >= 10) || orderId || paymentId) {
@@ -735,6 +767,7 @@ async function doPost(context) {
 
         if (isPaid && profileId && profileId.length >= 10) {
           const amount = amountPaid || amountQs || Number(body.outcome_amount || body.pay_amount || 0) || 10;
+          let rpcFallback = null;
           try {
             let okInc = await sbRpc(context, 'increment_wallet_balance', {
               target_profile_id: profileId, add_amount: amount
@@ -744,7 +777,24 @@ async function doPost(context) {
 
             const c = await ensureActivated(context, profileId, amount);
             activation = (c >= 2);
+
+            try {
+              rpcFallback = await callEnsureActivationRpc(context, {
+                payment_id: paymentId, order_id: orderId, np_status: payStatus,
+                amountReceived: amountReceived || Number(body.amount_received || body.pay_amount || 0),
+                expectedUsd: expectedAmount || Number(body.price_amount || body.expected_amount || 10),
+                txHash: body && (body.payin_hash || body.tx_hash) || null,
+                profile_id: profileId,
+                currency: body && (body.price_currency || body.pay_currency) || 'USDT',
+                network: body && (body.network || body.payin_network) || 'BSC'
+              });
+              if (rpcFallback && rpcFallback.ok === true) {
+                activation = true;
+                if (!walletUpdated) walletUpdated = !!(rpcFallback.operations && (rpcFallback.operations.wallet_upserted || rpcFallback.operations.tx_deposit_inserted));
+              }
+            } catch(_rpcE) { rpcFallback = { ok: false, reason: 'exception:' + String((_rpcE && _rpcE.message) || _rpcE || '').slice(0,200) }; }
           } catch(_act) {}
+          rpcFallbackStored = rpcFallback;
         }
       }
     } catch(_err) {}
@@ -759,7 +809,8 @@ async function doPost(context) {
       activation: activation,
       wallet_updated: walletUpdated,
       tx_matched: txMatched,
-      profile_resolved_via_order_id: !!(profilePartial8 || (profileId && !url.searchParams.get('profile_id')))
+      profile_resolved_via_order_id: !!(profilePartial8 || (profileId && !url.searchParams.get('profile_id'))),
+      rpc_fallback: typeof rpcFallbackStored !== 'undefined' ? rpcFallbackStored : null
     });
   } catch(err) {
     try {

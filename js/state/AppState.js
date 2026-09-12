@@ -822,6 +822,7 @@ const AppState = {
         this.refreshReferrals(),
         this.refreshTreeNetwork(),
         this.refreshBonusNotifications(),
+        this.refreshReferralsBonusReport(),
         this.npReconcilePendingPayments({ force: false })
       ]);
       return true;
@@ -1544,130 +1545,249 @@ const AppState = {
     try {
       var sb = this._sb(); if (!sb) return false;
       var me = (this.currentUser && this.currentUser.id) ? this.currentUser.id : null;
-      if (!me) { this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0}, history:[], teamAudit:[] }; return false; }
+      if (!me) { this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0,n6:0,n7:0,n8:0,n9:0,n10:0,n11:0,n12:0}, history:[], teamAudit:[] }; return false; }
+      console.log('[refreshReferralsBonusReport] ▶ INÍCIO | me=' + String(me||'').slice(0,8));
 
-      var summary = { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0 };
+      var summary = { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0, n6: 0, n7: 0, n8: 0, n9: 0, n10: 0, n11: 0, n12: 0 };
       var history = [];
       var teamAuditMap = {}; // key = profile_id do membro
 
       // 1) Carrega bônus RECEBIDOS por mim (profile_id=me) - usado para SUMMARY e HISTORY
       try {
-        var rB = await sb.from('transactions')
-          .select('id, kind, level_reference, amount, status, created_at, confirmed_at, related_profile_id, from_user:profiles!transactions_profile_id_fkey(username), related_username:profiles!transactions_related_profile_id_fkey(username)')
-          .eq('profile_id', me)
-          .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
-          .order('created_at', { ascending: false })
-          .limit(500);
-        var bRows = (rB && rB.data) ? rB.data : [];
+        var bRows = [];
+        // 1a) Tentativa 1: RPC admin (bypass RLS) se existir, senao query directa (menos joins, mais robusta)
+        try {
+          if (typeof sb.rpc === 'function') {
+            try {
+              var rRpc = await sb.rpc('get_my_bonus_transactions', { lookback_days: 365 });
+              if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length) bRows = rRpc.data.slice();
+            } catch(_rpcFallback){}
+          }
+        } catch(_ignoreRpc) {}
+        if (!bRows.length) {
+          // 1b) Fallback: query transactions SIMPLES (SEM JOINS) para nao quebrar por alias de foreign key errado / RLS
+          var rB = await sb.from('transactions')
+            .select('id, kind, level_reference, amount, status, tx_hash, note, created_at, confirmed_at, related_profile_id, profile_id')
+            .eq('profile_id', me)
+            .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5','bonus_level6','bonus_level7','bonus_level8','bonus_level9','bonus_level10','bonus_level11','bonus_level12'])
+            .order('created_at', { ascending: false })
+            .limit(500);
+          if (rB && rB.data) bRows = rB.data.slice();
+        }
+        console.log('[refreshReferralsBonusReport][1] transacoes bonus recebidas: ' + bRows.length);
+        // idx id->profile (construir 1x depois, usando allP da etapa 2 ou treeNodes OU query especifica)
+        var profileById = (typeof this.profilesById === 'object' && this.profilesById) ? this.profilesById : null;
+        if (!profileById) { profileById = {}; try { if (this.treeNodes && this.treeNodes.length) this.treeNodes.forEach(function(n){ if (n&&n.id) profileById[String(n.id)] = {username:n.username||'',status:n.status||''}; }); } catch(_e) {} }
         bRows.forEach(function(b){
+          // resolve username do related_profile_id (pessoa ativada que originou o bonus)
+          var relatedUsr = '';
+          try {
+            var pidR = String(b.related_profile_id||'');
+            if (pidR) {
+              try { if (b.related_username) relatedUsr = Array.isArray(b.related_username)?(b.related_username[0]&&b.related_username[0].username||''):(b.related_username.username||''); } catch(_){}
+              if (!relatedUsr && profileById && profileById[pidR]) relatedUsr = (profileById[pidR].username||'');
+              if (!relatedUsr) { var mm=(b.note||'').match(/@([a-zA-Z0-9_\-]+)/); if (mm&&mm[1]) relatedUsr = mm[1]; }
+            }
+          } catch(_u){}
+          b._related_username = relatedUsr;
           var lv = Number(b.level_reference || 0);
-          if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
+          if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; else if (b.kind==='bonus_level6') lv=6; else if (b.kind==='bonus_level7') lv=7; else if (b.kind==='bonus_level8') lv=8; else if (b.kind==='bonus_level9') lv=9; else if (b.kind==='bonus_level10') lv=10; else if (b.kind==='bonus_level11') lv=11; else if (b.kind==='bonus_level12') lv=12; }
           var amt = Number(b.amount || 0);
           if (lv===1) summary.n1 += amt;
           else if (lv===2) summary.n2 += amt;
           else if (lv===3) summary.n3 += amt;
           else if (lv===4) summary.n4 += amt;
           else if (lv===5) summary.n5 += amt;
+          else if (lv===6) summary.n6 += amt;
+          else if (lv===7) summary.n7 += amt;
+          else if (lv===8) summary.n8 += amt;
+          else if (lv===9) summary.n9 += amt;
+          else if (lv===10) summary.n10 += amt;
+          else if (lv===11) summary.n11 += amt;
+          else if (lv===12) summary.n12 += amt;
           summary.total += amt;
           history.push(b);
-          // Adiciona no teamAuditMap (membro = related_profile_id)
           if (b.related_profile_id) {
             var pid = String(b.related_profile_id);
-            var usr = ''; try { if (b.related_username) usr = Array.isArray(b.related_username)?(b.related_username[0]&&b.related_username[0].username||''):(b.related_username.username||''); } catch(_){}
-            if (!teamAuditMap[pid]) teamAuditMap[pid] = { profile_id: pid, username: usr, level: lv, bonusReceived: 0, status: 'ATIVO', active: true, activationDate: b.confirmed_at || b.created_at };
+            if (!teamAuditMap[pid]) teamAuditMap[pid] = { profile_id: pid, username: relatedUsr, level: lv, bonusReceived: 0, status: 'ATIVO', active: true, activationDate: b.confirmed_at || b.created_at };
             teamAuditMap[pid].bonusReceived = Number(teamAuditMap[pid].bonusReceived || 0) + amt;
-            if (usr && !teamAuditMap[pid].username) teamAuditMap[pid].username = usr;
+            if (relatedUsr && !teamAuditMap[pid].username) teamAuditMap[pid].username = relatedUsr;
           }
         });
-      } catch(_bErr) { bRows = []; }
+      } catch(_bErr) { bRows = []; console.log('[refreshReferralsBonusReport][1ERR] etapa 1 transacoes: ' + String((_bErr&&_bErr.message)||_bErr)); }
 
-      // 2) Carrega INDICAÇÕES DIRETAS (N1) de AppState.referrals + profiles/status para completar teamAudit
+      // 2) Carrega TODA A REDE 12 NÍVEIS via BFS usando profiles.upline_id (SSOT real)
+      //    Ordem fallback: (1) SELECT profiles direto + BFS → (2) AppState.treeNodes (pré-carregado via refreshTreeNetwork RPC admin) → (3) BFS via RPC get_my_direct_referrals (bypass RLS) → (4) AppState.referrals.direct (só N1)
       try {
-        var directs = (this.referrals && this.referrals.direct && this.referrals.direct.length) ? this.referrals.direct : [];
-        var pidsDir = directs.map(function(d){ return d.profile_id || d.id; }).filter(function(x){ return x; });
-        var profsById = {};
-        if (pidsDir && pidsDir.length) {
-          try {
-            var rP = await sb.from('profiles').select('id, username, status, created_at, upline_1_id, upline_2_id, upline_3_id, upline_4_id, upline_5_id').in('id', pidsDir).limit(200);
-            var pR = (rP && rP.data) ? rP.data : [];
-            pR.forEach(function(p){ profsById[String(p.id)] = p; });
-          } catch(_pErr) {}
+        var allP = [];
+        try {
+          var rp = await sb.from('profiles').select('id, username, status, created_at, upline_id').order('created_at', {ascending:true}).limit(5000);
+          allP = (rp && rp.data) ? rp.data : [];
+        } catch(_pE) { allP = []; }
+        console.log('[refreshReferralsBonusReport][2] BFS: profiles RLS carregados=' + allP.length + ' | treeNodes (fallback)=' + (this.treeNodes||[]).length);
+
+        // idx: upline_id -> array[profile]
+        var uplIdx = {};
+        allP.forEach(function(p){
+          var up = p.upline_id ? String(p.upline_id) : null;
+          if (!up) return;
+          if (!uplIdx[up]) uplIdx[up] = [];
+          uplIdx[up].push(p);
+        });
+
+        // idx: id -> profile
+        var byId = {};
+        allP.forEach(function(p){ byId[String(p.id)] = p; });
+
+        // BFS: fila [{profile, level}]
+        var queue = [];
+        var directChildren = uplIdx[String(me)] || [];
+        console.log('[refreshReferralsBonusReport][2b] BFS RLS: filhos DIRETOS (N1) = ' + directChildren.length);
+        directChildren.forEach(function(p){ queue.push({profile:p, level:1}); });
+
+        // idx: profile_id -> level descoberto BFS (menor level = nível mais próximo)
+        var lvlOf = {};
+        var teamProfiles = [];
+        var levelCount = {};
+        while (queue.length) {
+          var cur = queue.shift();
+          var pid = String(cur.profile.id);
+          if (lvlOf[pid]) continue; // evita ciclos / duplicatas
+          lvlOf[pid] = cur.level;
+          teamProfiles.push(cur.profile);
+          if (!levelCount[cur.level]) levelCount[cur.level] = 0;
+          levelCount[cur.level]++;
+          // adicionar filhos desse profile (N+1) até 12 níveis
+          if (cur.level < 12) {
+            var ch = uplIdx[pid] || [];
+            if (ch.length) console.log('[refreshReferralsBonusReport][2c] BFS RLS: nível ' + cur.level + ' nó ' + String(pid).slice(0,8) + ' → filhos: ' + ch.length);
+            ch.forEach(function(c){ queue.push({profile:c, level:cur.level + 1}); });
+          }
         }
-        directs.forEach(function(d){
-          var pid = String(d.profile_id || d.id || '');
-          if (!pid) return;
-          var lv = 1;
-          var pData = profsById[pid] || {};
-          var usr = d.username || pData.username || '';
-          var isAt = (d.status === 'ACTIVE' || d.status === 'active' || pData.status === 'ACTIVE' || pData.status === 'active');
-          var dt = d.date || d.createdAt || pData.created_at || null;
+
+        // --- FALLBACK 2: Se teamProfiles vazio OU poucos, tentar AppState.treeNodes (RPC admin já resolveu BFS com levels) ---
+        if (!teamProfiles.length || (this.treeNodes && this.treeNodes.length > teamProfiles.length)) {
+          try {
+            var tn = this.treeNodes || [];
+            if (tn.length) {
+              console.log('[refreshReferralsBonusReport][2d1] FALLBACK treeNodes: usar ' + tn.length + ' nós (níveis já calculados!)');
+              uplIdx = {}; byId = {}; lvlOf = {}; teamProfiles = []; levelCount = {};
+              tn.forEach(function(n){
+                var pid2 = String(n.id||'');
+                if (!pid2 || pid2===String(me)) return;
+                var lv2 = Number(n.level || 0);
+                if (lv2<1||lv2>12) return;
+                lvlOf[pid2] = lv2;
+                teamProfiles.push({ id: pid2, username: n.username||'', status: n.status||'PENDING', created_at: n.created_at||null, upline_id: n.upline_id||null });
+                byId[pid2] = teamProfiles[teamProfiles.length-1];
+                if (!levelCount[lv2]) levelCount[lv2] = 0;
+                levelCount[lv2]++;
+              });
+            }
+          } catch(_tnErr) { console.log('[refreshReferralsBonusReport][2d1ERR] treeNodes fallback: ' + String((_tnErr&&_tnErr.message)||_tnErr)); }
+        }
+
+        // --- FALLBACK 3: Se AINDA vazio, BFS via RPC get_my_direct_referrals (igual refreshTreeNetwork, bypass RLS) ---
+        if (!teamProfiles.length) {
+          try {
+            console.log('[refreshReferralsBonusReport][2d2] FALLBACK RPC BFS: get_my_direct_referrals nível por nível');
+            uplIdx = {}; byId = {}; lvlOf = {}; teamProfiles = []; levelCount = {};
+            var visited = new Set([String(me)]);
+            var curLvIds = [String(me)];
+            for (var d=1; d<=12; d++) {
+              var nxtLv = [];
+              for (var ii=0; ii<curLvIds.length; ii++) {
+                var cid = curLvIds[ii];
+                try {
+                  var rpcOut = await sb.rpc('get_my_direct_referrals', { me: cid });
+                  var kids = [];
+                  if (rpcOut && Array.isArray(rpcOut.data)) kids = rpcOut.data;
+                  else if (Array.isArray(rpcOut)) kids = rpcOut;
+                  console.log('[refreshReferralsBonusReport][2d2c] BFS RPC: nível ' + d + ' nó ' + String(cid).slice(0,8) + ' → filhos: ' + kids.length);
+                  if (!uplIdx[cid]) uplIdx[cid] = [];
+                  for (var kk=0; kk<kids.length; kk++) {
+                    var kid = kids[kk];
+                    var kidId = String(kid.id||'').toLowerCase();
+                    if (!kidId || visited.has(kidId)) continue;
+                    visited.add(kidId);
+                    kid.upline_id = cid;
+                    uplIdx[cid].push(kid);
+                    var prof = { id: kidId, username: kid.username||'', status: kid.status||'PENDING', created_at: kid.created_at||null, upline_id: cid };
+                    byId[kidId] = prof;
+                    lvlOf[kidId] = d;
+                    teamProfiles.push(prof);
+                    if (!levelCount[d]) levelCount[d] = 0;
+                    levelCount[d]++;
+                    nxtLv.push(kidId);
+                  }
+                } catch(_rpcErr) { console.log('[refreshReferralsBonusReport][2d2ERR] RPC nó ' + String(cid).slice(0,8) + ': ' + String((_rpcErr&&_rpcErr.message)||_rpcErr)); }
+              }
+              curLvIds = nxtLv;
+              if (!curLvIds.length) break;
+            }
+          } catch(_fb3Err) { console.log('[refreshReferralsBonusReport][2d2ERR] Geral fallback RPC: ' + String((_fb3Err&&_fb3Err.message)||_fb3Err)); }
+        }
+
+        console.log('[refreshReferralsBonusReport][2d] teamProfiles total=' + teamProfiles.length + ' | por nível: ' + JSON.stringify(levelCount));
+
+        // --- FALLBACK 4: Se AINDA vazio, usar diretos do AppState.referrals (RPC 013 admin) como N1 ---
+        if (!teamProfiles.length && this.referrals && this.referrals.direct && this.referrals.direct.length) {
+          console.log('[refreshReferralsBonusReport][2e] ÚLTIMO FALLBACK → AppState.referrals.direct (só N1): ' + this.referrals.direct.length);
+          this.referrals.direct.forEach(function(d){
+            if (!d) return;
+            var p = { id: d.profile_id || d.id, username: d.username || '', status: d.status || 'PENDING', created_at: d.date || d.createdAt || null, upline_id: String(me) };
+            teamProfiles.push(p);
+            if (p.id) lvlOf[String(p.id)] = 1;
+            byId[String(p.id)] = p;
+          });
+          levelCount[1] = teamProfiles.length;
+        }
+
+        // 2b) Verifica ativações (deposit confirmed >=9.2) para membros da equipe
+        var actMap = {};
+        if (teamProfiles && teamProfiles.length) {
+          var pids = teamProfiles.map(function(p){ return p.id; }).filter(Boolean);
+          try {
+            var rD = await sb.from('transactions')
+              .select('id, profile_id, amount, status, confirmed_at, created_at')
+              .eq('kind','deposit')
+              .in('profile_id', pids)
+              .gte('amount', 9.2)
+              .in('status', ['confirmed','completed','finished','paid','success'])
+              .limit(2000);
+            var dRows = (rD && rD.data) ? rD.data : [];
+            dRows.forEach(function(t){
+              if (!actMap[t.profile_id] || (t.confirmed_at && t.confirmed_at < (actMap[t.profile_id].confirmed_at || '9999'))) {
+                actMap[t.profile_id] = t;
+              }
+            });
+          } catch(_dE) {}
+        }
+
+        // 2c) Merge nos teamAuditMap (cria / atualiza cada membro)
+        teamProfiles.forEach(function(p){
+          var pid = String(p.id || '');
+          if (!pid || pid===String(me)) return;
+          var lv = Number(lvlOf[pid] || 0);
+          if (!lv || lv<1 || lv>12) return;
+          var hasAct = !!actMap[pid];
+          var isAt = hasAct || p.status==='ACTIVE' || p.status==='active' || p.status==='ATIVO';
+          var usr = p.username || '';
+          var dt = (actMap[pid] && (actMap[pid].confirmed_at || actMap[pid].created_at)) || p.created_at || null;
           if (!teamAuditMap[pid]) {
             teamAuditMap[pid] = { profile_id: pid, username: usr, level: lv, bonusReceived: 0, status: isAt?'ATIVO':'PENDENTE', active: !!isAt, activationDate: dt };
           } else {
             if (!teamAuditMap[pid].username) teamAuditMap[pid].username = usr;
-            teamAuditMap[pid].status = isAt ? 'ATIVO' : (teamAuditMap[pid].status||'PENDENTE');
+            teamAuditMap[pid].level = lv; // SSOT nível da BFS real
+            teamAuditMap[pid].status = isAt ? 'ATIVO' : (teamAuditMap[pid].status || 'PENDENTE');
             teamAuditMap[pid].active = teamAuditMap[pid].active || !!isAt;
             if (dt && !teamAuditMap[pid].activationDate) teamAuditMap[pid].activationDate = dt;
-            teamAuditMap[pid].level = 1; // N1 sempre direto
           }
         });
+      } catch(_teamErr) { console.log('[refreshReferralsBonusReport][ERR2] etapa 2 BFS: ' + String((_teamErr&&_teamErr.message)||_teamErr)); }
 
-        // 3) Busca N2..N5 para complementar teamAudit = todos profiles onde upline_1..5 contém meu ID
-        // e estão ATIVOS (possuem deposit confirmed). Primeiro busca profiles onde eu sou upline N2..N5
-        try {
-          var uplFields = ['upline_2_id','upline_3_id','upline_4_id','upline_5_id'];
-          var levelField = { 'upline_2_id':2, 'upline_3_id':3, 'upline_4_id':4, 'upline_5_id':5 };
-          var allBelowMe = [];
-          for (var uf=0; uf<uplFields.length; uf++) {
-            try {
-              var rr = await sb.from('profiles').select('id, username, status, created_at, upline_1_id, upline_2_id, upline_3_id, upline_4_id, upline_5_id').eq(uplFields[uf], me).limit(500);
-              var rowR = (rr && rr.data) ? rr.data : [];
-              rowR.forEach(function(p){
-                p._levelHint = levelField[uplFields[uf]];
-                allBelowMe.push(p);
-              });
-            } catch(_ue){}
-          }
-          // Para cada profile abaixo de mim, verifica se tem ativação (deposit confirmed amount>=9.2)
-          if (allBelowMe && allBelowMe.length) {
-            var belowPids = allBelowMe.map(function(p){ return p.id; }).filter(function(x){return x;});
-            var actMap = {};
-            try {
-              var rD = await sb.from('transactions')
-                .select('id, profile_id, amount, status, confirmed_at, created_at')
-                .eq('kind','deposit')
-                .in('profile_id', belowPids)
-                .gte('amount', 9.2)
-                .in('status', ['confirmed','completed','finished','paid','success'])
-                .limit(500);
-              var dRows = (rD && rD.data) ? rD.data : [];
-              dRows.forEach(function(t){
-                if (!actMap[t.profile_id] || (t.confirmed_at && t.confirmed_at < (actMap[t.profile_id].confirmed_at || '9999'))) {
-                  actMap[t.profile_id] = t;
-                }
-              });
-            } catch(_dErr){}
-            allBelowMe.forEach(function(p){
-              var pid = String(p.id);
-              var lv = Number(p._levelHint || 0);
-              if (!lv || lv<2 || lv>5) return;
-              var hasAct = !!actMap[pid];
-              var isAt = hasAct || p.status==='ACTIVE' || p.status==='active';
-              if (!teamAuditMap[pid]) {
-                teamAuditMap[pid] = { profile_id: pid, username: p.username||'', level: lv, bonusReceived: 0, status: isAt?'ATIVO':'PENDENTE', active: !!isAt, activationDate: (actMap[pid]&&(actMap[pid].confirmed_at||actMap[pid].created_at)) || p.created_at || null };
-              } else {
-                if (!teamAuditMap[pid].username) teamAuditMap[pid].username = p.username||'';
-                if (!teamAuditMap[pid].level || teamAuditMap[pid].level<2) teamAuditMap[pid].level = lv;
-                teamAuditMap[pid].status = isAt ? 'ATIVO' : (teamAuditMap[pid].status||'PENDENTE');
-                teamAuditMap[pid].active = teamAuditMap[pid].active || !!isAt;
-              }
-            });
-          }
-        } catch(_n25err) {}
-      } catch(_dErr) {}
-
-      // Arredonda summary
-      ['total','n1','n2','n3','n4','n5'].forEach(function(k){ summary[k] = Math.round(Number(summary[k]||0)*1000000)/1000000; });
+      // Arredonda summary n1..n12 + total
+      ['total','n1','n2','n3','n4','n5','n6','n7','n8','n9','n10','n11','n12'].forEach(function(k){ summary[k] = Math.round(Number(summary[k]||0)*1000000)/1000000; });
 
       // Converte teamAuditMap para array ordenado por level, depois data
       var teamAudit = Object.keys(teamAuditMap).map(function(k){ return teamAuditMap[k]; })
@@ -1678,10 +1798,12 @@ const AppState = {
           return (da<db?-1:(da>db?1:0));
         });
 
+      console.log('[refreshReferralsBonusReport] ✅ FINAL | teamAudit=' + teamAudit.length + ' membros | summary.total=' + Number(summary.total||0).toFixed(2));
       this.userBonusReport = { summary: summary, history: history, teamAudit: teamAudit };
       return true;
     } catch(e) {
-      this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0}, history:[], teamAudit:[] };
+      console.log('[refreshReferralsBonusReport][ERRG] geral: ' + String((e&&e.message)||e));
+      this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0,n6:0,n7:0,n8:0,n9:0,n10:0,n11:0,n12:0}, history:[], teamAudit:[] };
       return false;
     }
   },

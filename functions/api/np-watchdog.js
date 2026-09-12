@@ -67,6 +67,35 @@ async function sbPost(c, table, row) {
   } catch(_) { return false; }
 }
 
+async function sbRpcFull(c, name, params) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? base + 'rest/v1/rpc/' + name : base + '/rest/v1/rpc/' + name);
+    const r = await fetch(url, { method: 'POST', headers: sbHeaders(c), body: JSON.stringify(params || {}) });
+    if (!r.ok) return null;
+    try { return await r.json(); } catch(_) { return true; }
+  } catch(_e) { return null; }
+}
+
+async function callEnsureActivationRpc(c, opts) {
+  try {
+    const o = opts || {};
+    if (!o.payment_id && !o.profile_id && !o.username) return { ok: false, reason: 'no_identifiers' };
+    return await sbRpcFull(c, 'ensure_activation_by_payment', {
+      p_payment_id:          String(o.payment_id || o.paymentId || o.nowpayments_id || o.nowpaymentsId || '').slice(0,128),
+      p_order_id:            String(o.order_id || o.orderId || '').slice(0,256),
+      p_np_status:           String(o.np_status || o.status || o.payment_status || '').slice(0,64),
+      p_amount_received_usd: Number(o.amount_received || o.amountReceived || o.pay_amount || 0) || 0,
+      p_expected_usd:        Number(o.expected_usd || o.expectedUsd || o.price_amount || 10) || 10,
+      p_tx_hash:             String(o.tx_hash || o.txHash || o.payin_hash || '').slice(0,512),
+      p_profile_id:          o.profile_id || o.profileId || null,
+      p_username:            String(o.username || '').replace(/^@/,'').slice(0,128) || null,
+      p_currency:            String(o.currency || 'USDT').slice(0,32),
+      p_network:             String(o.network || o.payin_network || 'BSC').slice(0,32)
+    });
+  } catch(e) { return { ok: false, reason: 'exception:' + String((e && (e.message || String(e))) || '').slice(0,200) }; }
+}
+
 async function ensureActivated(c, profileId, amount) {
   if (!profileId || profileId.length < 10) return 0;
   let changes = 0; const now = new Date().toISOString();
@@ -112,6 +141,22 @@ async function npGetPayment(c, paymentId) {
   } catch(_) { return null; }
 }
 
+async function npListRecentPayments(c, limit) {
+  try {
+    const NP_API_URL = getEnv(c, 'NOWPAYMENTS_API_URL', 'https://api.nowpayments.io/v1');
+    const NP_API_KEY = getEnv(c, 'NOWPAYMENTS_API_KEY', '');
+    if (!NP_API_KEY) return [];
+    const u = NP_API_URL.endsWith('/') ? (NP_API_URL + 'payments') : (NP_API_URL + '/payments');
+    const params = new URLSearchParams({ limit: String(limit || 500) });
+    const r = await fetch(u + '?' + params.toString(), { method: 'GET', headers: { 'x-api-key': NP_API_KEY, 'User-Agent': 'fourhash.app-watchdog/1.0' } });
+    if (!r.ok) return [];
+    const d = await r.json().catch(function(){ return {}; });
+    if (d && Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d)) return d;
+    return [];
+  } catch(_) { return []; }
+}
+
 function extractProfileFromOrder(orderId) {
   try {
     const s = String(orderId || '').trim(); if (!s) return null;
@@ -151,7 +196,11 @@ async function processPaymentWatchdog(c, paymentId, opts) {
   const isPaidFinal = isPaidFinal(npStatus);
 
   const expectedUsd = (priceAmount && priceAmount > 0) ? priceAmount : (orderId && /^4H-(activation|deposit)-/.test(orderId) ? 10 : 10);
-  const minPct = (npStatus === 'partially_paid' || npStatus === 'wrong_asset') ? 0.93 : 0.985;
+  const isActivationFixed10 = orderId && /^4H-(activation|deposit)-/.test(orderId);
+  let minPct = 0.985;
+  if (npStatus === 'partially_paid' || npStatus === 'wrong_asset') minPct = 0.93;
+  if (isActivationFixed10) minPct = Math.min(minPct, 0.90);
+  if (expectedUsd <= 10 && (npStatus === 'partially_paid' || npStatus === 'wrong_asset')) minPct = Math.min(minPct, 0.90);
   const passes = isPaidFinal && (payAmount <= 0 || payAmount >= Number((expectedUsd * minPct).toFixed(6)));
 
   let profileId = null;
@@ -209,7 +258,19 @@ async function processPaymentWatchdog(c, paymentId, opts) {
 
   const activatedChanges = await ensureActivated(c, profileId, expectedUsd || 10);
 
-  return { payment_id: paymentId, ok: true, processed: true, tx_matched: txMatched, activated_changes: activatedChanges, profile_id: profileId, np_status: npStatus, amount_expected: expectedUsd, amount_paid_np: payAmount, threshold_pct: minPct };
+  let rpcFallback = null;
+  try {
+    rpcFallback = await callEnsureActivationRpc(c, {
+      payment_id: paymentId, order_id: orderId, np_status: npStatus,
+      amountReceived: payAmount, expectedUsd: expectedUsd,
+      txHash: (np && (np.payin_hash || np.tx_hash)) || null,
+      profile_id: profileId,
+      currency: np && (np.price_currency || np.pay_currency) || 'USDT',
+      network: np && (np.network || np.payin_network) || 'BSC'
+    });
+  } catch(_rpcErr) { rpcFallback = { ok: false, reason: 'rpc_exception', msg: String((_rpcErr && _rpcErr.message) || _rpcErr || '').slice(0,200) }; }
+
+  return { payment_id: paymentId, ok: true, processed: true, tx_matched: txMatched, activated_changes: activatedChanges, profile_id: profileId, np_status: npStatus, amount_expected: expectedUsd, amount_paid_np: payAmount, threshold_pct: minPct, rpc_fallback: rpcFallback };
 }
 
 async function doPost(c, req) {
@@ -240,6 +301,50 @@ async function doPost(c, req) {
     }
   } else {
     const after = new Date(Date.now() - 1000 * 60 * 60 * hoursLookback).toISOString();
+
+    // ============================================================
+    //  CAMADA 1: SCAN NP API /payments recentes (500 pagamentos)
+    //  → Resolve pagamentos ÓRFÃOS (nunca tiveram transaction local)
+    //  ============================================================
+    try {
+      const recentNp = await npListRecentPayments(c, Math.max(500, Number(scanLimit) || 500));
+      if (Array.isArray(recentNp) && recentNp.length) {
+        const localNpIds = new Set();
+        try {
+          const localAll = await sbGet(c, 'transactions', 'and=(created_at.gt.' + encodeURIComponent(after) + ')&select=nowpayments_id,tx_hash&limit=1000');
+          if (Array.isArray(localAll)) localAll.forEach(tx => {
+            if (tx && tx.nowpayments_id) localNpIds.add(String(tx.nowpayments_id).trim());
+            if (tx && tx.tx_hash) localNpIds.add(String(tx.tx_hash).trim());
+          });
+        } catch(_) {}
+        const recentCutoff = Date.now() - 1000 * 60 * 60 * hoursLookback;
+        const orphanCandidates = [];
+        for (let k=0; k<recentNp.length; k++) {
+          const p = recentNp[k]; if (!p || !p.payment_id) continue;
+          const pid = String(p.payment_id).trim();
+          if (localNpIds.has(pid)) continue;
+          const pStatus = String(p.payment_status || p.status || '').toLowerCase();
+          const isPaidShort = ['finished','confirmed','completed','success','paid','payment_received','settled','partially_paid','wrong_asset'].indexOf(pStatus) >= 0;
+          if (!isPaidShort && !/(paid|finish|confirm|complete|success|settle|received)/i.test(pStatus)) continue;
+          let pTs = 0; try { if (p.updated_at) pTs = new Date(p.updated_at).getTime(); else if (p.created_at) pTs = new Date(p.created_at).getTime(); } catch(_) {}
+          if (pTs && pTs < recentCutoff) continue;
+          orphanCandidates.push(pid);
+        }
+        const dedupOrphans = {};
+        for (let i=0; i<orphanCandidates.length; i++) dedupOrphans[orphanCandidates[i]] = true;
+        const orphanArr = Object.keys(dedupOrphans).slice(0, Math.max(50, Number(scanLimit) || 50));
+        for (let i=0; i<orphanArr.length; i++) {
+          try {
+            const r = await processPaymentWatchdog(c, orphanArr[i], { dry });
+            (r.ok && (r.processed || (r.dry && r.passes_threshold))) ? processed.push(r) : skipped.push(r);
+          } catch(e) { skipped.push({ payment_id: orphanArr[i], ok: false, skipped: true, reason: 'exception_orphan: ' + String((e && (e.message || String(e))) || '').slice(0, 100) }); }
+        }
+      }
+    } catch(_orphErr) { skipped.push({ payment_id: null, ok: false, skipped: true, reason: 'orphan_scan_exception: ' + String((_orphErr && (_orphErr.message || String(_orphErr))) || '').slice(0, 120) }); }
+
+    // ============================================================
+    //  CAMADA 2: SCAN transactions LOCAL pendentes (fallback)
+    // ============================================================
     const pendTx = await sbGet(c, 'transactions',
       'and=(or=(status.eq.pending,status.eq.created),created_at.gt.' + encodeURIComponent(after) + ')' +
       '&or=(nowpayments_status.eq.waiting,nowpayments_status.eq.partially_paid,nowpayments_status.eq.confirming,nowpayments_status.eq.pending,nowpayments_status.is.null)' +

@@ -260,7 +260,7 @@ const Views = {
               <span class="w-3 h-3 rounded-full ${u.status === 'ACTIVE' ? 'bg-brand shadow-neon-sm' : 'bg-amber-400'}"></span>
               <span class="text-base sm:text-lg font-extrabold text-white">${u.status === 'ACTIVE' ? I18n.t('active') : I18n.t('pending')}</span>
             </div>
-            <div class="text-[10px] text-gray-500 mt-1">Desde ${u.entryDate}</div>
+            <div class="text-[10px] text-gray-500 mt-1">${I18n.t('profileSinceLabel')}${u.entryDate || '-'}</div>
           </div>
 
           <div class="rounded-2xl border border-brand-border bg-brand-card p-4 sm:p-5">
@@ -296,7 +296,7 @@ const Views = {
               <i class="fa-solid fa-copy mr-1.5"></i>${I18n.t('copyLink')}
             </button>
             <button onclick="Router.navigate('position')" class="px-5 py-2.5 rounded-xl border border-white/20 hover:border-brand bg-brand-surface text-white font-bold text-xs transition">
-              <i class="fa-solid fa-sitemap mr-1.5 text-brand"></i>Ver Árvore 3D
+              <i class="fa-solid fa-sitemap mr-1.5 text-brand"></i>${I18n.t('viewTreeBtn')}
             </button>
           </div>
         </div>
@@ -1243,37 +1243,46 @@ const Views = {
     const rStatus = (s) => s === 'ATIVO' ? I18n.t('active') : s === 'INATIVO' ? I18n.t('statusInactive') : I18n.t('pending');
     const refTab = AppState.referralsActiveTab || 'overview';
     const rpt = AppState.userBonusReport || {};
-    const sum = rpt.summary || { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0 };
+    const sum = rpt.summary || { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0, n6: 0, n7: 0, n8: 0, n9: 0, n10: 0, n11: 0, n12: 0 };
     const hist = rpt.history || [];
     const team = rpt.teamAudit || [];
     const fmtUSD = function(n){ try { return 'US$ ' + Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch(e){ return 'US$ ' + Number(n||0).toFixed(2); } };
+    const LV_META = [
+      { n:1,  label:'N1 · Direto',  pct:'50%', val:'$5,00', color:'text-brand',          bg:'bg-brand/10',       border:'border-brand/30',       badgeIco:'fa-user-check', pays:true  },
+      { n:2,  label:'N2 · Upline', pct:'2,5%', val:'$0,25', color:'text-emerald-400',   bg:'bg-emerald-500/10', border:'border-emerald-500/30', badgeIco:'fa-gem',        pays:true  },
+      { n:3,  label:'N3 · Upline', pct:'2,5%', val:'$0,25', color:'text-sky-400',       bg:'bg-sky-500/10',     border:'border-sky-500/30',     badgeIco:'fa-gem',        pays:true  },
+      { n:4,  label:'N4 · Upline', pct:'2,5%', val:'$0,25', color:'text-violet-400',    bg:'bg-violet-500/10',  border:'border-violet-500/30',  badgeIco:'fa-gem',        pays:true  },
+      { n:5,  label:'N5 · Upline', pct:'2,5%', val:'$0,25', color:'text-pink-400',      bg:'bg-pink-500/10',    border:'border-pink-500/30',    badgeIco:'fa-gem',        pays:true  },
+      { n:6,  label:'N6 · Upline', pct:'—',    val:'$0,00', color:'text-fuchsia-400',   bg:'bg-fuchsia-500/10', border:'border-fuchsia-500/30', badgeIco:'fa-network-wired', pays:false },
+      { n:7,  label:'N7 · Upline', pct:'—',    val:'$0,00', color:'text-cyan-400',      bg:'bg-cyan-500/10',    border:'border-cyan-500/30',    badgeIco:'fa-network-wired', pays:false },
+      { n:8,  label:'N8 · Upline', pct:'—',    val:'$0,00', color:'text-lime-400',      bg:'bg-lime-500/10',    border:'border-lime-500/30',    badgeIco:'fa-network-wired', pays:false },
+      { n:9,  label:'N9 · Upline', pct:'—',    val:'$0,00', color:'text-orange-400',    bg:'bg-orange-500/10',  border:'border-orange-500/30',  badgeIco:'fa-network-wired', pays:false },
+      { n:10, label:'N10· Upline', pct:'—',    val:'$0,00', color:'text-indigo-400',    bg:'bg-indigo-500/10',  border:'border-indigo-500/30',  badgeIco:'fa-network-wired', pays:false },
+      { n:11, label:'N11· Upline', pct:'—',    val:'$0,00', color:'text-rose-400',      bg:'bg-rose-500/10',    border:'border-rose-500/30',    badgeIco:'fa-network-wired', pays:false },
+      { n:12, label:'N12· Upline', pct:'—',    val:'$0,00', color:'text-teal-400',      bg:'bg-teal-500/10',    border:'border-teal-500/30',    badgeIco:'fa-network-wired', pays:false }
+    ];
     return `
       <div class="space-y-6">
         <div>
           <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="referralsTitle">Minhas Indicações</h2>
-          <p class="text-xs text-gray-400" data-i18n="referralsSubtitle">Regra equipe 60/40: Ganhe US$ 5.00 por indicação direta (N1) + US$ 0.25 p/ ativação nos níveis 2→5</p>
+          <p class="text-xs text-gray-400" data-i18n="referralsSubtitle">Rede Linear 12 Níveis · Pré-Cadastro (Fase 1) = 5 Níveis operando · N6→N12 = Fase 2 (em breve)</p>
         </div>
 
         <div class="flex flex-wrap items-stretch gap-2 p-1.5 rounded-2xl bg-brand-surface/80 border border-white/5">
           <button onclick="AppState.referralsActiveTab='overview'; Router.refreshCurrentView();"
                   class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='overview'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
-            <i class="fa-solid fa-chart-pie mr-1.5"></i>VISÃO GERAL
-          </button>
-          <button onclick="AppState.referralsActiveTab='mybonuses'; (async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();"
-                  class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='mybonuses'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
-            <i class="fa-solid fa-wallet mr-1.5"></i>MEUS BÔNUS
-            <span class="ml-1 px-2 py-0.5 rounded-md ${refTab==='mybonuses'?'bg-black/20 text-black':'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'} text-[10px] font-bold border">${fmtUSD(sum.total||0)}</span>
+            <i class="fa-solid fa-chart-pie mr-1.5"></i>${I18n.t('tabOverview')}
           </button>
           <button onclick="AppState.referralsActiveTab='teamreport'; (async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();"
-                  class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='teamreport'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
-            <i class="fa-solid fa-sitemap mr-1.5"></i>RELATÓRIO EQUIPE 5 NÍVEIS
+                  class="flex-1 min-w-[260px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='teamreport'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+            <i class="fa-solid fa-sitemap mr-1.5"></i>${I18n.t('tab12Report')}
             <span class="ml-1 px-2 py-0.5 rounded-md ${refTab==='teamreport'?'bg-black/20 text-black':'bg-sky-500/15 text-sky-300 border border-sky-500/20'} text-[10px] font-bold border">${team.length}</span>
           </button>
         </div>
 
         ${refTab!=='overview' ? '' : `
         <div class="rounded-2xl border border-brand/30 bg-gradient-to-r from-brand-card via-black to-brand-card p-6">
-          <div class="text-xs font-mono text-brand font-bold uppercase tracking-wider mb-2" data-i18n="regTeamTitle">Estrutura de Divisão — Fase 1 Lançamento</div>
+          <div class="text-xs font-mono text-brand font-bold uppercase tracking-wider mb-2" data-i18n="regTeamTitle">Estrutura de Divisão — Fase 1 Pré-Cadastro (5 Níveis Operando)</div>
           <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.15fr)_auto_minmax(0,4fr)_minmax(0,0.95fr)] gap-3 md:gap-x-3 md:gap-y-4 items-center text-center">
             <div class="p-4 rounded-xl bg-brand-surface border border-white/5">
               <div class="text-[10px] text-gray-400 font-mono" data-i18n="regEntradaLabel">ENTRADA</div>
@@ -1318,9 +1327,9 @@ const Views = {
             </div>
           </div>
           <div class="mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono">
-            <span class="text-gray-400"><span data-i18n="regFooterTeamTotal">Total distribuído equipe</span>: <span class="text-brand font-bold" data-i18n="regFooterTeamPctVal">60% = US$ 6,00</span></span>
-            <span class="text-gray-400"><span data-i18n="regFooterFund">Fundo liquidez projeto</span>: <span class="text-amber-300 font-bold" data-i18n="regFooterFundVal">40% = US$ 4,00</span></span>
-            <span class="text-gray-500" data-i18n="regFooterSum100">Soma: 100% = US$ 10,00 ✅</span>
+            <span class="text-gray-400"><span data-i18n="regFooterTeamTotal">Fase 1 · 5 Níveis equipe</span>: <span class="text-brand font-bold">60% = US$ 6,00</span></span>
+            <span class="text-gray-400"><span data-i18n="regFooterFund">Fundo liquidez projeto</span>: <span class="text-amber-300 font-bold">40% = US$ 4,00</span></span>
+            <span class="text-sky-400/80">N6 → N12 · FASE 2 · Em breve (após fase pré-cadastro)</span>
           </div>
         </div>
 
@@ -1343,7 +1352,7 @@ const Views = {
         </div>
 
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4" data-i18n="directReferrals">Membros Indicados Diretamente</h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4" data-i18n="directReferrals">Membros Indicados Diretamente (N1 · Fase 1)</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
               <thead>
@@ -1360,7 +1369,7 @@ const Views = {
                   var rows = '';
                   try {
                     var list = (AppState.referrals && AppState.referrals.direct && AppState.referrals.direct.length) ? AppState.referrals.direct : [];
-                    if (!list.length) return '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>';
+                    if (!list.length) return '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>' + I18n.t('emptyDirectReferrals') + '</td></tr>';
                     list.forEach(function(ref){
                       var isActive = (ref.status === 'ACTIVE' || ref.status === 'active');
                       var statusClass = isActive ? 'bg-brand/10 text-brand' : 'bg-amber-400/10 text-amber-400';
@@ -1379,95 +1388,7 @@ const Views = {
                         </tr>`;
                     });
                   } catch(e) {}
-                  return rows || '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>';
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        `}
-
-        ${refTab!=='mybonuses' ? '' : `
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
-          <div class="flex items-center gap-2">
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-wallet"></i></div>
-            <div>
-              <h3 class="text-sm font-black text-white font-mono">Meus Bônus Recebidos · Rede 5 Níveis</h3>
-              <p class="text-[11px] text-gray-400 font-mono">Histórico completo de comissões recebidas de ativações abaixo de você</p>
-            </div>
-          </div>
-          <button onclick="(async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();" class="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold transition">
-            <i class="fa-solid fa-rotate-right mr-1.5"></i>ATUALIZAR DADOS
-          </button>
-        </div>
-
-        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4 col-span-2">
-            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Total Recebido</div>
-            <div class="text-2xl font-black text-white font-mono">${fmtUSD(sum.total||0)}</div>
-            <div class="text-[10px] text-brand mt-1 font-mono"><i class="fa-solid fa-check-circle mr-1"></i>${hist.length} lançamentos confirmados</div>
-          </div>
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <div class="text-[10px] font-mono text-brand mb-1 uppercase">N1 · Direto</div>
-            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n1||0)}</div>
-            <div class="text-[10px] text-gray-500 font-mono">50% · $5 / ativação</div>
-          </div>
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <div class="text-[10px] font-mono text-emerald-400 mb-1 uppercase">N2</div>
-            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n2||0)}</div>
-            <div class="text-[10px] text-gray-500 font-mono">2,5% · $0,25</div>
-          </div>
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <div class="text-[10px] font-mono text-sky-400 mb-1 uppercase">N3</div>
-            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n3||0)}</div>
-            <div class="text-[10px] text-gray-500 font-mono">2,5% · $0,25</div>
-          </div>
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <div class="text-[10px] font-mono text-violet-400 mb-1 uppercase">N4 · N5</div>
-            <div class="text-lg font-black text-white font-mono">${fmtUSD((Number(sum.n4||0)+Number(sum.n5||0)))}</div>
-            <div class="text-[10px] text-gray-500 font-mono">N4 ${fmtUSD(sum.n4||0)} · N5 ${fmtUSD(sum.n5||0)}</div>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">Histórico de Bônus</h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead>
-                <tr class="border-b border-white/10 text-gray-400 font-mono">
-                  <th class="py-3">DATA</th>
-                  <th class="py-3">NÍVEL</th>
-                  <th class="py-3">USUÁRIO ATIVADO</th>
-                  <th class="py-3">TIPO BÔNUS</th>
-                  <th class="py-3 text-right">VALOR</th>
-                  <th class="py-3 text-right">STATUS</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/5">
-                ${(() => {
-                  try {
-                    if (!hist || !hist.length) return '<tr><td colspan="6" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-timeline mr-2 text-gray-600"></i>Nenhum bônus recebido ainda. Convide pessoas e ative-as para gerar receita!</td></tr>';
-                    var r = '';
-                    hist.forEach(function(b){
-                      var lv = Number(b.level_reference || 0);
-                      if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
-                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : 'text-pink-400 bg-pink-500/10 border-pink-500/30';
-                      var dt = ''; try { if (b.created_at||b.confirmed_at) dt = new Date(b.created_at||b.confirmed_at).toLocaleDateString('pt-PT') + ' ' + new Date(b.created_at||b.confirmed_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
-                      var isOk = b.status==='confirmed' || b.status==='paid' || b.status==='completed';
-                      var fromUsr = ''; try { if (b.from_user) fromUsr = Array.isArray(b.from_user)?(b.from_user[0]&&b.from_user[0].username||''):(b.from_user.username||''); if (!fromUsr && b.related_username) fromUsr = b.related_username; } catch(_){}
-                      if (!fromUsr) fromUsr = String(b.related_profile_id||'').slice(0,8);
-                      r += `
-                        <tr>
-                          <td class="py-3 font-mono text-gray-400">${dt||'-'}</td>
-                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">N${lv}</span></td>
-                          <td class="py-3 font-bold text-white">@${fromUsr}</td>
-                          <td class="py-3 font-mono text-gray-400">${b.kind||'-'}</td>
-                          <td class="py-3 text-right font-mono font-bold text-emerald-400">+${fmtUSD(b.amount||0)}</td>
-                          <td class="py-3 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isOk?'bg-emerald-500/15 text-emerald-300':'bg-amber-400/10 text-amber-400'}">${isOk?'CONFIRMADO':'PENDENTE'}</span></td>
-                        </tr>`;
-                    });
-                    return r;
-                  } catch(e) { return '<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono text-[11px]">Erro ao carregar histórico: ' + String((e&&e.message)||e) + '</td></tr>'; }
+                  return rows || '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>' + I18n.t('emptyDirectReferrals') + '</td></tr>';
                 })()}
               </tbody>
             </table>
@@ -1480,77 +1401,197 @@ const Views = {
           <div class="flex items-center gap-2">
             <div class="w-9 h-9 rounded-xl bg-sky-500/15 flex items-center justify-center text-sky-400"><i class="fa-solid fa-sitemap"></i></div>
             <div>
-              <h3 class="text-sm font-black text-white font-mono">Relatório Equipe · Auditoria 5 Níveis</h3>
-              <p class="text-[11px] text-gray-400 font-mono">Detalhamento de todas as ativações abaixo de você com bônus devidos e recebidos</p>
+              <h3 class="text-sm font-black text-white font-mono">${I18n.t('reportTitle')}</h3>
+              <p class="text-[11px] text-gray-400 font-mono">${I18n.t('reportSubtitle')}</p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="window.open('https://supabase.com/dashboard/project/psxzgidozduecpaxwcny/sql/new', '_blank');" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 text-xs font-mono font-bold transition">
-              <i class="fa-solid fa-database mr-1.5"></i>ABRIR SQL EDITOR
-            </button>
             <button onclick="(async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();" class="px-4 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-bold transition">
-              <i class="fa-solid fa-rotate-right mr-1.5"></i>ATUALIZAR
+              <i class="fa-solid fa-rotate-right mr-1.5"></i>${I18n.t('btnRefresh')}
             </button>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 xl:grid-cols-5 gap-3">
           ${(() => {
+            var qtdN1 = team.filter(function(x){ return Number(x.level||0)===1; }).length;
+            var qtdF1 = team.filter(function(x){ return Number(x.level||0)>=1 && Number(x.level||0)<=5 && (x.status==='ATIVO'||x.status==='ACTIVE'||x.status==='active'||x.active===true); }).length;
             var ativos = team.filter(function(x){ return x.status==='ATIVO' || x.status==='ACTIVE' || x.status==='active' || x.active===true; }).length;
-            var espN1 = 5.00 * team.filter(function(x){ return Number(x.level||0)===1; }).length;
-            var espN2a5 = 0.25 * team.filter(function(x){ return Number(x.level||0)>=2; }).length;
+            var espN1 = 5.00 * qtdN1;
+            var espN2a5 = 0.25 * team.filter(function(x){ return Number(x.level||0)>=2 && Number(x.level||0)<=5; }).length;
             var esperado = espN1 + espN2a5;
             var recebido = Number(sum.total||0);
             var diff = esperado - recebido;
             return `
             <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Ativados Diretos</div>
-              <div class="text-2xl font-black text-white font-mono">${team.filter(function(x){ return Number(x.level||0)===1; }).length}</div>
-              <div class="text-[10px] text-brand mt-1 font-mono">N1 · $5 cada</div>
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardActN1Label')}</div>
+              <div class="text-2xl font-black text-white font-mono">${qtdN1}</div>
+              <div class="text-[10px] text-brand mt-1 font-mono">${I18n.t('cardActN1Hint')}</div>
             </div>
             <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Total Equipe</div>
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardTotalNetLabel')}</div>
               <div class="text-2xl font-black text-white font-mono">${team.length}</div>
-              <div class="text-[10px] text-sky-400 mt-1 font-mono">${ativos} ativos · ${team.length-ativos} pendentes</div>
+              <div class="text-[10px] text-sky-400 mt-1 font-mono">${I18n.t('networkHintCount').replace('{ativos}', String(ativos)).replace('{active}', String(ativos)).replace('{f1}', String(qtdF1))}</div>
             </div>
             <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Ganhos Esperados</div>
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardExpectedLabel')}</div>
               <div class="text-2xl font-black text-white font-mono">${fmtUSD(esperado)}</div>
-              <div class="text-[10px] text-amber-400 mt-1 font-mono">N1 ${fmtUSD(espN1)} + N2-5 ${fmtUSD(espN2a5)}</div>
+              <div class="text-[10px] text-amber-400 mt-1 font-mono">${I18n.t('expectedBreakdown').replace('{n1}', fmtUSD(espN1)).replace('{nRest}', fmtUSD(espN2a5))}</div>
+            </div>
+            <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-black to-black p-4">
+              <div class="text-[10px] font-mono text-emerald-300/80 mb-1 uppercase tracking-wider">${I18n.t('cardTotalRecvLabel')}</div>
+              <div class="text-2xl font-black text-emerald-300 font-mono">${fmtUSD(recebido)}</div>
+              <div class="text-[10px] text-gray-400 mt-1 font-mono"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('historyBonusCount').replace('{qty}', String(hist.length))}</div>
             </div>
             <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Recebido vs Diferença</div>
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardDiffLabel')}</div>
               <div class="text-2xl font-black ${diff<=0.001?'text-emerald-400':'text-amber-400'} font-mono">${fmtUSD(recebido)}</div>
-              <div class="text-[10px] font-mono mt-1 ${diff<=0.001?'text-emerald-300':'text-amber-300'}">${diff<=0.001?'✅ Tudo recebido':'⚠️ Faltam ' + fmtUSD(diff)}</div>
+              <div class="text-[10px] font-mono mt-1 ${diff<=0.001?'text-emerald-300':'text-amber-300'}">${diff<=0.001?I18n.t('allReceivedOk'):(I18n.t('missingReceivePrefix')+fmtUSD(diff))}</div>
             </div>
             `;
           })()}
         </div>
 
+        <div class="grid grid-cols-3 md:grid-cols-6 xl:grid-cols-12 gap-2">
+          ${LV_META.map(function(L){
+            var cnt = team.filter(function(x){ return Number(x.level||0)===L.n; }).length;
+            var rawV = sum['n'+L.n] || 0;
+            var temValor = L.pays && Number(rawV) > 0;
+            return `
+            <div class="rounded-xl border ${L.border} bg-brand-card p-3 text-center ${temValor?'ring-1 '+L.border+' shadow-[0_0_18px_rgba(16,185,129,0.12)]':''}">
+              <div class="text-[9px] font-mono ${L.color} mb-1 uppercase tracking-wider"><i class="fa-solid ${L.badgeIco} mr-1"></i>N${L.n}</div>
+              <div class="text-lg font-black ${L.pays?'text-white':'text-gray-300'} font-mono">${cnt}</div>
+              <div class="text-[8px] text-gray-500 font-mono">${L.pays?(L.n===1?'$5,00':'$0,25'):'$0,00'} · ${I18n.t('labelReceived')} ${fmtUSD(rawV)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+
+        <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400 shrink-0"><i class="fa-solid fa-bell"></i></div>
+            <div class="flex-1 space-y-3">
+              <div>
+                <h3 class="text-sm font-black text-white font-mono">${I18n.t('lastBonusesTitle')}</h3>
+                <p class="text-[11px] text-amber-300/80 font-mono">${I18n.t('lastBonusesDesc')}</p>
+              </div>
+              ${(() => {
+                try {
+                  var lastB = [];
+                  try {
+                    if (AppState.notifications && AppState.notifications.length) {
+                      AppState.notifications.slice(0, 10).forEach(function(n){ if (/Bônus.*Nível/i.test(n.title||'')) lastB.push({ title:n.title, msg:n.message, time:n.time, ico:n.icon, read:n.read, _src:'notif' }); });
+                    }
+                  } catch(_e){}
+                  hist.slice(0, Math.max(0, 10-lastB.length)).forEach(function(b){
+                    try {
+                      var amt = Number(b.amount||0).toFixed(2);
+                      var lv = Number(b.level_reference||0);
+                      if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
+                      if (lv<1||lv>12) return;
+                      var usr=''; try { if (b.from_user) usr = Array.isArray(b.from_user)?(b.from_user[0]&&b.from_user[0].username||''):(b.from_user.username||''); if (!usr && b.related_username) usr=b.related_username; if (!usr && b._related_username) usr=b._related_username; } catch(_u){}
+                      if (!usr) try { var m=(b.note||'').match(/@([a-zA-Z0-9_\-]+)/); if (m&&m[1]) usr=m[1]; } catch(_mm){}
+                      usr = String(usr||'').replace(/^@+/,'') || String(b.related_profile_id||'').slice(0,8);
+                      var dt=''; try { dt = new Date(b.created_at||b.confirmed_at).toLocaleDateString('pt-PT')+' '+new Date(b.created_at||b.confirmed_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); } catch(_){}
+                      var tit='💰 Bônus Nível '+lv+' recebido · $'+amt;
+                      var msg='Ganhou $'+amt+' USD de bônus Nível '+lv+' pela ativação de @'+usr+'.';
+                      if (b.note) msg = b.note;
+                      var dup = false; lastB.forEach(function(x){ if (x.title===tit) dup=true; });
+                      if (!dup) lastB.push({ title:tit, msg:msg, time:dt, ico:(lv===1?'fa-user-check':'fa-gem'), read:false, _src:'tx' });
+                    } catch(_e){}
+                  });
+                  if (!lastB.length) return '<div class="px-4 py-8 rounded-xl bg-white/5 text-center space-y-2"><div class="text-2xl opacity-40">📭</div><p class="text-[11px] text-gray-500 font-mono">' + I18n.t('emptyBonuses') + '</p></div>';
+                  return lastB.map(function(n){
+                    return `
+                    <div class="px-4 py-3 rounded-xl border ${n.read?'border-white/5 opacity-60 bg-white/[0.02]':'border-emerald-500/10 bg-emerald-500/[0.04]'} transition hover:bg-white/[0.03]">
+                      <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg ${n.read?'bg-gray-500/10 text-gray-500':'bg-emerald-500/15 text-emerald-400'} flex items-center justify-center shrink-0"><i class="fa-solid ${n.ico||'fa-gem'}"></i></div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center justify-between gap-2 mb-0.5">
+                            <span class="font-bold text-white text-[12px] truncate">${n.title}</span>
+                            <span class="text-[9px] text-gray-500 font-mono shrink-0">${n.time||'-'}</span>
+                          </div>
+                          <p class="text-gray-300 text-[11px] leading-relaxed">${n.msg}</p>
+                        </div>
+                      </div>
+                    </div>`;
+                  }).join('');
+                } catch(e) { return '<div class="px-4 py-8 rounded-xl bg-red-500/5 border border-red-500/20 text-center text-red-400 font-mono text-[11px]">Erro carregar notificações bônus: '+String((e&&e.message)||e)+'</div>'; }
+              })()}
+            </div>
+          </div>
+        </div>
+
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">Equipe · Linha por Linha (N1 → N5)</h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">${I18n.t('historyTitle')}</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-white/10 text-gray-400 font-mono">
-                  <th class="py-3">USUÁRIO</th>
-                  <th class="py-3">NÍVEL</th>
-                  <th class="py-3">STATUS</th>
-                  <th class="py-3">DATA ATIVAÇÃO</th>
-                  <th class="py-3 text-right">BÔNUS DEVIDO</th>
-                  <th class="py-3 text-right">BÔNUS RECEBIDO</th>
-                  <th class="py-3 text-right">DIFERENÇA</th>
+                  <th class="py-3">${I18n.t('txDate')}</th>
+                  <th class="py-3">${I18n.t('currentLevel')}</th>
+                  <th class="py-3">${I18n.t('colActivationUser')}</th>
+                  <th class="py-3">${I18n.t('colBonusType')}</th>
+                  <th class="py-3 text-right">${I18n.t('txAmount')}</th>
+                  <th class="py-3 text-right">${I18n.t('txStatus')}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
                 ${(() => {
                   try {
-                    if (!team || !team.length) return '<tr><td colspan="7" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-users mr-2 text-gray-600"></i>Sem membros na equipe ainda. Compartilhe seu link para construir sua rede!</td></tr>';
+                    if (!hist || !hist.length) return '<tr><td colspan="6" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-timeline mr-2 text-gray-600"></i>' + I18n.t('emptyHistoryBonus') + '</td></tr>';
+                    var r = '';
+                    hist.forEach(function(b){
+                      var lv = Number(b.level_reference || 0);
+                      if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
+                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : lv===5 ? 'text-pink-400 bg-pink-500/10 border-pink-500/30' : 'text-gray-500 bg-white/5 border-white/10';
+                      var dt = ''; try { if (b.created_at||b.confirmed_at) dt = new Date(b.created_at||b.confirmed_at).toLocaleDateString('pt-PT') + ' ' + new Date(b.created_at||b.confirmed_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
+                      var isOk = b.status==='confirmed' || b.status==='paid' || b.status==='completed';
+                      var fromUsr = ''; try { if (b.from_user) fromUsr = Array.isArray(b.from_user)?(b.from_user[0]&&b.from_user[0].username||''):(b.from_user.username||''); if (!fromUsr && b.related_username) fromUsr = b.related_username; if (!fromUsr && b._related_username) fromUsr = b._related_username; } catch(_){}
+                      if (!fromUsr) try { var _mx=(b.note||'').match(/@([a-zA-Z0-9_\-]+)/); if (_mx&&_mx[1]) fromUsr=_mx[1]; } catch(_ee){}
+                      if (!fromUsr) fromUsr = String(b.related_profile_id||'').slice(0,8);
+                      r += `
+                        <tr>
+                          <td class="py-3 font-mono text-gray-400">${dt||'-'}</td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">${lv?('N'+lv):'N?'}</span></td>
+                          <td class="py-3 font-bold text-white">@${fromUsr}</td>
+                          <td class="py-3 font-mono text-gray-400">${b.kind||'-'}</td>
+                          <td class="py-3 text-right font-mono font-bold text-emerald-400">+${fmtUSD(b.amount||0)}</td>
+                          <td class="py-3 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isOk?'bg-emerald-500/15 text-emerald-300':'bg-amber-400/10 text-amber-400'}">${isOk?I18n.t('statusCONFIRMADO'):I18n.t('statusPENDENTE')}</span></td>
+                        </tr>`;
+                    });
+                    return r;
+                  } catch(e) { return '<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono text-[11px]">Erro ao carregar histórico: ' + String((e&&e.message)||e) + '</td></tr>'; }
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">${I18n.t('teamAuditTitle')}</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono">
+                  <th class="py-3">${I18n.t('colTeamUser')}</th>
+                  <th class="py-3">${I18n.t('currentLevel')}</th>
+                  <th class="py-3">${I18n.t('myStatus')}</th>
+                  <th class="py-3">${I18n.t('colActivationDate')}</th>
+                  <th class="py-3 text-right">${I18n.t('colBonusDue')}</th>
+                  <th class="py-3 text-right">${I18n.t('colBonusPaid')}</th>
+                  <th class="py-3 text-right">${I18n.t('colDiff')}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${(() => {
+                  try {
+                    if (!team || !team.length) return '<tr><td colspan="7" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-users mr-2 text-gray-600"></i>' + I18n.t('emptyTeamMembers') + '</td></tr>';
                     var r = '';
                     team.forEach(function(m){
                       var lv = Number(m.level||0);
-                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : 'text-pink-400 bg-pink-500/10 border-pink-500/30';
-                      var devido = lv===1 ? 5.00 : (lv>=2 && lv<=5 ? 0.25 : 0);
+                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : lv===5 ? 'text-pink-400 bg-pink-500/10 border-pink-500/30' : 'text-gray-500 bg-white/5 border-white/10';
+                      var fase1 = lv>=1 && lv<=5;
+                      var devido = !fase1 ? 0 : (lv===1 ? 5.00 : 0.25);
                       var receb = Number(m.bonusReceived || 0);
                       var dif = devido - receb;
                       var isAt = m.status==='ATIVO' || m.status==='ACTIVE' || m.status==='active' || m.active===true;
@@ -1558,12 +1599,12 @@ const Views = {
                       r += `
                         <tr>
                           <td class="py-3 font-bold text-white">@${m.username||'user'}</td>
-                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">N${lv||'?'}</span></td>
-                          <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isAt?'bg-brand/10 text-brand':'bg-amber-400/10 text-amber-400'}">● ${isAt?'ATIVO':'PENDENTE'}</span></td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">${lv?('N'+lv):'N?'}</span></td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isAt?'bg-brand/10 text-brand':'bg-amber-400/10 text-amber-400'}">● ${isAt?I18n.t('active'):I18n.t('pending')}</span></td>
                           <td class="py-3 font-mono text-gray-400">${dts||'-'}</td>
-                          <td class="py-3 text-right font-mono text-gray-300">${isAt?fmtUSD(devido):'-'}</td>
+                          <td class="py-3 text-right font-mono ${isAt&&fase1?'text-gray-300':'text-gray-500'}">${isAt?(fase1?fmtUSD(devido):'—'):'-'}</td>
                           <td class="py-3 text-right font-mono font-bold ${receb>0?'text-emerald-400':'text-gray-500'}">${receb>0?('+'+fmtUSD(receb)):fmtUSD(0)}</td>
-                          <td class="py-3 text-right"><span class="font-mono font-bold text-[11px] ${!isAt?'text-gray-500':dif<=0.001?'text-emerald-400':'text-amber-400'}">${!isAt?'-':(dif<=0.001?'✅ OK':('FALTA '+fmtUSD(dif)))}</span></td>
+                          <td class="py-3 text-right"><span class="font-mono font-bold text-[11px] ${!isAt||!fase1?'text-gray-500':dif<=0.001?'text-emerald-400':'text-amber-400'}">${!isAt?'—':(!fase1?'—':(dif<=0.001?I18n.t('statusOK'):(I18n.t('statusMissingPrefix')+fmtUSD(dif))))}</span></td>
                         </tr>`;
                     });
                     return r;
@@ -1577,7 +1618,6 @@ const Views = {
       </div>
     `;
   },
-
   Profile() {
     const u = AppState.currentUser;
     const isMaster = ((AppState.currentUser.id || '').toString().toLowerCase() === '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f') || ((AppState.currentUser.email || '').toString().toLowerCase() === '4hashprotocol@gmail.com');
@@ -1587,10 +1627,10 @@ const Views = {
         ${showAdminBtn ? `
         <div class="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xl">
           <div>
-            <div class="text-amber-400 font-black text-sm sm:text-base tracking-wide font-['Space_Grotesk']"><i class="fa-solid fa-crown mr-2"></i>ACESSO ADMINISTRADOR MASTER</div>
-            <div class="text-[11px] text-gray-400 mt-1 font-mono">Acesso total ao backoffice, financeiro e suporte.</div>
+            <div class="text-amber-400 font-black text-sm sm:text-base tracking-wide font-['Space_Grotesk']"><i class="fa-solid fa-crown mr-2"></i>${I18n.t('masterAdminTitle')}</div>
+            <div class="text-[11px] text-gray-400 mt-1 font-mono">${I18n.t('masterAdminDesc')}</div>
           </div>
-          <button onclick="Router.navigate('admin')" class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm tracking-wider shadow-neon-sm transition whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>ABRIR PAINEL ADMIN</button>
+          <button onclick="Router.navigate('admin')" class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs sm:text-sm tracking-wider shadow-neon-sm transition whitespace-nowrap"><i class="fa-solid fa-gauge-high mr-2"></i>${I18n.t('openAdminPanelBtn')}</button>
         </div>
         ` : ''}
         <div class="rounded-2xl border border-brand-border bg-brand-card p-6 sm:p-8 shadow-2xl">
@@ -1600,41 +1640,41 @@ const Views = {
             </div>
             <div>
               <h2 class="text-xl font-bold text-white font-['Space_Grotesk']">${u.fullName || u.username || 'Usuário'}</h2>
-              <div class="text-xs font-mono text-brand">@${u.username || ''} • Pos: ${u.positionNumber || '-'}</div>
+              <div class="text-xs font-mono text-brand">@${u.username || ''} • ${I18n.t('profilePositionLabel')} ${u.positionNumber || '-'}</div>
               <div class="text-[11px] text-gray-400 mt-0.5">${u.country || ''}</div>
             </div>
           </div>
 
           <form onsubmit="event.preventDefault(); UI.showToast('Alterações salvas com sucesso!', 'success');" class="space-y-4">
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">Nome Completo</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileFullName')}</label>
               <input type="text" value="${u.fullName || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-mono text-gray-400 mb-1">Username (Fixo)</label>
+                <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileUsername')}</label>
                 <input type="text" readonly disabled value="@${u.username || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-gray-500 font-mono cursor-not-allowed">
               </div>
               <div>
-                <label class="block text-xs font-mono text-gray-400 mb-1">Patrocinador</label>
+                <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileSponsor')}</label>
                 <input type="text" readonly disabled value="@${u.sponsor || ''}" class="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-brand font-mono cursor-not-allowed">
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">E-mail</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profileEmail')}</label>
               <input type="email" value="${u.email || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div>
-              <label class="block text-xs font-mono text-gray-400 mb-1">Telefone</label>
+              <label class="block text-xs font-mono text-gray-400 mb-1">${I18n.t('profilePhone')}</label>
               <input type="tel" value="${u.phone || ''}" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="pt-4">
               <button type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-xs tracking-wider shadow-neon transition">
-                SALVAR ALTERAÇÕES
+                ${I18n.t('profileSaveBtn')}
               </button>
             </div>
           </form>

@@ -14,13 +14,16 @@ const I18n = {
     AppState.currentLang = langCode;
     localStorage.setItem('fh_lang', langCode);
 
-    const flags = { pt: '🇵🇹', en: '🇺🇸', es: '🇪🇸', zh: '🇨🇳', ja: '🇯🇵', th: '🇹🇭', fr: '🇫🇷', ru: '🇷🇺' };
+    const flags = { pt: '🇵🇹', en: '🇺🇸', es: '🇪🇸', de: '🇩🇪', it: '🇮🇹', fr: '🇫🇷', zh: '🇨🇳', ja: '🇯🇵', ko: '🇰🇷', th: '🇹🇭', ru: '🇷🇺' };
     document.getElementById('current-lang-flag').innerText = flags[langCode] || '🌐';
     document.getElementById('current-lang-code').innerText = langCode.toUpperCase();
 
     document.getElementById('lang-dropdown').classList.add('hidden');
     this.updatePageTranslations();
-    Router.refreshCurrentView();
+    if (typeof Router !== 'undefined') {
+      if (typeof Router.renderNav === 'function') try { Router.renderNav(); } catch (_) {}
+      Router.refreshCurrentView();
+    }
     UI.showToast(`${I18n.t('languageChanged')}: ${langCode.toUpperCase()}`, 'success');
 
     const themeBtn = document.getElementById('theme-btn');

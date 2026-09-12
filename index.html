@@ -92,7 +92,7 @@
       <!-- CONTROLES: IDIOMA, TEMA, NOTIFICAÇÕES & USUÁRIO (COMPACTADO MOBILE) -->
       <div class="flex items-center gap-1 sm:gap-2 md:gap-3 flex-shrink-0 overflow-visible">
 
-        <!-- SELETOR DE IDIOMAS (8 IDIOMAS) — MINIATURIZADO NO MOBILE -->
+        <!-- SELETOR DE IDIOMAS (11 IDIOMAS) — MINIATURIZADO NO MOBILE -->
         <div class="header-dropdown-parent relative flex-shrink-0 z-[110] overflow-visible">
           <button id="lang-btn" onclick="UI.toggleLanguageMenu()" class="flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/10 hover:border-brand/40 bg-brand-card hover:bg-brand-surface text-xs font-medium transition-all">
             <span id="current-lang-flag" class="text-base sm:text-base leading-none">🇵🇹</span>
@@ -125,6 +125,15 @@
               </button>
               <button onclick="I18n.setLanguage('fr')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
                 <span>🇫🇷 Français</span> <span class="text-[10px] font-mono text-gray-500">FR</span>
+              </button>
+              <button onclick="I18n.setLanguage('de')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇩🇪 Deutsch</span> <span class="text-[10px] font-mono text-gray-500">DE</span>
+              </button>
+              <button onclick="I18n.setLanguage('it')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇮🇹 Italiano</span> <span class="text-[10px] font-mono text-gray-500">IT</span>
+              </button>
+              <button onclick="I18n.setLanguage('ko')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
+                <span>🇰🇷 한국어</span> <span class="text-[10px] font-mono text-gray-500">KO</span>
               </button>
               <button onclick="I18n.setLanguage('ru')" class="w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-brand/10 hover:text-brand transition">
                 <span>🇷🇺 Русский</span> <span class="text-[10px] font-mono text-gray-500">RU</span>
@@ -213,19 +222,19 @@
   <script src="js/data/countries_i18n.js"></script>
 
   <!-- 2. Traduções (dados puros) -->
-  <script src="js/i18n/translations.js"></script>
+  <script src="js/i18n/translations.js?v=11"></script>
 
   <!-- 2b. Supabase Client (CDN SDK + credenciais) -->
   <script src="js/supabase/client.js"></script>
 
   <!-- 3. Estado Global da Aplicação -->
-  <script src="js/state/AppState.js"></script>
+  <script src="js/state/AppState.js?v=11"></script>
 
   <!-- 3. Utilitários de Interface (Toasts, Modais, Clipboard...) -->
   <script src="js/ui/UI.js"></script>
 
   <!-- 4. Motor de Internacionalização -->
-  <script src="js/i18n/i18n.js"></script>
+  <script src="js/i18n/i18n.js?v=11"></script>
 
   <!-- 5. Sistema de Temas Dark/Light -->
   <script src="js/theme/Theme.js"></script>
@@ -238,10 +247,10 @@
   <script src="js/payments/PaymentVault.js"></script>
 
   <!-- 7. Templates das Telas -->
-  <script src="js/views/Views.js"></script>
+  <script src="js/views/Views.js?v=11"></script>
 
   <!-- 8. Roteador SPA -->
-  <script src="js/router/Router.js"></script>
+  <script src="js/router/Router.js?v=11"></script>
 
   <!-- 9. Bootstrap / Entry Point (listeners globais + onload) -->
   <script src="js/app.js"></script>
