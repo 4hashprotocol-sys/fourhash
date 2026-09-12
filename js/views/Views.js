@@ -12,7 +12,7 @@ const Views = {
           <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-brand/10 rounded-full blur-3xl pointer-events-none"></div>
 
           <div class="mx-auto h-24 sm:h-28 mb-6 relative flex items-center justify-center animate-pulse">
-            <img src="/Logo_4h_solo.png" alt="FourHash Logo 4#" onerror="var _i=this; _i.onerror=null; _i.src='/assets/logo/Logo_4h_solo.png'; setTimeout(function(){try{if(!_i.naturalWidth){_i.src='/logo/Logo_4h_solo.png';_i.onerror=null;}}catch(_e){}},50);" class="h-24 sm:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,102,0.8)]">
+            <img src="/assets/logo/Logo_4h_solo.png?v=2" alt="FourHash Logo 4#" onerror="var _i=this; _i.onerror=null; _i.src='/Logo_4h_solo.png?v=2'; setTimeout(function(){try{if(!_i.naturalWidth){_i.src='/logo/Logo_4h_solo.png?v=2';_i.onerror=null;}}catch(_e){}},50);" class="h-24 sm:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(0,255,102,0.8)]">
           </div>
 
           <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white font-['Space_Grotesk']">
@@ -80,7 +80,7 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-8 shadow-2xl backdrop-blur-xl">
           <div class="text-center mb-8">
             <div class="w-12 h-12 mx-auto rounded-xl bg-brand/10 border border-brand/40 flex items-center justify-center mb-3 shadow-neon-sm overflow-hidden">
-              <img src="/Logo_4h_solo.png" alt="4#" onerror="var _i=this; _i.onerror=null; _i.src='/assets/logo/Logo_4h_solo.png';" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
+              <img src="/assets/logo/Logo_4h_solo.png?v=2" alt="4#" onerror="var _i=this; _i.onerror=null; _i.src='/Logo_4h_solo.png?v=2';" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
             </div>
             <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="login">Acessar FourHash</h2>
             <p class="text-xs text-gray-400 mt-1">Acesso exclusivo por e-mail cadastrado</p>
