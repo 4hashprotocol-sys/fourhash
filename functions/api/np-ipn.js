@@ -272,6 +272,62 @@ async function sbUpdateTransactions(c, q, patch) {
   } catch(_e) { return false; }
 }
 
+async function sbInsertTransactions(c, row) {
+  try {
+    const base = getEnv(c, 'SUPABASE_URL', 'https://psxzgidozduecpaxwcny.supabase.co');
+    const url = (base.endsWith('/') ? (base + 'rest/v1/transactions') : (base + '/rest/v1/transactions'));
+    const H = sbHeaders(c);
+    const now = new Date().toISOString();
+    const baseRow = {
+      profile_id: null,
+      kind: 'deposit',
+      currency: 'USDT',
+      network: 'BEP20',
+      amount: 0,
+      fee: 0,
+      status: 'pending',
+      confirmations: 0,
+      metadata: {},
+      created_at: now,
+      updated_at: now
+    };
+    const cleanRow = Object.assign({}, baseRow, row || {});
+    if (cleanRow.amount !== undefined && cleanRow.amount !== null) cleanRow.amount = Number(cleanRow.amount) || 0;
+    if (cleanRow.confirmed_at === undefined && cleanRow.status === 'confirmed') cleanRow.confirmed_at = now;
+    const attempts = [];
+    attempts.push(Object.assign({}, cleanRow));
+    const mini = Object.assign({}, cleanRow);
+    delete mini.updated_at; delete mini.note; delete mini.from_address; delete mini.to_address; delete mini.network;
+    attempts.push(mini);
+    const mini2 = {
+      profile_id: cleanRow.profile_id,
+      kind: cleanRow.kind || 'deposit',
+      amount: Number(cleanRow.amount || 0),
+      status: cleanRow.status || 'pending',
+      nowpayments_id: cleanRow.nowpayments_id || null,
+      tx_hash: cleanRow.tx_hash || null,
+      confirmed_at: cleanRow.confirmed_at || null,
+      created_at: now
+    };
+    attempts.push(mini2);
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        const headers = Object.assign({}, H, { 'Prefer': 'return=representation,resolution=ignore-duplicates' });
+        const r = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(attempts[i]) });
+        if (r.ok) {
+          try {
+            const d = await r.json();
+            if (Array.isArray(d) && d.length) return d[0];
+            if (d && d.id) return d;
+            return true;
+          } catch(_) { return true; }
+        }
+      } catch(_) {}
+    }
+    return false;
+  } catch(_e) { return false; }
+}
+
 function txMissingField(msg) { return /42703|column (error_message|order_id|gateway_payment_id|gateway_provider|method|description|updated_at|network|from_address|to_address|note) of relation "transactions" does not exist/i.test(msg || ''); }
 function updatedAtFieldError(msg) { return /42703:.*updated_at|column.*updated_at.*does not exist/i.test(msg || ''); }
 async function rpcEnsureTxColumns(c, text) {
@@ -476,7 +532,7 @@ async function doPost(context) {
     }
 
     function isPaidAmountOk(statusStr, amountReceived, expectedUsd) {
-      const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled'];
+      const finalStates = ['finished','confirmed','completed','success','paid','payment_received','settled','partially_paid','wrong_asset'];
       const st = String(statusStr || '').toLowerCase().trim();
       let full = false;
       if (finalStates.indexOf(st) >= 0) full = true;
@@ -485,11 +541,27 @@ async function doPost(context) {
       const ex = Number(expectedUsd || 0) > 0 ? Number(expectedUsd) : 10;
       const recv = Number(amountReceived || 0);
       if (recv <= 0) return true;
-      return recv >= Number((ex * 0.985).toFixed(6));
+      let minPct = 0.985;
+      if (st === 'partially_paid' || st === 'wrong_asset' || st === 'payment_received') {
+        minPct = 0.94;
+      }
+      if (ex <= 10 && (st === 'partially_paid' || st === 'wrong_asset')) minPct = 0.93;
+      return recv >= Number((ex * minPct).toFixed(6));
     }
 
     const amountReceived = Number(body.amount_received || body.pay_amount || body.outcome_amount || body.amount || amountPaid || 0);
-    const expectedAmount = Number(body.price_amount || body.expected_amount || amountPaid || (body && body.order_id && /^4H-(activation|deposit)-/.test(body.order_id) ? 10 : 0)) || 10;
+    let expectedAmount = 10;
+    try {
+      const vRaw = Number(body.price_amount || body.expected_amount || amountPaid || 0);
+      if (body && body.order_id && /^4H-(activation|deposit)-/.test(body.order_id)) {
+        expectedAmount = 10;
+      } else if (vRaw && Number(vRaw) > 0) {
+          expectedAmount = Number(vRaw);
+        } else {
+          expectedAmount = 10;
+        }
+    } catch(_) { expectedAmount = 10; }
+    expectedAmount = Number(expectedAmount) || 10;
     const finalStates = ['finished','confirmed','completed','success','partially_paid','wrong_asset','paid','payment_received','settled'];
     const isPaid = isPaidAmountOk(payStatus, amountReceived, expectedAmount);
     const isFailed = ['failed','expired','refunded','rejected','cancelled','canceled','timeout','time_out'].indexOf(payStatus) >= 0;
@@ -562,6 +634,45 @@ async function doPost(context) {
               'kind=in.(deposit,adjustment_credit),or=(status.eq.pending,status.eq.created),created_at.gt.' + encodeURIComponent(new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()) + ')';
             const okFb = await sbUpdateTransactions(context, qFallback, patchTx);
             if (okFb) txMatched = true;
+          } catch(_) {}
+        }
+        if (!txMatched && profileId && profileId.length >= 10 && (isPaid || isFailed)) {
+          try {
+            const kindTx = (kind && (kind === 'deposit' || kind === 'activation' || /deposit|activation/i.test(String(kind)))) ? 'deposit' : 'deposit';
+            const nowTx = new Date().toISOString();
+            const insertRow = {
+              profile_id: profileId,
+              kind: kindTx,
+              currency: String(body.price_currency || body.pay_currency || 'USDT').toUpperCase() || 'USDT',
+              network: (body && (body.network || body.payin_network || body.pay_network)) ? String(String(body.network || body.payin_network || body.pay_network).toUpperCase()).slice(0, 32) : 'BSC',
+              amount: Number(expectedAmount || amountReceived || (isPaid ? 10 : 0)) || 0,
+              fee: 0,
+              status: isPaid ? 'confirmed' : (isFailed ? 'failed' : 'pending'),
+              confirmations: isPaid ? 12 : 0,
+              confirmed_at: isPaid ? nowTx : (isFailed ? nowTx : null),
+              tx_hash: (body && body.payin_hash) ? String(body.payin_hash) : (paymentId ? String(paymentId) : null),
+              nowpayments_id: paymentId || null,
+              nowpayments_status: payStatus || null,
+              related_profile_id: null,
+              note: (orderId ? ('IPN fallback insert. order_id=' + String(orderId).slice(0, 80) + '. ') : '') +
+                    (isFailed ? ('[status_pagamento=' + payStatus + '] ') : '') +
+                    ((body && body.order_description) ? String(body.order_description).slice(0, 120) : ''),
+              metadata: {
+                gateway: {
+                  provider: 'nowpayments',
+                  payment_id: paymentId || null,
+                  order_id: orderId || null,
+                  ipn: body || null,
+                  signature_validated: sigOk,
+                  processed_at: nowTx,
+                  fallback_insert: true
+                }
+              },
+              created_at: nowTx,
+              updated_at: nowTx
+            };
+            const okIns = await sbInsertTransactions(context, insertRow);
+            if (okIns) { txMatched = true; }
           } catch(_) {}
         }
         if (!profileId && orderId) {

@@ -817,6 +817,7 @@ const AppState = {
         this.refreshSupportTickets(),
         this.refreshFinanceProblems(),
         this.refreshAdminSummaries(),
+        this.refreshAdminReports(),
         this.refreshAdminUsersList(),
         this.refreshReferrals(),
         this.refreshTreeNetwork(),
@@ -1419,6 +1420,268 @@ const AppState = {
 
       return true;
     } catch (e) {
+      return false;
+    }
+  },
+
+  async refreshAdminReports() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var MASTER_UUID = '7ce5a80a-abc8-4bc3-a17f-d7ed8670b15f';
+
+      // 1) Wallet Master
+      try {
+        var wm = await sb.from('wallets').select('available_balance, total_bonus_team, total_deposited, total_withdrawn').eq('profile_id', MASTER_UUID).limit(1).maybeSingle();
+        var wData = (wm && wm.data) ? wm.data : {};
+        this.adminReports = this.adminReports || {};
+        this.adminReports.walletMaster = {
+          available: Number(wData.available_balance || 0),
+          team: Number(wData.total_bonus_team || 0),
+          dep: Number(wData.total_deposited || 0),
+          wd: Number(wData.total_withdrawn || 0)
+        };
+      } catch(_wme) { this.adminReports = this.adminReports || {}; this.adminReports.walletMaster = { available: 0, team: 0, dep: 0, wd: 0 }; }
+
+      // 2) Todas ativações = kind='deposit' status='confirmed' amount~10
+      var activations = [];
+      try {
+        var rA = await sb.from('transactions')
+          .select('id, profile_id, username:profiles!transactions_profile_id_fkey(username), amount, status, confirmed_at, created_at, nowpayments_id')
+          .eq('kind', 'deposit')
+          .in('status', ['confirmed','completed','finished','paid','success'])
+          .order('confirmed_at', { ascending: false })
+          .limit(200);
+        var actRows = (rA && rA.data) ? rA.data : [];
+        actRows.forEach(function(t){
+          if (Number(t.amount || 0) < 9.2) return; // ignora valores < $9.20
+          var usr = (t && t.username) ? (Array.isArray(t.username) ? (t.username[0] && t.username[0].username || '') : (typeof t.username === 'string' ? t.username : (t.username.username || ''))) : '';
+          activations.push({
+            tx_id: t.id,
+            profile_id: t.profile_id,
+            username: usr || t.profile_id,
+            amount: Number(t.amount || 0),
+            date: t.confirmed_at || t.created_at,
+            np_id: t.nowpayments_id || '',
+            n1: { exists: false, v: 0, usr: '', pid: null },
+            n2: { exists: false, v: 0, usr: '', pid: null },
+            n3: { exists: false, v: 0, usr: '', pid: null },
+            n4: { exists: false, v: 0, usr: '', pid: null },
+            n5: { exists: false, v: 0, usr: '', pid: null }
+          });
+        });
+      } catch(_aErr) { activations = []; }
+
+      // 3) Para cada ativação, carregar bônus (related_profile_id = profile_id ativado)
+      try {
+        var pids = activations.map(function(a){ return a.profile_id; }).filter(function(x){ return x && x !== ''; });
+        if (pids && pids.length) {
+          var rB = await sb.from('transactions')
+            .select('id, profile_id, to_user:profiles!transactions_profile_id_fkey(username), related_profile_id, kind, level_reference, amount, status')
+            .in('related_profile_id', pids)
+            .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
+            .eq('status', 'confirmed')
+            .limit(1000);
+          var bonusRows = (rB && rB.data) ? rB.data : [];
+          bonusRows.forEach(function(b){
+            var usrTo = (b && b.to_user) ? (Array.isArray(b.to_user) ? (b.to_user[0] && b.to_user[0].username || '') : (typeof b.to_user === 'string' ? b.to_user : (b.to_user.username || ''))) : String(b.profile_id || '').slice(0,8);
+            var lv = Number(b.level_reference || 0);
+            var key = (lv===1 || b.kind==='bonus_sponsor') ? 'n1' : 'n'+(lv>0?lv:0);
+            if (b.kind==='bonus_level2') key='n2'; if (b.kind==='bonus_level3') key='n3'; if (b.kind==='bonus_level4') key='n4'; if (b.kind==='bonus_level5') key='n5';
+            activations.forEach(function(a){
+              if (a.profile_id === b.related_profile_id) {
+                if (key==='n1' || key==='n2' || key==='n3' || key==='n4' || key==='n5') {
+                  a[key].exists = true;
+                  a[key].v = Math.round(Number(b.amount || 0) * 1000000) / 1000000;
+                  a[key].usr = usrTo;
+                  a[key].pid = b.profile_id;
+                }
+              }
+            });
+          });
+        }
+      } catch(_bErr) {}
+      this.adminReports = this.adminReports || {};
+      this.adminReports.activations = activations;
+
+      // 4) Histórico ultimos bônus
+      try {
+        var rH = await sb.from('transactions')
+          .select('id, profile_id, to_user:profiles!transactions_profile_id_fkey(username), related_profile_id, from_user:profiles!transactions_related_profile_id_fkey(username), kind, level_reference, amount, created_at, status')
+          .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
+          .eq('status', 'confirmed')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        var hRows = (rH && rH.data) ? rH.data : [];
+        var hist = hRows.map(function(r){
+          var u1 = (r && r.to_user) ? (Array.isArray(r.to_user) ? (r.to_user[0] && r.to_user[0].username || '') : (typeof r.to_user === 'string' ? r.to_user : (r.to_user.username || ''))) : '';
+          var u2 = (r && r.from_user) ? (Array.isArray(r.from_user) ? (r.from_user[0] && r.from_user[0].username || '') : (typeof r.from_user === 'string' ? r.from_user : (r.from_user.username || ''))) : '';
+          return {
+            created_at: r.created_at,
+            to_user: u1 || String(r.profile_id||'').slice(0,8),
+            from_user: u2 || String(r.related_profile_id||'').slice(0,8),
+            level_reference: Number(r.level_reference || (r.kind==='bonus_sponsor' ? 1 : 0)),
+            kind: r.kind,
+            amount: Number(r.amount || 0)
+          };
+        });
+        this.adminReports.bonusHistory = hist;
+      } catch(_hErr) {
+        if (this.adminReports) this.adminReports.bonusHistory = [];
+      }
+
+      // 5) Garante adminSummaries refreshed também
+      try { await this.refreshAdminSummaries(); } catch(_s) {}
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async refreshReferralsBonusReport() {
+    if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+    try {
+      var sb = this._sb(); if (!sb) return false;
+      var me = (this.currentUser && this.currentUser.id) ? this.currentUser.id : null;
+      if (!me) { this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0}, history:[], teamAudit:[] }; return false; }
+
+      var summary = { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0 };
+      var history = [];
+      var teamAuditMap = {}; // key = profile_id do membro
+
+      // 1) Carrega bônus RECEBIDOS por mim (profile_id=me) - usado para SUMMARY e HISTORY
+      try {
+        var rB = await sb.from('transactions')
+          .select('id, kind, level_reference, amount, status, created_at, confirmed_at, related_profile_id, from_user:profiles!transactions_profile_id_fkey(username), related_username:profiles!transactions_related_profile_id_fkey(username)')
+          .eq('profile_id', me)
+          .in('kind', ['bonus_sponsor','bonus_level2','bonus_level3','bonus_level4','bonus_level5'])
+          .order('created_at', { ascending: false })
+          .limit(500);
+        var bRows = (rB && rB.data) ? rB.data : [];
+        bRows.forEach(function(b){
+          var lv = Number(b.level_reference || 0);
+          if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
+          var amt = Number(b.amount || 0);
+          if (lv===1) summary.n1 += amt;
+          else if (lv===2) summary.n2 += amt;
+          else if (lv===3) summary.n3 += amt;
+          else if (lv===4) summary.n4 += amt;
+          else if (lv===5) summary.n5 += amt;
+          summary.total += amt;
+          history.push(b);
+          // Adiciona no teamAuditMap (membro = related_profile_id)
+          if (b.related_profile_id) {
+            var pid = String(b.related_profile_id);
+            var usr = ''; try { if (b.related_username) usr = Array.isArray(b.related_username)?(b.related_username[0]&&b.related_username[0].username||''):(b.related_username.username||''); } catch(_){}
+            if (!teamAuditMap[pid]) teamAuditMap[pid] = { profile_id: pid, username: usr, level: lv, bonusReceived: 0, status: 'ATIVO', active: true, activationDate: b.confirmed_at || b.created_at };
+            teamAuditMap[pid].bonusReceived = Number(teamAuditMap[pid].bonusReceived || 0) + amt;
+            if (usr && !teamAuditMap[pid].username) teamAuditMap[pid].username = usr;
+          }
+        });
+      } catch(_bErr) { bRows = []; }
+
+      // 2) Carrega INDICAÇÕES DIRETAS (N1) de AppState.referrals + profiles/status para completar teamAudit
+      try {
+        var directs = (this.referrals && this.referrals.direct && this.referrals.direct.length) ? this.referrals.direct : [];
+        var pidsDir = directs.map(function(d){ return d.profile_id || d.id; }).filter(function(x){ return x; });
+        var profsById = {};
+        if (pidsDir && pidsDir.length) {
+          try {
+            var rP = await sb.from('profiles').select('id, username, status, created_at, upline_1_id, upline_2_id, upline_3_id, upline_4_id, upline_5_id').in('id', pidsDir).limit(200);
+            var pR = (rP && rP.data) ? rP.data : [];
+            pR.forEach(function(p){ profsById[String(p.id)] = p; });
+          } catch(_pErr) {}
+        }
+        directs.forEach(function(d){
+          var pid = String(d.profile_id || d.id || '');
+          if (!pid) return;
+          var lv = 1;
+          var pData = profsById[pid] || {};
+          var usr = d.username || pData.username || '';
+          var isAt = (d.status === 'ACTIVE' || d.status === 'active' || pData.status === 'ACTIVE' || pData.status === 'active');
+          var dt = d.date || d.createdAt || pData.created_at || null;
+          if (!teamAuditMap[pid]) {
+            teamAuditMap[pid] = { profile_id: pid, username: usr, level: lv, bonusReceived: 0, status: isAt?'ATIVO':'PENDENTE', active: !!isAt, activationDate: dt };
+          } else {
+            if (!teamAuditMap[pid].username) teamAuditMap[pid].username = usr;
+            teamAuditMap[pid].status = isAt ? 'ATIVO' : (teamAuditMap[pid].status||'PENDENTE');
+            teamAuditMap[pid].active = teamAuditMap[pid].active || !!isAt;
+            if (dt && !teamAuditMap[pid].activationDate) teamAuditMap[pid].activationDate = dt;
+            teamAuditMap[pid].level = 1; // N1 sempre direto
+          }
+        });
+
+        // 3) Busca N2..N5 para complementar teamAudit = todos profiles onde upline_1..5 contém meu ID
+        // e estão ATIVOS (possuem deposit confirmed). Primeiro busca profiles onde eu sou upline N2..N5
+        try {
+          var uplFields = ['upline_2_id','upline_3_id','upline_4_id','upline_5_id'];
+          var levelField = { 'upline_2_id':2, 'upline_3_id':3, 'upline_4_id':4, 'upline_5_id':5 };
+          var allBelowMe = [];
+          for (var uf=0; uf<uplFields.length; uf++) {
+            try {
+              var rr = await sb.from('profiles').select('id, username, status, created_at, upline_1_id, upline_2_id, upline_3_id, upline_4_id, upline_5_id').eq(uplFields[uf], me).limit(500);
+              var rowR = (rr && rr.data) ? rr.data : [];
+              rowR.forEach(function(p){
+                p._levelHint = levelField[uplFields[uf]];
+                allBelowMe.push(p);
+              });
+            } catch(_ue){}
+          }
+          // Para cada profile abaixo de mim, verifica se tem ativação (deposit confirmed amount>=9.2)
+          if (allBelowMe && allBelowMe.length) {
+            var belowPids = allBelowMe.map(function(p){ return p.id; }).filter(function(x){return x;});
+            var actMap = {};
+            try {
+              var rD = await sb.from('transactions')
+                .select('id, profile_id, amount, status, confirmed_at, created_at')
+                .eq('kind','deposit')
+                .in('profile_id', belowPids)
+                .gte('amount', 9.2)
+                .in('status', ['confirmed','completed','finished','paid','success'])
+                .limit(500);
+              var dRows = (rD && rD.data) ? rD.data : [];
+              dRows.forEach(function(t){
+                if (!actMap[t.profile_id] || (t.confirmed_at && t.confirmed_at < (actMap[t.profile_id].confirmed_at || '9999'))) {
+                  actMap[t.profile_id] = t;
+                }
+              });
+            } catch(_dErr){}
+            allBelowMe.forEach(function(p){
+              var pid = String(p.id);
+              var lv = Number(p._levelHint || 0);
+              if (!lv || lv<2 || lv>5) return;
+              var hasAct = !!actMap[pid];
+              var isAt = hasAct || p.status==='ACTIVE' || p.status==='active';
+              if (!teamAuditMap[pid]) {
+                teamAuditMap[pid] = { profile_id: pid, username: p.username||'', level: lv, bonusReceived: 0, status: isAt?'ATIVO':'PENDENTE', active: !!isAt, activationDate: (actMap[pid]&&(actMap[pid].confirmed_at||actMap[pid].created_at)) || p.created_at || null };
+              } else {
+                if (!teamAuditMap[pid].username) teamAuditMap[pid].username = p.username||'';
+                if (!teamAuditMap[pid].level || teamAuditMap[pid].level<2) teamAuditMap[pid].level = lv;
+                teamAuditMap[pid].status = isAt ? 'ATIVO' : (teamAuditMap[pid].status||'PENDENTE');
+                teamAuditMap[pid].active = teamAuditMap[pid].active || !!isAt;
+              }
+            });
+          }
+        } catch(_n25err) {}
+      } catch(_dErr) {}
+
+      // Arredonda summary
+      ['total','n1','n2','n3','n4','n5'].forEach(function(k){ summary[k] = Math.round(Number(summary[k]||0)*1000000)/1000000; });
+
+      // Converte teamAuditMap para array ordenado por level, depois data
+      var teamAudit = Object.keys(teamAuditMap).map(function(k){ return teamAuditMap[k]; })
+        .sort(function(a,b){
+          var la = Number(a.level||0), lb = Number(b.level||0);
+          if (la!==lb) return la-lb;
+          var da = a.activationDate||'', db = b.activationDate||'';
+          return (da<db?-1:(da>db?1:0));
+        });
+
+      this.userBonusReport = { summary: summary, history: history, teamAudit: teamAudit };
+      return true;
+    } catch(e) {
+      this.userBonusReport = { summary:{total:0,n1:0,n2:0,n3:0,n4:0,n5:0}, history:[], teamAudit:[] };
       return false;
     }
   },

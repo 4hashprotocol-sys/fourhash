@@ -1241,6 +1241,12 @@ const Views = {
   Referrals() {
     const u = AppState.currentUser;
     const rStatus = (s) => s === 'ATIVO' ? I18n.t('active') : s === 'INATIVO' ? I18n.t('statusInactive') : I18n.t('pending');
+    const refTab = AppState.referralsActiveTab || 'overview';
+    const rpt = AppState.userBonusReport || {};
+    const sum = rpt.summary || { total: 0, n1: 0, n2: 0, n3: 0, n4: 0, n5: 0 };
+    const hist = rpt.history || [];
+    const team = rpt.teamAudit || [];
+    const fmtUSD = function(n){ try { return 'US$ ' + Number(n || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } catch(e){ return 'US$ ' + Number(n||0).toFixed(2); } };
     return `
       <div class="space-y-6">
         <div>
@@ -1248,6 +1254,24 @@ const Views = {
           <p class="text-xs text-gray-400" data-i18n="referralsSubtitle">Regra equipe 60/40: Ganhe US$ 5.00 por indicação direta (N1) + US$ 0.25 p/ ativação nos níveis 2→5</p>
         </div>
 
+        <div class="flex flex-wrap items-stretch gap-2 p-1.5 rounded-2xl bg-brand-surface/80 border border-white/5">
+          <button onclick="AppState.referralsActiveTab='overview'; Router.refreshCurrentView();"
+                  class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='overview'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
+            <i class="fa-solid fa-chart-pie mr-1.5"></i>VISÃO GERAL
+          </button>
+          <button onclick="AppState.referralsActiveTab='mybonuses'; (async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();"
+                  class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='mybonuses'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+            <i class="fa-solid fa-wallet mr-1.5"></i>MEUS BÔNUS
+            <span class="ml-1 px-2 py-0.5 rounded-md ${refTab==='mybonuses'?'bg-black/20 text-black':'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'} text-[10px] font-bold border">${fmtUSD(sum.total||0)}</span>
+          </button>
+          <button onclick="AppState.referralsActiveTab='teamreport'; (async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();"
+                  class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='teamreport'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+            <i class="fa-solid fa-sitemap mr-1.5"></i>RELATÓRIO EQUIPE 5 NÍVEIS
+            <span class="ml-1 px-2 py-0.5 rounded-md ${refTab==='teamreport'?'bg-black/20 text-black':'bg-sky-500/15 text-sky-300 border border-sky-500/20'} text-[10px] font-bold border">${team.length}</span>
+          </button>
+        </div>
+
+        ${refTab!=='overview' ? '' : `
         <div class="rounded-2xl border border-brand/30 bg-gradient-to-r from-brand-card via-black to-brand-card p-6">
           <div class="text-xs font-mono text-brand font-bold uppercase tracking-wider mb-2" data-i18n="regTeamTitle">Estrutura de Divisão — Fase 1 Lançamento</div>
           <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.15fr)_auto_minmax(0,4fr)_minmax(0,0.95fr)] gap-3 md:gap-x-3 md:gap-y-4 items-center text-center">
@@ -1336,7 +1360,7 @@ const Views = {
                   var rows = '';
                   try {
                     var list = (AppState.referrals && AppState.referrals.direct && AppState.referrals.direct.length) ? AppState.referrals.direct : [];
-                    if (!list.length) return `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                    if (!list.length) return '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>';
                     list.forEach(function(ref){
                       var isActive = (ref.status === 'ACTIVE' || ref.status === 'active');
                       var statusClass = isActive ? 'bg-brand/10 text-brand' : 'bg-amber-400/10 text-amber-400';
@@ -1355,12 +1379,201 @@ const Views = {
                         </tr>`;
                     });
                   } catch(e) {}
-                  return rows || `<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>`;
+                  return rows || '<tr><td colspan="5" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-user-plus mr-2 text-gray-600"></i>Sem indicações diretas ainda. Compartilhe seu link de convite!</td></tr>';
                 })()}
               </tbody>
             </table>
           </div>
         </div>
+        `}
+
+        ${refTab!=='mybonuses' ? '' : `
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
+          <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-wallet"></i></div>
+            <div>
+              <h3 class="text-sm font-black text-white font-mono">Meus Bônus Recebidos · Rede 5 Níveis</h3>
+              <p class="text-[11px] text-gray-400 font-mono">Histórico completo de comissões recebidas de ativações abaixo de você</p>
+            </div>
+          </div>
+          <button onclick="(async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();" class="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold transition">
+            <i class="fa-solid fa-rotate-right mr-1.5"></i>ATUALIZAR DADOS
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4 col-span-2">
+            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Total Recebido</div>
+            <div class="text-2xl font-black text-white font-mono">${fmtUSD(sum.total||0)}</div>
+            <div class="text-[10px] text-brand mt-1 font-mono"><i class="fa-solid fa-check-circle mr-1"></i>${hist.length} lançamentos confirmados</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-brand mb-1 uppercase">N1 · Direto</div>
+            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n1||0)}</div>
+            <div class="text-[10px] text-gray-500 font-mono">50% · $5 / ativação</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-emerald-400 mb-1 uppercase">N2</div>
+            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n2||0)}</div>
+            <div class="text-[10px] text-gray-500 font-mono">2,5% · $0,25</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-sky-400 mb-1 uppercase">N3</div>
+            <div class="text-lg font-black text-white font-mono">${fmtUSD(sum.n3||0)}</div>
+            <div class="text-[10px] text-gray-500 font-mono">2,5% · $0,25</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-violet-400 mb-1 uppercase">N4 · N5</div>
+            <div class="text-lg font-black text-white font-mono">${fmtUSD((Number(sum.n4||0)+Number(sum.n5||0)))}</div>
+            <div class="text-[10px] text-gray-500 font-mono">N4 ${fmtUSD(sum.n4||0)} · N5 ${fmtUSD(sum.n5||0)}</div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">Histórico de Bônus</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono">
+                  <th class="py-3">DATA</th>
+                  <th class="py-3">NÍVEL</th>
+                  <th class="py-3">USUÁRIO ATIVADO</th>
+                  <th class="py-3">TIPO BÔNUS</th>
+                  <th class="py-3 text-right">VALOR</th>
+                  <th class="py-3 text-right">STATUS</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${(() => {
+                  try {
+                    if (!hist || !hist.length) return '<tr><td colspan="6" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-timeline mr-2 text-gray-600"></i>Nenhum bônus recebido ainda. Convide pessoas e ative-as para gerar receita!</td></tr>';
+                    var r = '';
+                    hist.forEach(function(b){
+                      var lv = Number(b.level_reference || 0);
+                      if (!lv) { if (b.kind==='bonus_sponsor') lv=1; else if (b.kind==='bonus_level2') lv=2; else if (b.kind==='bonus_level3') lv=3; else if (b.kind==='bonus_level4') lv=4; else if (b.kind==='bonus_level5') lv=5; }
+                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : 'text-pink-400 bg-pink-500/10 border-pink-500/30';
+                      var dt = ''; try { if (b.created_at||b.confirmed_at) dt = new Date(b.created_at||b.confirmed_at).toLocaleDateString('pt-PT') + ' ' + new Date(b.created_at||b.confirmed_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
+                      var isOk = b.status==='confirmed' || b.status==='paid' || b.status==='completed';
+                      var fromUsr = ''; try { if (b.from_user) fromUsr = Array.isArray(b.from_user)?(b.from_user[0]&&b.from_user[0].username||''):(b.from_user.username||''); if (!fromUsr && b.related_username) fromUsr = b.related_username; } catch(_){}
+                      if (!fromUsr) fromUsr = String(b.related_profile_id||'').slice(0,8);
+                      r += `
+                        <tr>
+                          <td class="py-3 font-mono text-gray-400">${dt||'-'}</td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">N${lv}</span></td>
+                          <td class="py-3 font-bold text-white">@${fromUsr}</td>
+                          <td class="py-3 font-mono text-gray-400">${b.kind||'-'}</td>
+                          <td class="py-3 text-right font-mono font-bold text-emerald-400">+${fmtUSD(b.amount||0)}</td>
+                          <td class="py-3 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isOk?'bg-emerald-500/15 text-emerald-300':'bg-amber-400/10 text-amber-400'}">${isOk?'CONFIRMADO':'PENDENTE'}</span></td>
+                        </tr>`;
+                    });
+                    return r;
+                  } catch(e) { return '<tr><td colspan="6" class="py-8 text-center text-red-400 font-mono text-[11px]">Erro ao carregar histórico: ' + String((e&&e.message)||e) + '</td></tr>'; }
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `}
+
+        ${refTab!=='teamreport' ? '' : `
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-sky-500/20 bg-sky-500/5">
+          <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-sky-500/15 flex items-center justify-center text-sky-400"><i class="fa-solid fa-sitemap"></i></div>
+            <div>
+              <h3 class="text-sm font-black text-white font-mono">Relatório Equipe · Auditoria 5 Níveis</h3>
+              <p class="text-[11px] text-gray-400 font-mono">Detalhamento de todas as ativações abaixo de você com bônus devidos e recebidos</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="window.open('https://supabase.com/dashboard/project/psxzgidozduecpaxwcny/sql/new', '_blank');" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 text-xs font-mono font-bold transition">
+              <i class="fa-solid fa-database mr-1.5"></i>ABRIR SQL EDITOR
+            </button>
+            <button onclick="(async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();" class="px-4 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-bold transition">
+              <i class="fa-solid fa-rotate-right mr-1.5"></i>ATUALIZAR
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          ${(() => {
+            var ativos = team.filter(function(x){ return x.status==='ATIVO' || x.status==='ACTIVE' || x.status==='active' || x.active===true; }).length;
+            var espN1 = 5.00 * team.filter(function(x){ return Number(x.level||0)===1; }).length;
+            var espN2a5 = 0.25 * team.filter(function(x){ return Number(x.level||0)>=2; }).length;
+            var esperado = espN1 + espN2a5;
+            var recebido = Number(sum.total||0);
+            var diff = esperado - recebido;
+            return `
+            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Ativados Diretos</div>
+              <div class="text-2xl font-black text-white font-mono">${team.filter(function(x){ return Number(x.level||0)===1; }).length}</div>
+              <div class="text-[10px] text-brand mt-1 font-mono">N1 · $5 cada</div>
+            </div>
+            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Total Equipe</div>
+              <div class="text-2xl font-black text-white font-mono">${team.length}</div>
+              <div class="text-[10px] text-sky-400 mt-1 font-mono">${ativos} ativos · ${team.length-ativos} pendentes</div>
+            </div>
+            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Ganhos Esperados</div>
+              <div class="text-2xl font-black text-white font-mono">${fmtUSD(esperado)}</div>
+              <div class="text-[10px] text-amber-400 mt-1 font-mono">N1 ${fmtUSD(espN1)} + N2-5 ${fmtUSD(espN2a5)}</div>
+            </div>
+            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">Recebido vs Diferença</div>
+              <div class="text-2xl font-black ${diff<=0.001?'text-emerald-400':'text-amber-400'} font-mono">${fmtUSD(recebido)}</div>
+              <div class="text-[10px] font-mono mt-1 ${diff<=0.001?'text-emerald-300':'text-amber-300'}">${diff<=0.001?'✅ Tudo recebido':'⚠️ Faltam ' + fmtUSD(diff)}</div>
+            </div>
+            `;
+          })()}
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono mb-4">Equipe · Linha por Linha (N1 → N5)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono">
+                  <th class="py-3">USUÁRIO</th>
+                  <th class="py-3">NÍVEL</th>
+                  <th class="py-3">STATUS</th>
+                  <th class="py-3">DATA ATIVAÇÃO</th>
+                  <th class="py-3 text-right">BÔNUS DEVIDO</th>
+                  <th class="py-3 text-right">BÔNUS RECEBIDO</th>
+                  <th class="py-3 text-right">DIFERENÇA</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/5">
+                ${(() => {
+                  try {
+                    if (!team || !team.length) return '<tr><td colspan="7" class="py-10 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-users mr-2 text-gray-600"></i>Sem membros na equipe ainda. Compartilhe seu link para construir sua rede!</td></tr>';
+                    var r = '';
+                    team.forEach(function(m){
+                      var lv = Number(m.level||0);
+                      var lvColor = lv===1 ? 'text-brand bg-brand/10 border-brand/30' : lv===2 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : lv===3 ? 'text-sky-400 bg-sky-500/10 border-sky-500/30' : lv===4 ? 'text-violet-400 bg-violet-500/10 border-violet-500/30' : 'text-pink-400 bg-pink-500/10 border-pink-500/30';
+                      var devido = lv===1 ? 5.00 : (lv>=2 && lv<=5 ? 0.25 : 0);
+                      var receb = Number(m.bonusReceived || 0);
+                      var dif = devido - receb;
+                      var isAt = m.status==='ATIVO' || m.status==='ACTIVE' || m.status==='active' || m.active===true;
+                      var dts = ''; try { if (m.activationDate||m.createdAt) dts = new Date(m.activationDate||m.createdAt).toLocaleDateString('pt-PT'); } catch(e){}
+                      r += `
+                        <tr>
+                          <td class="py-3 font-bold text-white">@${m.username||'user'}</td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold font-mono ${lvColor}">N${lv||'?'}</span></td>
+                          <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${isAt?'bg-brand/10 text-brand':'bg-amber-400/10 text-amber-400'}">● ${isAt?'ATIVO':'PENDENTE'}</span></td>
+                          <td class="py-3 font-mono text-gray-400">${dts||'-'}</td>
+                          <td class="py-3 text-right font-mono text-gray-300">${isAt?fmtUSD(devido):'-'}</td>
+                          <td class="py-3 text-right font-mono font-bold ${receb>0?'text-emerald-400':'text-gray-500'}">${receb>0?('+'+fmtUSD(receb)):fmtUSD(0)}</td>
+                          <td class="py-3 text-right"><span class="font-mono font-bold text-[11px] ${!isAt?'text-gray-500':dif<=0.001?'text-emerald-400':'text-amber-400'}">${!isAt?'-':(dif<=0.001?'✅ OK':('FALTA '+fmtUSD(dif)))}</span></td>
+                        </tr>`;
+                    });
+                    return r;
+                  } catch(e) { return '<tr><td colspan="7" class="py-8 text-center text-red-400 font-mono text-[11px]">Erro ao carregar equipe: ' + String((e&&e.message)||e) + '</td></tr>'; }
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        `}
       </div>
     `;
   },
@@ -1618,6 +1831,15 @@ const Views = {
     const fin = AppState.financeProblems || [];
     const tks = AppState.supportTickets || [];
 
+    if (tab === 'reports' && typeof setTimeout !== 'undefined') {
+      try {
+        var _rep = AppState.adminReports || {};
+        if (!_rep.activations || _rep.activations.length === 0) {
+          setTimeout(function(){ try { AppState.refreshAdminReports().then(function(){ if (typeof Router !== 'undefined') Router.refreshCurrentView(); }).catch(function(){}); } catch(_e){} }, 50);
+        }
+      } catch(_ee) {}
+    }
+
     const vol = (AppState.adminSummaries && AppState.adminSummaries.volume) ? AppState.adminSummaries.volume : {};
     const todayVol = Number(vol.todayVolume || 0);
     const todayCnt = Number(vol.todayCount || 0);
@@ -1676,6 +1898,10 @@ const Views = {
         <div class="flex flex-wrap items-stretch gap-2 p-1.5 rounded-2xl bg-brand-surface/80 border border-white/5">
           <button onclick="AppState.adminActiveTab='backoffice'; Router.navigate('admin');" class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='backoffice'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-gauge-high"></i>BACKOFFICE
+          </button>
+          <button onclick="AppState.adminActiveTab='reports'; Router.navigate('admin');" class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='reports'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+            <i class="fa-solid fa-chart-column"></i>RELATÓRIO · AUDITORIA
+            <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='reports'?'bg-black/20 text-black':'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'} text-[10px] font-bold border">60/40</span>
           </button>
           <button onclick="AppState.adminActiveTab='finance'; Router.navigate('admin');" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-sack-dollar"></i>FINANCEIRO · PAGAMENTOS
@@ -1891,6 +2117,188 @@ const Views = {
               </tbody>
             </table>
           </div>
+        `}
+
+        ${tab!=='reports' ? '' : `
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          ${(() => {
+            try {
+              var u = (AppState.adminSummaries && AppState.adminSummaries.users) || {};
+              var v = (AppState.adminSummaries && AppState.adminSummaries.volume) || {};
+              var atv = Number((u && u.active) || 0);
+              var volEnt = Number((v && v.volumeEntradas) || 0);
+              var fundo = Number((v && v.fundoLiquidez) || 0);
+              var bonus = Number((v && v.bonusEquipe) || 0);
+              var espEq = Math.round(volEnt * 0.6 * 100) / 100;
+              var espFu = Math.round(volEnt * 0.4 * 100) / 100;
+              var difEq = Math.round((espEq - bonus) * 100) / 100;
+              var wallet4hp = (AppState.adminReports && AppState.adminReports.walletMaster) || {};
+              var fmtU = function(n){ return Number(n||0).toLocaleString('pt-PT'); };
+              var fmt$ = function(n){ return '$ ' + Number(n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+              var pctEq = volEnt>0 ? Math.min(100, Math.round(bonus / Math.max(0.01,espEq) * 1000)/10) : 0;
+              return `
+          <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-emerald-500/10 blur-2xl"></div>
+            <div class="text-xs font-mono text-emerald-300/80 mb-1"><i class="fa-solid fa-rocket mr-1.5"></i>Total Ativações</div>
+            <div class="text-3xl font-black text-white font-mono">${fmtU(atv)}<span class="text-sm text-gray-500 font-bold ml-2">perfis</span></div>
+            <div class="text-[10px] text-emerald-300 mt-1 font-mono">Volume confirmado: ${fmt$(volEnt)} · USDT BEP20</div>
+          </div>
+          <div class="rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-5 relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-blue-500/10 blur-2xl"></div>
+            <div class="text-xs font-mono text-blue-300/80 mb-1"><i class="fa-solid fa-users mr-1.5"></i>Equipe (60%)</div>
+            <div class="text-3xl font-black text-white font-mono">${fmt$(bonus)}</div>
+            <div class="text-[10px] text-blue-300 mt-1 font-mono">Esperado: ${fmt$(espEq)} · Distribuído: ${pctEq}%${difEq>0?' · Faltam: '+fmt$(difEq):' · ✅ Fechado'}</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-5">
+            <div class="text-xs font-mono text-gray-400 mb-1"><i class="fa-solid fa-vault mr-1.5 text-brand"></i>Fundo Projeto (40%)</div>
+            <div class="text-3xl font-black text-brand font-mono">${fmt$(fundo)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono">Estimado: ${fmt$(espFu)} · Reserva estratégica</div>
+          </div>
+          <div class="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-5 relative overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-20 h-20 rounded-full bg-amber-500/10 blur-2xl"></div>
+            <div class="text-xs font-mono text-amber-300/80 mb-1"><i class="fa-solid fa-crown mr-1.5"></i>Wallet Master @4hashprotocol</div>
+            <div class="text-3xl font-black text-white font-mono">${fmt$(wallet4hp.available||0)}</div>
+            <div class="text-[10px] text-amber-300 mt-1 font-mono">Team Bonuses: ${fmt$(wallet4hp.team||0)} · Depositado: ${fmt$(wallet4hp.dep||0)}</div>
+          </div>
+              `;
+            } catch(e){ return ''; }
+          })()}
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-list-check"></i></span>
+                AUDITORIA POR ATIVAÇÃO · 5 NÍVEIS (SSOT 60% / 40%)
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 font-mono">Cada linha = 1 ativação US$ 10. Verificação automática N1=$5 / N2..N5=$0.25 cada. ✅ Verde = todas 5 linhas de bônus existem.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="AppState.refreshAdminReports(); Router.refreshCurrentView();" class="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold font-mono hover:bg-emerald-500/25 transition">
+                <i class="fa-solid fa-rotate mr-1.5"></i>ATUALIZAR DADOS
+              </button>
+              <button onclick="window.open('https://supabase.com/dashboard/project/psxzgidozduecpaxwcny/sql/new','_blank')" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-[11px] font-bold font-mono hover:bg-white/10 hover:text-white transition">
+                <i class="fa-solid fa-up-right-from-square mr-1.5"></i>ABRIR SQL EDITOR
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto -mx-6 px-6">
+            <table class="w-full text-left text-[11px] min-w-[1200px]">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono uppercase tracking-wider text-[10px]">
+                  <th class="py-3 font-bold whitespace-nowrap">ATIVADO</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">DATA</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-right">VALOR</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">N1 · $5.00</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">N2 · $0.25</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">N3 · $0.25</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">N4 · $0.25</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">N5 · $0.25</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-right">EQUIPE</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-right">FUNDO</th>
+                  <th class="py-3 font-bold whitespace-nowrap text-center">STATUS</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/[0.04]">
+                ${(() => {
+                  try {
+                    var list = (AppState.adminReports && AppState.adminReports.activations) || [];
+                    if (!list || list.length===0)
+                      return `<tr><td colspan="11" class="py-12 text-center text-gray-500 font-mono text-[11px]"><i class="fa-solid fa-spinner fa-spin mr-2 text-gray-600"></i>Carregando auditoria... clique em ATUALIZAR DADOS ou cole o script SQL RELATÓRIO no SQL Editor.</td></tr>`;
+                    var fmt$ = function(n){ return '$ ' + Number(n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+                    var fmtDt = function(d){ try { var x=new Date(d); return (x.getDate()+'/'+('0'+(x.getMonth()+1)).slice(-2)+'/'+String(x.getFullYear()).slice(2)); } catch(e){ return '-'; } };
+                    var rows = '';
+                    list.forEach(function(a){
+                      var n1 = a.n1 && a.n1.exists;
+                      var n2 = a.n2 && a.n2.exists;
+                      var n3 = a.n3 && a.n3.exists;
+                      var n4 = a.n4 && a.n4.exists;
+                      var n5 = a.n5 && a.n5.exists;
+                      var eqReal = (Number((a.n1&&a.n1.v)||0)+Number((a.n2&&a.n2.v)||0)+Number((a.n3&&a.n3.v)||0)+Number((a.n4&&a.n4.v)||0)+Number((a.n5&&a.n5.v)||0));
+                      eqReal = Math.round(eqReal*100)/100;
+                      var fu = Math.round((10-eqReal)*100)/100;
+                      var ok = n1&&n2&&n3&&n4&&n5;
+                      var cellN = function(ex,v,usr){
+                        if (ex) return `<div class="flex flex-col items-center gap-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-500/15 text-green-300 border border-green-500/20 text-[10px] font-bold">✅ ${fmt$(v)}</span><span class="text-[9px] text-gray-500 font-mono">${usr||'-'}</span></div>`;
+                        return `<div class="flex flex-col items-center gap-0.5"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/15 text-red-300 border border-red-500/20 text-[10px] font-bold">❌ FALTA</span><span class="text-[9px] text-gray-600 font-mono">sem upline</span></div>`;
+                      };
+                      rows += `<tr class="hover:bg-white/[0.02]">
+                        <td class="py-3.5 font-mono whitespace-nowrap"><div class="text-white font-bold">@${a.username||'-'}</div><div class="text-[9px] text-gray-500">PID: ${a.np_id||'-'}</div></td>
+                        <td class="py-3.5 text-center text-gray-300 font-mono">${fmtDt(a.date)}</td>
+                        <td class="py-3.5 text-right text-white font-mono font-bold">${fmt$(10)}</td>
+                        <td class="py-3.5">${cellN(n1, (a.n1&&a.n1.v)||0, (a.n1&&a.n1.usr)||'-')}</td>
+                        <td class="py-3.5">${cellN(n2, (a.n2&&a.n2.v)||0, (a.n2&&a.n2.usr)||'-')}</td>
+                        <td class="py-3.5">${cellN(n3, (a.n3&&a.n3.v)||0, (a.n3&&a.n3.usr)||'-')}</td>
+                        <td class="py-3.5">${cellN(n4, (a.n4&&a.n4.v)||0, (a.n4&&a.n4.usr)||'-')}</td>
+                        <td class="py-3.5">${cellN(n5, (a.n5&&a.n5.v)||0, (a.n5&&a.n5.usr)||'-')}</td>
+                        <td class="py-3.5 text-right text-blue-300 font-mono font-bold">${fmt$(eqReal)}</td>
+                        <td class="py-3.5 text-right text-brand font-mono font-bold">${fmt$(fu)}</td>
+                        <td class="py-3.5 text-center">
+                          ${ok
+                            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/15 text-green-300 border border-green-500/20 text-[10px] font-black font-mono"><i class="fa-solid fa-shield-halved mr-0.5"></i>5/5 · 100%</span>`
+                            : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/15 text-red-300 border border-red-500/20 text-[10px] font-black font-mono"><i class="fa-solid fa-triangle-exclamation mr-0.5"></i>INCOMPLETO</span>`
+                          }
+                        </td>
+                      </tr>`;
+                    });
+                    return rows;
+                  } catch(e){ return `<tr><td colspan="11" class="py-12 text-center text-gray-500 font-mono text-[11px]">${e && e.message ? e.message : 'Erro ao carregar auditoria'}</td></tr>`; }
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-brand-border bg-brand-card p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-wider text-white font-mono flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400"><i class="fa-solid fa-receipt"></i></span>
+                HISTÓRICO · ULTIMOS BÔNUS RECEBIDOS NA REDE
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 font-mono">Linha a linha todos os créditos de comissão gerados na rede linear N1→N5.</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto -mx-6 px-6">
+            <table class="w-full text-left text-[11px] min-w-[900px]">
+              <thead>
+                <tr class="border-b border-white/10 text-gray-400 font-mono uppercase tracking-wider text-[10px]">
+                  <th class="py-3 font-bold">DATA</th>
+                  <th class="py-3 font-bold">RECEBEDOR</th>
+                  <th class="py-3 font-bold">NÍVEL</th>
+                  <th class="py-3 font-bold">TIPO BÔNUS</th>
+                  <th class="py-3 font-bold">ORIGEM (ATIVADO)</th>
+                  <th class="py-3 font-bold text-right">VALOR</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/[0.04]">
+                ${(() => {
+                  try {
+                    var h = (AppState.adminReports && AppState.adminReports.bonusHistory) || [];
+                    if (!h || h.length===0)
+                      return `<tr><td colspan="6" class="py-10 text-center text-gray-500 font-mono text-[11px]">Clique em ATUALIZAR DADOS para carregar histórico.</td></tr>`;
+                    var fmt$ = function(n){ return '$ ' + Number(n||0).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+                    var fmtDt = function(d){ try { var x=new Date(d); return (x.getDate()+'/'+('0'+(x.getMonth()+1)).slice(-2)+' '+('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2)); } catch(e){ return '-'; } };
+                    var kindLabel = function(k){ var m={'bonus_sponsor':'N1 · Sponsor','bonus_level2':'N2 · Upline','bonus_level3':'N3 · Upline','bonus_level4':'N4 · Upline','bonus_level5':'N5 · Upline'}; return m[k] || k; };
+                    var lvBadge = function(l){ var c=['bg-gray-500/15 text-gray-300 border-gray-500/20','bg-emerald-500/15 text-emerald-300 border-emerald-500/20','bg-sky-500/15 text-sky-300 border-sky-500/20','bg-violet-500/15 text-violet-300 border-violet-500/20','bg-purple-500/15 text-purple-300 border-purple-500/20','bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/20']; return '<span class="inline-flex px-1.5 py-0.5 rounded-md border text-[9px] font-black font-mono '+c[l||0]+'">N'+l+'</span>'; };
+                    return h.slice(0,50).map(function(r){
+                      return `<tr class="hover:bg-white/[0.02]">
+                        <td class="py-2.5 text-gray-300 font-mono whitespace-nowrap">${fmtDt(r.created_at)}</td>
+                        <td class="py-2.5"><div class="text-white font-mono font-bold">@${r.to_user||'-'}</div></td>
+                        <td class="py-2.5 whitespace-nowrap">${lvBadge(r.level_reference||0)}</td>
+                        <td class="py-2.5 text-gray-300 font-mono whitespace-nowrap">${kindLabel(r.kind)}</td>
+                        <td class="py-2.5 text-gray-300 font-mono whitespace-nowrap">@${r.from_user||'-'}</td>
+                        <td class="py-2.5 text-right text-green-300 font-mono font-black">${fmt$(r.amount)}</td>
+                      </tr>`;
+                    }).join('');
+                  } catch(e){ return `<tr><td colspan="6" class="py-10 text-center text-gray-500 font-mono text-[11px]">Histórico vazio.</td></tr>`; }
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
         `}
 
         ${tab!=='finance' ? '' : `
