@@ -1261,6 +1261,22 @@ const Views = {
       { n:11, label:'N11· Upline', pct:'—',    val:'$0,00', color:'text-rose-400',      bg:'bg-rose-500/10',    border:'border-rose-500/30',    badgeIco:'fa-network-wired', pays:false },
       { n:12, label:'N12· Upline', pct:'—',    val:'$0,00', color:'text-teal-400',      bg:'bg-teal-500/10',    border:'border-teal-500/30',    badgeIco:'fa-network-wired', pays:false }
     ];
+    const lvCnt = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0,11:0,12:0};
+    let qtdN1 = 0, ativos = 0, qtdF1 = 0, n2a5 = 0;
+    for (let _mi=0; _mi<team.length; _mi++) {
+      const _m = team[_mi];
+      const _ml = Number(_m.level||0);
+      if (_ml>=1 && _ml<=12) lvCnt[_ml]++;
+      if (_ml===1) qtdN1++;
+      if (_ml>=2 && _ml<=5) n2a5++;
+      const _ma = _m.status==='ATIVO'||_m.status==='ACTIVE'||_m.status==='active'||_m.active===true;
+      if (_ma) { ativos++; if (_ml>=1 && _ml<=5) qtdF1++; }
+    }
+    const espN1 = 5.00 * qtdN1;
+    const espN2a5 = 0.25 * n2a5;
+    const esperado = espN1 + espN2a5;
+    const recebidoRpt = Number(sum.total||0);
+    const diffRpt = esperado - recebidoRpt;
     return `
       <div class="space-y-6">
         <div>
@@ -1273,7 +1289,7 @@ const Views = {
                   class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='overview'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-chart-pie mr-1.5"></i>${I18n.t('tabOverview')}
           </button>
-          <button onclick="AppState.referralsActiveTab='teamreport'; (async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();"
+          <button onclick="AppState.referralsActiveTab='teamreport'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.refreshReferralsBonusReport(); }).then(function(ok){ if (ok!==false) Router.refreshCurrentView(); }).catch(function(){});"
                   class="flex-1 min-w-[260px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${refTab==='teamreport'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-sitemap mr-1.5"></i>${I18n.t('tab12Report')}
             <span class="ml-1 px-2 py-0.5 rounded-md ${refTab==='teamreport'?'bg-black/20 text-black':'bg-sky-500/15 text-sky-300 border border-sky-500/20'} text-[10px] font-bold border">${team.length}</span>
@@ -1406,55 +1422,43 @@ const Views = {
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="(async function(){ try { await AppState.refreshReferralsBonusReport(); } catch(e){} Router.refreshCurrentView(); })();" class="px-4 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-bold transition">
+            <button onclick="Promise.resolve().then(function(){ return AppState.refreshReferralsBonusReport({force:true}); }).then(function(){ Router.refreshCurrentView(); }).catch(function(){});" class="px-4 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-mono font-bold transition">
               <i class="fa-solid fa-rotate-right mr-1.5"></i>${I18n.t('btnRefresh')}
             </button>
           </div>
         </div>
 
         <div class="grid grid-cols-2 xl:grid-cols-5 gap-3">
-          ${(() => {
-            var qtdN1 = team.filter(function(x){ return Number(x.level||0)===1; }).length;
-            var qtdF1 = team.filter(function(x){ return Number(x.level||0)>=1 && Number(x.level||0)<=5 && (x.status==='ATIVO'||x.status==='ACTIVE'||x.status==='active'||x.active===true); }).length;
-            var ativos = team.filter(function(x){ return x.status==='ATIVO' || x.status==='ACTIVE' || x.status==='active' || x.active===true; }).length;
-            var espN1 = 5.00 * qtdN1;
-            var espN2a5 = 0.25 * team.filter(function(x){ return Number(x.level||0)>=2 && Number(x.level||0)<=5; }).length;
-            var esperado = espN1 + espN2a5;
-            var recebido = Number(sum.total||0);
-            var diff = esperado - recebido;
-            return `
-            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardActN1Label')}</div>
-              <div class="text-2xl font-black text-white font-mono">${qtdN1}</div>
-              <div class="text-[10px] text-brand mt-1 font-mono">${I18n.t('cardActN1Hint')}</div>
-            </div>
-            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardTotalNetLabel')}</div>
-              <div class="text-2xl font-black text-white font-mono">${team.length}</div>
-              <div class="text-[10px] text-sky-400 mt-1 font-mono">${I18n.t('networkHintCount').replace('{ativos}', String(ativos)).replace('{active}', String(ativos)).replace('{f1}', String(qtdF1))}</div>
-            </div>
-            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardExpectedLabel')}</div>
-              <div class="text-2xl font-black text-white font-mono">${fmtUSD(esperado)}</div>
-              <div class="text-[10px] text-amber-400 mt-1 font-mono">${I18n.t('expectedBreakdown').replace('{n1}', fmtUSD(espN1)).replace('{nRest}', fmtUSD(espN2a5))}</div>
-            </div>
-            <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-black to-black p-4">
-              <div class="text-[10px] font-mono text-emerald-300/80 mb-1 uppercase tracking-wider">${I18n.t('cardTotalRecvLabel')}</div>
-              <div class="text-2xl font-black text-emerald-300 font-mono">${fmtUSD(recebido)}</div>
-              <div class="text-[10px] text-gray-400 mt-1 font-mono"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('historyBonusCount').replace('{qty}', String(hist.length))}</div>
-            </div>
-            <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-              <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardDiffLabel')}</div>
-              <div class="text-2xl font-black ${diff<=0.001?'text-emerald-400':'text-amber-400'} font-mono">${fmtUSD(recebido)}</div>
-              <div class="text-[10px] font-mono mt-1 ${diff<=0.001?'text-emerald-300':'text-amber-300'}">${diff<=0.001?I18n.t('allReceivedOk'):(I18n.t('missingReceivePrefix')+fmtUSD(diff))}</div>
-            </div>
-            `;
-          })()}
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardActN1Label')}</div>
+            <div class="text-2xl font-black text-white font-mono">${qtdN1}</div>
+            <div class="text-[10px] text-brand mt-1 font-mono">${I18n.t('cardActN1Hint')}</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardTotalNetLabel')}</div>
+            <div class="text-2xl font-black text-white font-mono">${team.length}</div>
+            <div class="text-[10px] text-sky-400 mt-1 font-mono">${I18n.t('networkHintCount').replace('{ativos}', String(ativos)).replace('{active}', String(ativos)).replace('{f1}', String(qtdF1))}</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardExpectedLabel')}</div>
+            <div class="text-2xl font-black text-white font-mono">${fmtUSD(esperado)}</div>
+            <div class="text-[10px] text-amber-400 mt-1 font-mono">${I18n.t('expectedBreakdown').replace('{n1}', fmtUSD(espN1)).replace('{nRest}', fmtUSD(espN2a5))}</div>
+          </div>
+          <div class="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-black to-black p-4">
+            <div class="text-[10px] font-mono text-emerald-300/80 mb-1 uppercase tracking-wider">${I18n.t('cardTotalRecvLabel')}</div>
+            <div class="text-2xl font-black text-emerald-300 font-mono">${fmtUSD(recebidoRpt)}</div>
+            <div class="text-[10px] text-gray-400 mt-1 font-mono"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('historyBonusCount').replace('{qty}', String(hist.length))}</div>
+          </div>
+          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
+            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardDiffLabel')}</div>
+            <div class="text-2xl font-black ${diffRpt<=0.001?'text-emerald-400':'text-amber-400'} font-mono">${fmtUSD(recebidoRpt)}</div>
+            <div class="text-[10px] font-mono mt-1 ${diffRpt<=0.001?'text-emerald-300':'text-amber-300'}">${diffRpt<=0.001?I18n.t('allReceivedOk'):(I18n.t('missingReceivePrefix')+fmtUSD(diffRpt))}</div>
+          </div>
         </div>
 
         <div class="grid grid-cols-3 md:grid-cols-6 xl:grid-cols-12 gap-2">
           ${LV_META.map(function(L){
-            var cnt = team.filter(function(x){ return Number(x.level||0)===L.n; }).length;
+            var cnt = lvCnt[L.n] || 0;
             var rawV = sum['n'+L.n] || 0;
             var temValor = L.pays && Number(rawV) > 0;
             return `
