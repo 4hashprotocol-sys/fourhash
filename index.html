@@ -50,6 +50,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <!-- FAVICONS / LOGO NAVEGADOR (aba) + app icons (redundância 3 paths anti-broken) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png">
+  <link rel="shortcut icon" type="image/png" href="/Logo_4h_solo.png">
+  <link rel="apple-touch-icon" type="image/png" href="/assets/logo/Logo_4h_solo.png">
+  <meta name="msapplication-TileImage" content="/assets/logo/Logo_4h_solo.png">
+
   <!-- Estilos customizados -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -171,7 +178,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-3">
         <div class="w-6 h-6 rounded bg-brand/10 border border-brand/40 flex items-center justify-center overflow-hidden">
-          <img src="/assets/logo/Logo_4h_solo.png" alt="4#" class="w-4 h-4 object-contain">
+          <img src="/Logo_4h_solo.png" alt="4#" onerror="var _i=this; _i.onerror=null; _i.src='/assets/logo/Logo_4h_solo.png';" class="w-4 h-4 object-contain">
         </div>
         <span class="font-mono text-gray-400" data-i18n="copyright">FOURHASH PROTOCOL © 2026</span>
       </div>

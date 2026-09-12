@@ -80,7 +80,7 @@ const Views = {
         <div class="rounded-2xl border border-brand-border bg-brand-card p-8 shadow-2xl backdrop-blur-xl">
           <div class="text-center mb-8">
             <div class="w-12 h-12 mx-auto rounded-xl bg-brand/10 border border-brand/40 flex items-center justify-center mb-3 shadow-neon-sm overflow-hidden">
-              <img src="/assets/logo/Logo_4h_solo.png" alt="4#" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
+              <img src="/Logo_4h_solo.png" alt="4#" onerror="var _i=this; _i.onerror=null; _i.src='/assets/logo/Logo_4h_solo.png';" class="w-8 h-8 object-contain drop-shadow-[0_0_6px_rgba(0,255,102,0.6)]">
             </div>
             <h2 class="text-2xl font-bold text-white font-['Space_Grotesk']" data-i18n="login">Acessar FourHash</h2>
             <p class="text-xs text-gray-400 mt-1">Acesso exclusivo por e-mail cadastrado</p>
