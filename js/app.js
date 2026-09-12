@@ -189,25 +189,26 @@ window.onload = async function() {
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
 
-  var sbDoneOk = false;
-  try {
-    if (window.SupabaseOK && typeof AppState.sbInit === 'function') {
-      try {
-        sbDoneOk = !!(await Promise.resolve(AppState.sbInit()));
-      } catch (err) { /* fallback silencioso */ }
-    }
-  } catch (e) { /* fallback silencioso */ }
-
+  // ============ RENDER PRIMEIRO, DEPOIS CARREGA (tela NÃO FICA PRETA) ============
   try {
     if (typeof Router !== 'undefined' && Router.renderNav) {
       try { Router.renderNav(); } catch(e) {}
     }
-    setTimeout(bindFormHandlers, 80);
+    setTimeout(bindFormHandlers, 40);
   } catch(e) {}
 
   if (refCode) {
     try { Router.navigate('register', { ref: refCode }); } catch(e) {}
     try { UI.showToast(`Cadastro iniciado através do link de @${refCode}`, 'info'); } catch(e) {}
+    // sbInit em background
+    Promise.resolve().then(function(){
+      if (window.SupabaseOK && typeof AppState.sbInit === 'function') {
+        try { return AppState.sbInit(); } catch(_e1) { return false; }
+      }
+      return false;
+    }).then(function(okSb){
+      if (okSb && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_rr){}
+    }).catch(function(){});
     return;
   }
 
@@ -228,4 +229,31 @@ window.onload = async function() {
 
   try { Router.navigate(initialRoute, {}); }
   catch(e) { try { Router.navigate('landing'); } catch(e2) {} }
+
+  // ============ sbInit EM BACKGROUND (após render já visível) ============
+  Promise.resolve().then(function(){
+    if (window.SupabaseOK && typeof AppState.sbInit === 'function') {
+      try { return AppState.sbInit(); } catch(_e2) { return false; }
+    }
+    return false;
+  }).then(function(okSb2){
+    if (!okSb2) return;
+    // atualizar para a rota correta se o sbInit mudou o estado de auth
+    try {
+      var isAuthNow = false;
+      try { isAuthNow = (typeof Router !== 'undefined' && Router.isAuthenticated) ? Router.isAuthenticated() : !!AppState.isAuthenticated; } catch(_ea) {}
+      var nowRoute = (Router && Router.currentRoute) ? Router.currentRoute : initialRoute;
+      var userNowIsPriv = _privRoutes.includes(nowRoute);
+      if (!isAuthNow && userNowIsPriv) {
+        try { Router.navigate('landing'); return; } catch(_en){}
+      }
+      var isAdminNow = false;
+      try { if (Router && Router.isAdmin) isAdminNow = Router.isAdmin(); } catch(_ead){}
+      if (isAuthNow && isAdminNow && nowRoute === 'landing') { try { Router.navigate('admin'); return; } catch(_eadm){} }
+      if (isAuthNow && (nowRoute === 'landing' || nowRoute === 'login' || nowRoute === 'register')) {
+        try { Router.navigate('dashboard'); return; } catch(_eld){}
+      }
+      try { if (typeof Router !== 'undefined') Router.refreshCurrentView(); } catch(_rrf){}
+    } catch(_erf) {}
+  }).catch(function(){});
 };

@@ -230,6 +230,19 @@ const Views = {
   },
 
   Dashboard() {
+    try {
+      var now = Date.now();
+      if (!window._vWalletTs || (now - window._vWalletTs) > 2500) {
+        window._vWalletTs = now;
+        setTimeout(function(){
+          if (AppState.refreshMyWallet) {
+            AppState.refreshMyWallet(false).then(function(changed){
+              if (changed && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_r){}
+            }).catch(function(){});
+          }
+        }, 0);
+      }
+    } catch(_swv){}
     const u = AppState.currentUser;
     const _st = (v) => Number(v || 0);
     const uiAvailable = _st(u.availableBalance);  // SÓ bônus líquido, NÃO depósito
@@ -1002,6 +1015,19 @@ const Views = {
   },
 
   Wallet() {
+    try {
+      var nowW = Date.now();
+      if (!window._vWalletTs || (nowW - window._vWalletTs) > 1500) {
+        window._vWalletTs = nowW;
+        setTimeout(function(){
+          if (AppState.refreshMyWallet) {
+            AppState.refreshMyWallet(true).then(function(changed){
+              if (typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_rw){}
+            }).catch(function(){});
+          }
+        }, 0);
+      }
+    } catch(_sw2){}
     const u = AppState.currentUser;
     const s = AppState.projectSettings.withdraw;
     const _st = (v) => Number(v || 0);
@@ -1277,6 +1303,16 @@ const Views = {
     const esperado = espN1 + espN2a5;
     const recebidoRpt = Number(sum.total||0);
     const diffRpt = esperado - recebidoRpt;
+    const pctProgresso = esperado > 0 ? Math.min(100, Math.max(0, Math.round((recebidoRpt / esperado) * 100))) : 0;
+    const pctAtivacao = team.length > 0 ? Math.round((ativos / team.length) * 100) : 0;
+    let topN1User = null, topN1Bonus = 0;
+    for (let _ti=0; _ti<team.length; _ti++) {
+      const _tm = team[_ti];
+      if (Number(_tm.level||0)===1 && Number(_tm.bonusReceived||0) > topN1Bonus) {
+        topN1Bonus = Number(_tm.bonusReceived||0);
+        topN1User = _tm;
+      }
+    }
     return `
       <div class="space-y-6">
         <div>
@@ -1428,7 +1464,7 @@ const Views = {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 xl:grid-cols-5 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
           <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
             <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardActN1Label')}</div>
             <div class="text-2xl font-black text-white font-mono">${qtdN1}</div>
@@ -1449,10 +1485,43 @@ const Views = {
             <div class="text-2xl font-black text-emerald-300 font-mono">${fmtUSD(recebidoRpt)}</div>
             <div class="text-[10px] text-gray-400 mt-1 font-mono"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${I18n.t('historyBonusCount').replace('{qty}', String(hist.length))}</div>
           </div>
-          <div class="rounded-2xl border border-brand-border bg-brand-card p-4">
-            <div class="text-[10px] font-mono text-gray-400 mb-1 uppercase tracking-wider">${I18n.t('cardDiffLabel')}</div>
-            <div class="text-2xl font-black ${diffRpt<=0.001?'text-emerald-400':'text-amber-400'} font-mono">${fmtUSD(recebidoRpt)}</div>
-            <div class="text-[10px] font-mono mt-1 ${diffRpt<=0.001?'text-emerald-300':'text-amber-300'}">${diffRpt<=0.001?I18n.t('allReceivedOk'):(I18n.t('missingReceivePrefix')+fmtUSD(diffRpt))}</div>
+          <div class="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-black to-black p-4">
+            <div class="flex items-center justify-between mb-1.5 gap-1">
+              <div class="text-[10px] font-mono text-violet-300/80 uppercase tracking-wider"><i class="fa-solid fa-bullseye mr-1"></i>PROGRESSO</div>
+              <div class="text-[9px] font-mono text-gray-500">${fmtUSD(recebidoRpt)}/${fmtUSD(esperado)}</div>
+            </div>
+            <div class="mb-2">
+              <div class="text-2xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 leading-none">${pctProgresso}%</div>
+            </div>
+            <div class="h-2 w-full rounded-full bg-white/5 overflow-hidden border border-white/5 mb-2.5">
+              <div class="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-emerald-400 transition-all duration-700" style="width:${pctProgresso}%; box-shadow: 0 0 14px rgba(217,70,239,${Math.max(0.25, pctProgresso/300)})"></div>
+            </div>
+            <div class="flex items-center justify-between text-[9px] font-mono pt-2 border-t border-white/5">
+              <span class="text-gray-500 uppercase tracking-wider">${I18n.t('cardDiffLabel')}</span>
+              <span class="font-bold ${diffRpt<=0.001?'text-emerald-400':'text-amber-400'}">${diffRpt<=0.001?I18n.t('allReceivedOk'):(I18n.t('missingReceivePrefix')+fmtUSD(diffRpt))}</span>
+            </div>
+          </div>
+          <div class="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-black to-black p-4">
+            <div class="flex items-start justify-between mb-2 gap-2">
+              <div>
+                <div class="text-[10px] font-mono text-sky-300/80 mb-0.5 uppercase tracking-wider"><i class="fa-solid fa-bolt mr-1"></i>ATIVAÇÃO + TOP</div>
+                <div class="text-2xl font-black font-mono text-white leading-none">${pctAtivacao}%</div>
+              </div>
+              <div class="relative w-10 h-10 shrink-0">
+                <svg class="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="3"/>
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="url(#gradAt${pctAtivacao})" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(pctAtivacao/100)*97.4} 97.4"/>
+                  <defs>
+                    <linearGradient id="gradAt${pctAtivacao}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#22c55e"/></linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center text-[8px] font-black font-mono text-sky-300">${pctAtivacao}</div>
+              </div>
+            </div>
+            <div class="mt-2 pt-2 border-t border-white/5">
+              <div class="text-[9px] font-mono text-gray-500 mb-0.5 uppercase tracking-wider">🏆 TOP N1 · ${topN1User?('@'+(topN1User.username||String(topN1User.profile_id||'').slice(0,8))):'—'}</div>
+              <div class="text-[10px] font-mono font-bold truncate ${topN1Bonus>0?'text-emerald-400':'text-gray-600'}">${topN1Bonus>0?('+$'+Number(topN1Bonus).toFixed(2)+' bônus'):'Sem ganhos ainda'}</div>
+            </div>
           </div>
         </div>
 
@@ -1870,19 +1939,31 @@ const Views = {
   },
 
   Admin() {
+    try {
+      var nowA = Date.now();
+      if (!window._vWalletTs || (nowA - window._vWalletTs) > 3000) {
+        window._vWalletTs = nowA;
+        setTimeout(function(){
+          if (AppState.refreshMyWallet) {
+            AppState.refreshMyWallet(false).then(function(changed){
+              if (changed && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_raw){}
+            }).catch(function(){});
+          }
+        }, 0);
+      }
+    } catch(_sw3){}
     const s = AppState.projectSettings;
     const tab = AppState.adminActiveTab || 'backoffice';
     const fin = AppState.financeProblems || [];
     const tks = AppState.supportTickets || [];
 
-    if (tab === 'reports' && typeof setTimeout !== 'undefined') {
-      try {
-        var _rep = AppState.adminReports || {};
-        if (!_rep.activations || _rep.activations.length === 0) {
-          setTimeout(function(){ try { AppState.refreshAdminReports().then(function(){ if (typeof Router !== 'undefined') Router.refreshCurrentView(); }).catch(function(){}); } catch(_e){} }, 50);
-        }
-      } catch(_ee) {}
-    }
+    // === CARREGAMENTO ADMIN UNIFICADO (async, cache TTL, aba instantânea) ===
+    try {
+      if (typeof AppState.loadAdminData === 'function') {
+        var needNow = !AppState.adminSummaries || !AppState.adminUsersList || !AppState.adminReports;
+        Promise.resolve().then(function(){ return AppState.loadAdminData(tab, needNow); }).then(function(changed){ if (changed && typeof Router !== 'undefined') Router.refreshCurrentView(); }).catch(function(){});
+      }
+    } catch(_lErr){}
 
     const vol = (AppState.adminSummaries && AppState.adminSummaries.volume) ? AppState.adminSummaries.volume : {};
     const todayVol = Number(vol.todayVolume || 0);
@@ -1890,27 +1971,54 @@ const Views = {
     const todayDepCount = Number(vol.todayDepositCount || vol.todayDeposits || 0);
     const todayBonusCount = Number(vol.todayBonusCount || vol.todayBonuses || 0);
     const todayDateStr = vol.todayDate || (new Date().toLocaleDateString('pt-PT'));
-    const finHojeStr = fin.filter(function(f){ try { return String(f.opened||f.opened_at||f.created_at||'').includes(todayDateStr.substr(0,5)) || String(f.created_at||'').includes(todayDateStr.substr(6,4)); } catch(_e) { return false; } }).length;
-    const finPendentes = fin.filter(f=>['Pendente Revisão','Em Análise','Open','Pendente','Aberto','pending','open','new','Novo'].includes(String(f.status||''))).length;
-    const finResolvidos = fin.filter(f=>String(f.status||'').includes('Resolvido')||String(f.status||'').includes('Fechado')||String(f.status||'').toLowerCase()==='closed'||String(f.status||'').toLowerCase()==='resolved'||String(f.status||'').toLowerCase()==='done').length;
-    const finValorTotal = fin.reduce((s,f)=>s+Number((f.expected||f.amount||f.value||0)),0);
-    const finPendValor = fin.filter(f=>['Pendente Revisão','Em Análise','Open','Pendente','Aberto','pending','open','new','Novo'].includes(String(f.status||''))).reduce((s,f)=>s+Number((f.expected||f.amount||f.value||0)),0);
+
+    // === MÉTRICAS FINANCE + SUPORTE EM 1 LOOP ÚNICO (O(N)) ===
+    let finHojeStr = 0, finPendentes = 0, finResolvidos = 0, finValorTotal = 0, finPendValor = 0;
+    let tkAbertos = 0, tkRespondidos = 0, tkFechados = 0;
+    const _pendFinSet = new Set(['Pendente Revisão','Em Análise','Open','Pendente','Aberto','pending','open','new','Novo']);
+    const _hojeSub1 = todayDateStr.substr(0,5);
+    const _hojeSub2 = todayDateStr.substr(6,4);
+    for (let _fi=0; _fi<fin.length; _fi++) {
+      const _ff = fin[_fi];
+      const _st = String(_ff.status||'');
+      const _amt = Number((_ff.expected||_ff.amount||_ff.value||0));
+      const _isPend = _pendFinSet.has(_st);
+      const _isRes = _st.includes('Resolvido')||_st.includes('Fechado')||['closed','resolved','done'].includes(_st.toLowerCase());
+      finValorTotal += _amt;
+      if (_isPend) { finPendentes++; finPendValor += _amt; }
+      if (_isRes) finResolvidos++;
+      try { const _dt = String(_ff.opened||_ff.opened_at||_ff.created_at||''); if (_dt.includes(_hojeSub1) || _dt.includes(_hojeSub2)) finHojeStr++; } catch(_){}
+    }
+    for (let _ti=0; _ti<tks.length; _ti++) {
+      const _tt = tks[_ti];
+      const _ts = String(_tt.status||'');
+      if (_ts==='Aberto'||_ts==='Open') tkAbertos++;
+      else if (_ts==='Respondido'||_ts==='Replied') tkRespondidos++;
+      else if (_ts==='Fechado'||_ts==='Closed') tkFechados++;
+    }
     const finFilter = AppState.adminFinanceFilter || 'Todos';
     const finCats = ['Todos','Depósito Atrasado','Hash Não Confirmado','Valor Incorreto','Rede Errada','Saque BEP20','Bônus N3','Processamento Lote 24h','Reembolso'];
-    const finFiltered = (finFilter==='Todos') ? fin : fin.filter(f=>String(f.category||f.type||'')===finFilter);
-
-    const tkAbertos = tks.filter(t=>t.status==='Aberto'||t.status==='Open').length;
-    const tkRespondidos = tks.filter(t=>t.status==='Respondido'||t.status==='Replied').length;
-    const tkFechados = tks.filter(t=>t.status==='Fechado'||t.status==='Closed').length;
     const tkFilter = AppState.adminSupportFilter || 'Todos';
     const tkCats = ['Todos','Abertos','Respondidos','Fechados','Alta','Média','Baixa'];
-    const tkFiltered = tks.filter(tk=>{
-      if (tkFilter==='Todos') return true;
-      if (tkFilter==='Abertos') return tk.status==='Aberto'||tk.status==='Open';
-      if (tkFilter==='Respondidos') return tk.status==='Respondido'||tk.status==='Replied';
-      if (tkFilter==='Fechados') return tk.status==='Fechado'||tk.status==='Closed';
-      return tk.priority===tkFilter || tk.priority===(tkFilter==='Alta'?'High':tkFilter==='Média'?'Medium':'Low');
-    });
+    let finFiltered = fin;
+    if (finFilter !== 'Todos') {
+      finFiltered = [];
+      for (let _ffi=0; _ffi<fin.length; _ffi++) if (String(fin[_ffi].category||fin[_ffi].type||'') === finFilter) finFiltered.push(fin[_ffi]);
+    }
+    let tkFiltered = tks;
+    if (tkFilter !== 'Todos') {
+      tkFiltered = [];
+      const _prMap = { Alta:'High', Média:'Medium', Baixa:'Low' };
+      for (let _tfi=0; _tfi<tks.length; _tfi++) {
+        const _tk = tks[_tfi];
+        let match = false;
+        if (tkFilter==='Abertos') match = (_tk.status==='Aberto'||_tk.status==='Open');
+        else if (tkFilter==='Respondidos') match = (_tk.status==='Respondido'||_tk.status==='Replied');
+        else if (tkFilter==='Fechados') match = (_tk.status==='Fechado'||_tk.status==='Closed');
+        else match = (_tk.priority === tkFilter || _tk.priority === _prMap[tkFilter]);
+        if (match) tkFiltered.push(_tk);
+      }
+    }
 
     const _finStaCls = (st) => {
       if (st.includes('Pendente')) return 'bg-red-500/10 text-red-400 border-red-500/20';
@@ -1940,18 +2048,18 @@ const Views = {
         </div>
 
         <div class="flex flex-wrap items-stretch gap-2 p-1.5 rounded-2xl bg-brand-surface/80 border border-white/5">
-          <button onclick="AppState.adminActiveTab='backoffice'; Router.navigate('admin');" class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='backoffice'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="AppState.adminActiveTab='backoffice'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('backoffice',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='backoffice'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-gauge-high"></i>BACKOFFICE
           </button>
-          <button onclick="AppState.adminActiveTab='reports'; Router.navigate('admin');" class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='reports'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="AppState.adminActiveTab='reports'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('reports',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='reports'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-chart-column"></i>RELATÓRIO · AUDITORIA
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='reports'?'bg-black/20 text-black':'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'} text-[10px] font-bold border">60/40</span>
           </button>
-          <button onclick="AppState.adminActiveTab='finance'; Router.navigate('admin');" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="AppState.adminActiveTab='finance'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('finance',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-sack-dollar"></i>FINANCEIRO · PAGAMENTOS
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='finance'?'bg-black/20 text-black':'bg-red-500/15 text-red-300 border border-red-500/20'} text-[10px] font-bold border">${finPendentes>0?finPendentes+' PEND':'0'}</span>
           </button>
-          <button onclick="AppState.adminActiveTab='support'; Router.navigate('admin');" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='support'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="AppState.adminActiveTab='support'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('support',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='support'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-headset"></i>CENTRAL DE SUPORTE
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='support'?'bg-black/20 text-black':'bg-green-500/15 text-green-300 border border-green-500/20'} text-[10px] font-bold border">${tkAbertos>0?tkAbertos+' ABERTO'+(tkAbertos>1?'S':''):'0'}</span>
           </button>
@@ -2385,7 +2493,7 @@ const Views = {
             </div>
             <div class="flex flex-wrap items-center gap-2">
               ${finCats.map(c=>`
-                <button onclick="AppState.adminFinanceFilter='${c}'; Router.navigate('admin');" class="px-3 py-1.5 rounded-xl border text-[10px] font-bold font-mono transition ${finFilter===c?'bg-gradient-to-r from-amber-500 to-orange-500 text-black border-transparent shadow-[0_0_12px_rgba(245,158,11,0.3)]':'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'}">
+                <button onclick="AppState.adminFinanceFilter='${c}'; Router.refreshCurrentView();" class="px-3 py-1.5 rounded-xl border text-[10px] font-bold font-mono transition ${finFilter===c?'bg-gradient-to-r from-amber-500 to-orange-500 text-black border-transparent shadow-[0_0_12px_rgba(245,158,11,0.3)]':'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'}">
                   ${c}
                 </button>
               `).join('')}
@@ -2483,7 +2591,7 @@ const Views = {
             <div class="text-[10px] text-gray-500 font-mono">
               Mostrando <span class="text-white font-bold">${finFiltered.length}</span> de <span class="text-white font-bold">${fin.length}</span> problemas. Filtro actual: 「<span class="text-amber-300 font-bold">${finFilter}</span>」
             </div>
-            <button onclick="AppState.adminFinanceFilter='Todos'; AppState.adminActiveTab='finance'; Router.navigate('admin'); UI._toast('Fila de Pagamentos — pronto para resolver depósitos e saques.','info','fa-circle-check');" class="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-brand/30 bg-brand/10 hover:bg-brand/20 text-brand text-[11px] font-black font-mono transition">
+            <button onclick="AppState.adminFinanceFilter='Todos'; AppState.adminActiveTab='finance'; Router.refreshCurrentView(); UI._toast('Fila de Pagamentos — pronto para resolver depósitos e saques.','info','fa-circle-check');" class="self-start sm:self-end inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-brand/30 bg-brand/10 hover:bg-brand/20 text-brand text-[11px] font-black font-mono transition">
               <i class="fa-solid fa-bell-concierge"></i>+ Abrir Resolução Manual
             </button>
           </div>
@@ -2537,7 +2645,7 @@ const Views = {
 
           <div class="flex flex-wrap items-center gap-2 mb-5">
             ${tkCats.map(c=>`
-              <button onclick="AppState.adminSupportFilter='${c}'; Router.navigate('admin');" class="px-3 py-1.5 rounded-xl border text-[10px] font-bold font-mono transition ${tkFilter===c?'bg-gradient-to-r from-sky-500 to-blue-500 text-black border-transparent shadow-[0_0_12px_rgba(14,165,233,0.3)]':'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'}">
+              <button onclick="AppState.adminSupportFilter='${c}'; Router.refreshCurrentView();" class="px-3 py-1.5 rounded-xl border text-[10px] font-bold font-mono transition ${tkFilter===c?'bg-gradient-to-r from-sky-500 to-blue-500 text-black border-transparent shadow-[0_0_12px_rgba(14,165,233,0.3)]':'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/20'}">
                 <i class="fa-solid fa-${c==='Todos'?'layer-group':c==='Abertos'?'circle-exclamation':c==='Respondidos'?'reply':c==='Fechados'?'lock':c==='Alta'?'arrow-up':c==='Média'?'equals':'arrow-down'} mr-1"></i>${c}
               </button>
             `).join('')}

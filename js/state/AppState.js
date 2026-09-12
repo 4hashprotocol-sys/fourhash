@@ -799,7 +799,19 @@ const AppState = {
       await this._loadUserProfileFromSupabase(this.sbAuth, this.sbSession);
 
       this._sbReady = true;
-      await this.refreshFromSupabase();
+      if (this.isAuthenticated && this.currentUser && this.currentUser.id) {
+        try { this.refreshMyWallet(true).then(function(){
+          try { if (typeof Router !== 'undefined') Router.refreshCurrentView(); } catch(_r1){}
+        }).catch(function(){}); } catch(_e1){}
+        var self = this;
+        Promise.resolve().then(function(){
+          try { return self.refreshFromSupabase({ scope: 'auto' }); } catch(_eRS) { return false; }
+        }).then(function(changed){
+          if (changed !== false) {
+            try { if (typeof Router !== 'undefined') Router.refreshCurrentView(); } catch(_r2){}
+          }
+        }).catch(function(){});
+      }
       return true;
     } catch (e) {
       this.sbError = (e && e.message) ? e.message : String(e);
@@ -811,20 +823,39 @@ const AppState = {
     }
   },
 
-  async refreshFromSupabase() {
+  async refreshFromSupabase(opts) {
     try {
-      await Promise.all([
-        this.refreshSupportTickets(),
-        this.refreshFinanceProblems(),
-        this.refreshAdminSummaries(),
-        this.refreshAdminReports(),
-        this.refreshAdminUsersList(),
-        this.refreshReferrals(),
-        this.refreshTreeNetwork(),
-        this.refreshBonusNotifications(),
-        this.refreshReferralsBonusReport(),
-        this.npReconcilePendingPayments({ force: false })
-      ]);
+      opts = opts || {};
+      const isAdminNow = !!(typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin());
+      const doUser = opts.scope === 'user' || opts.scope === 'all' || !opts.scope;
+      const doAdmin = (opts.scope === 'admin' || opts.scope === 'all' || !opts.scope) && isAdminNow;
+      var userQs = [];
+      var adminQs = [];
+      if (doUser) {
+        userQs.push(this.refreshMyWallet(true).catch(function(){}));
+        if (typeof this.refreshReferrals === 'function') userQs.push(this.refreshReferrals().catch(function(){}));
+        if (typeof this.refreshTreeNetwork === 'function') userQs.push(this.refreshTreeNetwork().catch(function(){}));
+        if (typeof this.refreshBonusNotifications === 'function') userQs.push(this.refreshBonusNotifications().catch(function(){}));
+        if (typeof this.refreshReferralsBonusReport === 'function') userQs.push(this.refreshReferralsBonusReport({force: !!opts.force}).catch(function(){}));
+        if (typeof this.npReconcilePendingPayments === 'function') userQs.push(this.npReconcilePendingPayments({ force: !!opts.force }).catch(function(){}));
+      }
+      if (doAdmin) {
+        if (typeof this.loadAdminData === 'function') {
+          adminQs.push(this.loadAdminData('backoffice', !!opts.force).catch(function(){}));
+        } else {
+          if (typeof this.refreshSupportTickets === 'function') adminQs.push(this.refreshSupportTickets().catch(function(){}));
+          if (typeof this.refreshFinanceProblems === 'function') adminQs.push(this.refreshFinanceProblems().catch(function(){}));
+          if (typeof this.refreshAdminSummaries === 'function') adminQs.push(this.refreshAdminSummaries().catch(function(){}));
+          if (typeof this.refreshAdminReports === 'function') adminQs.push(this.refreshAdminReports().catch(function(){}));
+          if (typeof this.refreshAdminUsersList === 'function') adminQs.push(this.refreshAdminUsersList().catch(function(){}));
+        }
+      }
+      var qs = userQs.concat(adminQs);
+      if (!qs.length) return true;
+      const t0 = Date.now();
+      console.log('[refreshFromSupabase] scope=' + (doUser?'U':'') + (doAdmin?'A':'') + ' | queries=' + qs.length);
+      await Promise.all(qs);
+      console.log('[refreshFromSupabase] ✅ done in ' + (Date.now() - t0) + 'ms');
       return true;
     } catch (e) {
       this.sbError = (e && e.message) ? e.message : String(e);
@@ -957,6 +988,101 @@ const AppState = {
     }
   },
 
+  _adminCache: { usersTs:0, summTs:0, reportsTs:0, finTs:0, supTs:0, TTL: 30000 },
+  _myWalletCacheTs: 0,
+  _myWalletCacheTTL: 30000,
+
+  async refreshMyWallet(force) {
+    try {
+      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) return false;
+      if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+      const sb = this._sb(); if (!sb) return false;
+      const now = Date.now();
+      const TTL = this._myWalletCacheTTL || 30000;
+      if (!force && (now - this._myWalletCacheTs) < TTL) return false;
+      const me = String(this.currentUser.id);
+      var wData = null;
+      try {
+        var r = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix, created_at, updated_at').eq('profile_id', me).limit(1).maybeSingle();
+        if (r && r.data && String(r.data.profile_id || '') === me) wData = r.data;
+      } catch (_w1) {}
+      if (!wData && typeof sb.rpc === 'function') {
+        try {
+          var rpcR = await sb.rpc('admin_get_my_wallet').catch(function(){ return {data:[]}; });
+          if (rpcR && rpcR.data && Array.isArray(rpcR.data) && rpcR.data.length) {
+            for (var _iw = 0; _iw < rpcR.data.length; _iw++) {
+              if (String(rpcR.data[_iw].profile_id || '') === me) { wData = rpcR.data[_iw]; break; }
+            }
+          }
+          if (!wData) {
+            try {
+              var rpcR2 = await sb.rpc('admin_get_all_wallets').catch(function(){ return {data:[]}; });
+              if (rpcR2 && rpcR2.data && Array.isArray(rpcR2.data)) {
+                for (var _iw2 = 0; _iw2 < rpcR2.data.length; _iw2++) {
+                  if (String(rpcR2.data[_iw2].profile_id || '') === me) { wData = rpcR2.data[_iw2]; break; }
+                }
+              }
+            } catch (_wrpc) {}
+          }
+        } catch (_w2) {}
+      }
+      if (wData) {
+        var rawAvailable = Number(wData.available_balance || 0);
+        var rawPending   = Number(wData.pending_balance   || 0);
+        var dep = Number(wData.total_deposited || 0);
+        var bT = Number(wData.total_bonus_team || 0);
+        var bM = Number(wData.total_bonus_matrix || 0);
+        var wT = Number(wData.total_withdrawn  || 0);
+        var totalBonusEarned = bT + bM;
+        var bonusWithdrawn   = Math.min(wT, totalBonusEarned);
+        var bonusNetAvail    = Math.max(0, totalBonusEarned - bonusWithdrawn);
+        var prev = [this.currentUser.totalDeposited||0, this.currentUser.totalBonusReceived||0, this.currentUser.availableBalance||0, this.currentUser.totalWithdrawn||0];
+        this.currentUser.blockedActivationBalance = dep;
+        this.currentUser.availableBalance = bonusNetAvail;
+        this.currentUser.pendingBonusBalance = rawPending;
+        this.currentUser.pendingBalance = rawPending;
+        this.currentUser.totalDeposited    = dep;
+        this.currentUser.totalBonusTeam    = bT;
+        this.currentUser.totalBonusMatrix  = bM;
+        this.currentUser.totalBonusReceived = totalBonusEarned;
+        this.currentUser.totalBonusNet = bonusNetAvail;
+        this.currentUser.totalReceived    = dep + totalBonusEarned;
+        this.currentUser.totalWithdrawn   = wT;
+        this.currentUser._wallet = wData;
+        this._myWalletCacheTs = Date.now();
+        var curr = [this.currentUser.totalDeposited||0, this.currentUser.totalBonusReceived||0, this.currentUser.availableBalance||0, this.currentUser.totalWithdrawn||0];
+        var changed = prev[0]!==curr[0] || prev[1]!==curr[1] || prev[2]!==curr[2] || prev[3]!==curr[3];
+        console.log('[refreshMyWallet] ' + (changed?'ATUALIZADO':'OK') + ' | depositado=$' + dep.toFixed(2) + ' | bonus=$' + totalBonusEarned.toFixed(2) + ' | saques=$' + wT.toFixed(2) + ' | liquido=$' + bonusNetAvail.toFixed(2));
+        return changed;
+      }
+      return false;
+    } catch (_ew) { console.log('[refreshMyWallet ERR]:', String((_ew&&_ew.message)||_ew)); return false; }
+  },
+
+  async loadAdminData(whichTab, force) {
+    try {
+      const now = Date.now();
+      const TTL = this._adminCache.TTL || 30000;
+      var changed = false;
+      const needs = { users:false, summ:false, reports:false, fin:false, sup:false };
+      if (force) { needs.users = needs.summ = needs.reports = needs.fin = needs.sup = true; }
+      else {
+        if (whichTab==='backoffice') { needs.summ = !(this.adminSummaries && this._adminCache.summTs && (now - this._adminCache.summTs < TTL)); needs.users = !(this.adminUsersList && this.adminUsersList.length && this._adminCache.usersTs && (now - this._adminCache.usersTs < TTL)); }
+        else if (whichTab==='reports') { needs.reports = !(this.adminReports && this._adminCache.reportsTs && (now - this._adminCache.reportsTs < TTL)); needs.summ = needs.reports; needs.users = needs.reports; }
+        else if (whichTab==='finance') { needs.fin = !(this.financeProblems && this.financeProblems.length && this._adminCache.finTs && (now - this._adminCache.finTs < TTL)); }
+        else if (whichTab==='support') { needs.sup = !(this.supportTickets && this.supportTickets.length && this._adminCache.supTs && (now - this._adminCache.supTs < TTL)); }
+      }
+      var qs = [];
+      if (needs.summ) qs.push(this.refreshAdminSummaries().then(ok=>{if(ok){this._adminCache.summTs=Date.now();changed=true;}}));
+      if (needs.users) qs.push(this.refreshAdminUsersList().then(ok=>{if(ok){this._adminCache.usersTs=Date.now();changed=true;}}));
+      if (needs.reports) qs.push(this.refreshAdminReports().then(ok=>{if(ok){this._adminCache.reportsTs=Date.now();changed=true;}}));
+      if (needs.fin) qs.push(this.refreshFinanceProblems ? this.refreshFinanceProblems().then(ok=>{if(ok!==false){this._adminCache.finTs=Date.now();changed=true;}}) : Promise.resolve(false));
+      if (needs.sup) qs.push(this.refreshSupportTickets ? this.refreshSupportTickets().then(ok=>{if(ok!==false){this._adminCache.supTs=Date.now();changed=true;}}) : Promise.resolve(false));
+      if (qs.length) { console.log('[loadAdminData] ⚡ PARALELO qtde='+qs.length+' | force='+!!force+' | tab='+whichTab); await Promise.all(qs); }
+      return changed;
+    } catch(_e) { console.log('[loadAdminData ERR]:', String((_e&&_e.message)||_e)); return false; }
+  },
+
   async refreshAdminUsersList() {
     if (!window.SupabaseOK || !window.SupabaseOK()) { this.adminUsersList = []; return false; }
     try {
@@ -964,22 +1090,24 @@ const AppState = {
       var rows = [];
       var walletByPid = {};
       try {
-        var rRpc = await sb.rpc('admin_get_all_profiles');
-        if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length > 1) {
-          rows = rRpc.data;
-          try {
-            var rWRpc = await sb.rpc('admin_get_all_wallets');
+        if (typeof sb.rpc === 'function') {
+          const [rRpc, rWRpc] = await Promise.all([
+            sb.rpc('admin_get_all_profiles'),
+            sb.rpc('admin_get_all_wallets').catch(function(){ return {data:[]}; })
+          ]);
+          if (rRpc && Array.isArray(rRpc.data) && rRpc.data.length > 1) {
+            rows = rRpc.data;
             if (rWRpc && Array.isArray(rWRpc.data) && rWRpc.data.length) {
               rWRpc.data.forEach(function(w){ walletByPid[w.profile_id] = w; });
             }
-          } catch(_wrpcErr){}
+          }
         }
       } catch(_rpcErr){
         console.log('[ADMIN-RPC] admin_get_all_profiles falhou (ainda não aplicou migration 013?): fallback direct select. ' + ((_rpcErr && (_rpcErr.message || _rpcErr.code)) || String(_rpcErr)));
       }
       if (!rows || rows.length <= 1) {
-        var r = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: false });
-        rows = (r && r.data) ? r.data : [];
+        var rFb = await sb.from('profiles').select('id, username, full_name, email, country, phone, upline_username, sponsor_code, level_number, position_index, line_row, line_seat, role, status, kyc_status, created_at').order('created_at', { ascending: false });
+        rows = (rFb && rFb.data) ? rFb.data : [];
         var pids = rows.map(function(p){ return p.id; }).filter(Boolean);
         if (pids.length > 0 && Object.keys(walletByPid).length === 0) {
           try {
@@ -1068,9 +1196,10 @@ const AppState = {
       if (!r || !r.data) { UI.showToast('Usuário não encontrado.', 'warning'); return false; }
       await sb.from('profiles').update({ status: 'INACTIVE', updated_at: new Date().toISOString() }).eq('id', r.data.id);
       UI.showToast('Usuário marcado inativo.', 'success');
+      this._adminCache.usersTs = 0; this._adminCache.summTs = 0; this._adminCache.reportsTs = 0;
       await this.refreshAdminUsersList();
       await this.refreshAdminSummaries();
-      if (typeof Router !== 'undefined') Router.refresh();
+      if (typeof Router !== 'undefined') Router.refreshCurrentView();
       return true;
     } catch (e) {
       UI.showToast((e && e.message) || 'Erro desativar usuário', 'error');
@@ -2008,13 +2137,26 @@ const AppState = {
         return false;
       }
       await this._loadUserProfileFromSupabase(userAuth, sessAuth);
-      try { await this.refreshFromSupabase(); } catch(err) {}
+      var route = 'dashboard';
+      try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
       if (typeof Router !== 'undefined' && Router.renderNav) try { Router.renderNav(); } catch(e) {}
+      if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
       UI.showToast(`Bem-vindo(a) ${this.currentUser.fullName || 'usuário'}! Autenticado com sucesso.`, 'success', 'fa-circle-check');
+      var selfSignIn = this;
+      try { this.refreshMyWallet(true).then(function(wCh){
+        if (wCh && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_rwc){}
+      }).catch(function(){}); } catch(_ew1){}
+      Promise.resolve().then(function(){
+        try { return selfSignIn.refreshFromSupabase({ scope: 'auto' }); } catch(_rs1) { return false; }
+      }).then(function(changed){
+        if (changed !== false && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_rr1){}
+      }).catch(function(){});
+      try { selfSignIn.npStartReconcileWatchdog(); } catch(_rd1) {}
+      Promise.resolve().then(function(){ try { selfSignIn.npReconcilePendingPayments({ force: true }); } catch(_rd2){} });
       try {
         var stLogin = String(this.currentUser.status || '').toUpperCase();
         if (stLogin === 'ACTIVE') {
-          var notifExistsWelcome = this.notifications.some(function(n){ return n.title && n.title.indexOf('Bem-vindo') >= 0; });
+          var notifExistsWelcome = (this.notifications || []).some(function(n){ return n.title && n.title.indexOf('Bem-vindo') >= 0; });
           if (!notifExistsWelcome) {
             this.pushNotification(
               '👋 Bem-vindo(a) ao FourHash!',
@@ -2023,7 +2165,7 @@ const AppState = {
             );
           }
         } else if (stLogin === 'PENDING') {
-          var notifExistsPending = this.notifications.some(function(n){ return n.title && n.title.indexOf('ativação') >= 0 || n.title.indexOf('pendente') >= 0; });
+          var notifExistsPending = (this.notifications || []).some(function(n){ return n.title && (n.title.indexOf('ativação') >= 0 || n.title.indexOf('pendente') >= 0); });
           if (!notifExistsPending) {
             this.pushNotification(
               '⏳ Conta pendente de ativação',
@@ -2033,11 +2175,6 @@ const AppState = {
           }
         }
       } catch(_eWelcome) {}
-      var route = 'dashboard';
-      try { if (typeof Router !== 'undefined' && Router.isAdmin && Router.isAdmin()) route = 'admin'; } catch(e) {}
-      if (typeof Router !== 'undefined') try { Router.navigate(route); } catch(e) {}
-      try { this.npStartReconcileWatchdog(); } catch(_rd1) {}
-      try { this.npReconcilePendingPayments({ force: true }); } catch(_rd2) {}
       return true;
     } catch (e) {
       var errStr = String((e && e.message) || 'Erro login' + '').toLowerCase();
