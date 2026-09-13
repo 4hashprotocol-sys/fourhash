@@ -113,6 +113,18 @@ const Router = {
               if (changed && self.currentRoute === 'referrals') { try { self.refreshCurrentView(true); } catch(_r4){} }
             }).catch(function(){});
         }
+        if (route === 'position' && AppState && typeof AppState.refreshTreeNetwork === 'function') {
+          Promise.resolve()
+            .then(function(){ return AppState.refreshTreeNetwork(); })
+            .then(function(hadData){
+              try { window._treeReady = !!hadData; } catch(_){}
+              if (self.currentRoute === 'position') {
+                try { TreeEngine.render(); } catch(_eTr){}
+                try { self.refreshCurrentView(true); } catch(_rP){}
+              }
+            })
+            .catch(function(){});
+        }
       }, 0);
     } catch(_sdl){}
   },
@@ -388,6 +400,7 @@ const Router = {
       case 'position':
         app.innerHTML = Views.Position();
         try { TreeEngine.init(); } catch(_) {}
+        this._scheduleRouteDataLoad(route);
         (function(){
           var tries = 0;
           var maxTries = 15;

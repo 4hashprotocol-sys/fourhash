@@ -1539,8 +1539,19 @@ const Views = {
                       if (!usr) try { var m=(b.note||'').match(/@([a-zA-Z0-9_\-]+)/); if (m&&m[1]) usr=m[1]; } catch(_mm){}
                       usr = String(usr||'').replace(/^@+/,'') || String(b.related_profile_id||'').slice(0,8);
                       var dt=''; try { dt = new Date(b.created_at||b.confirmed_at).toLocaleDateString('pt-PT')+' '+new Date(b.created_at||b.confirmed_at).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}); } catch(_){}
-                      var tit='💰 Bônus Nível '+lv+' recebido · $'+amt;
-                      var msg='Ganhou $'+amt+' USD de bônus Nível '+lv+' pela ativação de @'+usr+'.';
+                      var tit = '';
+                      try {
+                        tit = I18n.t('bonusLevelReceivedTitle')
+                          .replace(/\{level\}/g, String(lv))
+                          .replace(/\{amount\}/g, String(amt));
+                      } catch(_eT){ tit = '💰 Bônus Nível '+lv+' recebido · $'+amt; }
+                      var msg = '';
+                      try {
+                        msg = I18n.t('bonusLevelReceivedMsg')
+                          .replace(/\{level\}/g, String(lv))
+                          .replace(/\{amount\}/g, String(amt))
+                          .replace(/\{username\}/g, String(usr));
+                      } catch(_eM){ msg = 'Ganhou $'+amt+' USD de bônus Nível '+lv+' pela ativação de @'+usr+'.'; }
                       if (b.note) msg = b.note;
                       var dup = false; lastB.forEach(function(x){ if (x.title===tit) dup=true; });
                       if (!dup) lastB.push({ title:tit, msg:msg, time:dt, ico:(lv===1?'fa-user-check':'fa-gem'), read:false, _src:'tx' });
