@@ -5,12 +5,158 @@
 
 const Router = {
   currentRoute: 'landing',
-
   _privateRoutes: Object.freeze(['dashboard','position','wallet','deposit','referrals','profile','security','admin','notifications']),
   _guestOnlyRoutes: Object.freeze(['login','register']),
+  _refreshDebounceTimer: null,
+  _refreshBypass: false,
+  _lastLoadedRoute: null,
+  _lastLoadedAt: 0,
+  _renderCount: 0,
+  _routeDataLoaded: Object.create(null),
+  _lastAdminTab: null,
+  _lastAdminTabAt: 0,
+  _switchAdminTabTimer: null,
+
+  _switchAdminTab(tab) {
+    try {
+      tab = String(tab || 'backoffice');
+      var validTabs = ['backoffice','reports','finance','support'];
+      if (validTabs.indexOf(tab) < 0) tab = 'backoffice';
+      try { clearTimeout(this._switchAdminTabTimer); } catch(_) {}
+      this._switchAdminTabTimer = null;
+      var prevTab = (AppState && AppState.adminActiveTab) ? AppState.adminActiveTab : null;
+      if (AppState) try { AppState.adminActiveTab = tab; } catch(_at1){}
+      var tabChanged = prevTab !== tab;
+      // #region debug-point H3:Router.switchAdminTab-start
+      try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'Router.js:_switchAdminTab', 'switchAdminTab chamado', { tab: tab, prevTab: prevTab || null, tabChanged: tabChanged, count: (Router && Router._renderCount) || 0 }); } catch(_dH3a){}
+      // #endregion
+      try { console.log('[Router._switchAdminTab] ' + (tabChanged?'MUDOU':'IGUAL') + ' tab=' + tab + ' prev=' + prevTab); } catch(_lt){}
+      try { this.refreshCurrentView(true); } catch(_rc1){}
+      if (!tabChanged) return;
+      this._lastAdminTab = tab;
+      this._lastAdminTabAt = Date.now();
+      var self = this;
+      this._switchAdminTabTimer = setTimeout(function(){
+        if (self.currentRoute !== 'admin') return;
+        var currTab2 = (AppState && AppState.adminActiveTab) ? AppState.adminActiveTab : null;
+        if (currTab2 !== tab) return;
+        if (AppState && typeof AppState.loadAdminData === 'function') {
+          // #region debug-point H3:Router.switchAdminTab-load
+          try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'Router.js:_switchAdminTab loadAdminData', 'switchAdminTab disparando loadAdminData', { tab: tab, at: Date.now() - (self._lastAdminTabAt||0) }); } catch(_dH3b){}
+          // #endregion
+          Promise.resolve().then(function(){ return AppState.loadAdminData(tab, true); })
+            .then(function(changed){
+              try { console.log('[Router._switchAdminTab] loadAdminData done | changed=' + !!changed + ' tab=' + tab); } catch(_llt){}
+              if (changed && self.currentRoute === 'admin') {
+                var currTab3 = (AppState && AppState.adminActiveTab) ? AppState.adminActiveTab : null;
+                if (currTab3 === tab) try { self.refreshCurrentView(true); } catch(_rc2){}
+              }
+            })
+            .catch(function(_errLad){});
+        } else {
+          Promise.resolve().then(function(){ return AppState.refreshFromSupabase({scope:'admin',force:true}); })
+            .then(function(){ if (self.currentRoute === 'admin') try { self.refreshCurrentView(true); } catch(_rc3){} })
+            .catch(function(){});
+        }
+      }, 25);
+    } catch(_sat){ try { console.log('[Router._switchAdminTab ERR]', String((_sat&&_sat.message)||_sat)); } catch(_les){} }
+  },
+
+  _scheduleRouteDataLoad(route) {
+    try {
+      if (!route) return;
+      var cacheKey = String(route);
+      var now = Date.now();
+      var alreadyLoaded = !!this._routeDataLoaded[cacheKey];
+      var sameRouteRecently = this._lastLoadedRoute === cacheKey && (now - this._lastLoadedAt) < 1500;
+      if (alreadyLoaded && sameRouteRecently) return;
+      this._lastLoadedRoute = cacheKey;
+      this._lastLoadedAt = now;
+      this._routeDataLoaded[cacheKey] = now;
+      var self = this;
+      setTimeout(function(){
+        if (self.currentRoute !== route) return;
+        var needWallet = ['dashboard','wallet','admin','profile','referrals','deposit','withdraw'].indexOf(route) >= 0;
+        if (needWallet && AppState && typeof AppState.refreshMyWallet === 'function') {
+          Promise.resolve().then(function(){
+            return AppState.refreshMyWallet(route === 'wallet');
+          }).then(function(changed){
+            if (changed && self.currentRoute === route) {
+              try { self.refreshCurrentView(true); } catch(_r1){}
+            }
+          }).catch(function(){});
+        }
+        if (route === 'admin' && AppState) {
+          var tab = (AppState.adminActiveTab) || 'backoffice';
+          var recentTabSwitch = self._lastAdminTab === tab && (now - (self._lastAdminTabAt||0)) < 3000;
+          // #region debug-point H3:Router.scheduleRouteDataLoad-admin
+          try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'Router.js:_scheduleRouteDataLoad admin', 'scheduleRouteDataLoad admin section', { route: route, tab: tab, lastAdminTab: self._lastAdminTab || null, msSinceTabSwitch: (self._lastAdminTabAt ? (now - self._lastAdminTabAt) : -1), recentTabSwitch: !!recentTabSwitch, force: false }); } catch(_dH3c){}
+          // #endregion
+          if (recentTabSwitch) {
+            try { console.log('[Router._scheduleRouteDataLoad] admin recent switch tab=' + tab + ' → pulando (tab já está carregando via _switchAdminTab)'); } catch(_lgr){}
+          } else if (typeof AppState.loadAdminData === 'function') {
+            Promise.resolve().then(function(){ return AppState.loadAdminData(tab, false); })
+              .then(function(changed){
+                if (changed && self.currentRoute === 'admin') {
+                  try { self.refreshCurrentView(true); } catch(_r2){}
+                }
+              }).catch(function(){});
+          } else if (typeof AppState.refreshFromSupabase === 'function') {
+            Promise.resolve().then(function(){ return AppState.refreshFromSupabase({scope:'admin',force:false}); })
+              .then(function(){ if (self.currentRoute === 'admin') { try { self.refreshCurrentView(true); } catch(_r3){} } })
+              .catch(function(){});
+          }
+        }
+        if (route === 'referrals' && AppState && typeof AppState.refreshReferralsBonusReport === 'function') {
+          Promise.resolve().then(function(){ return AppState.refreshReferralsBonusReport({force:false}); })
+            .then(function(changed){
+              if (changed && self.currentRoute === 'referrals') { try { self.refreshCurrentView(true); } catch(_r4){} }
+            }).catch(function(){});
+        }
+      }, 0);
+    } catch(_sdl){}
+  },
+
+  refreshCurrentView(bypassDebounce) {
+    var self = this;
+    if (bypassDebounce === true) {
+      try { clearTimeout(self._refreshDebounceTimer); } catch(_){}
+      self._refreshDebounceTimer = null;
+      try {
+        self._renderCount++;
+        var route = self.currentRoute;
+        var c = self._renderCount;
+        // #region debug-point H1:Router.refresh-bypass
+        try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H1', 'Router.js:refreshCurrentView(bypass)', 'Router.refresh bypass', { count: c, route: route, bypass: true, adminActiveTab: (window.AppState && AppState.adminActiveTab) || null }); } catch(_dH1){}
+        // #endregion
+        try { console.log('[Router.refresh] #' + c + ' route=' + route + ' t=' + Date.now()); } catch(_lg){}
+        self.renderView(route);
+      } catch(e) { try { console.log('[Router.refresh ERR]:', String((e&&e.message)||e)); } catch(_le){} }
+      return;
+    }
+    try { clearTimeout(self._refreshDebounceTimer); } catch(_){}
+    self._refreshDebounceTimer = setTimeout(function(){
+      try {
+        self._refreshDebounceTimer = null;
+        self._renderCount++;
+        var route2 = self.currentRoute;
+        var c2 = self._renderCount;
+        // #region debug-point H1:Router.refresh-debounced
+        try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H1', 'Router.js:refreshCurrentView(debounced)', 'Router.refresh debounced', { count: c2, route: route2, bypass: false, adminActiveTab: (window.AppState && AppState.adminActiveTab) || null }); } catch(_dH1d){}
+        // #endregion
+        try { console.log('[Router.refresh] #' + c2 + ' route=' + route2 + ' t=' + Date.now()); } catch(_lg2){}
+        self.renderView(route2);
+      } catch(e2) { try { console.log('[Router.refresh ERR debounced]:', String((e2&&e2.message)||e2)); } catch(_le2){} }
+    }, 180);
+  },
 
   isAuthenticated() {
-    return !!(AppState.isAuthenticated || (AppState.sbAuth && AppState.sbAuth.id));
+    try {
+      if (AppState && AppState.isAuthenticated === true) return true;
+      if (AppState && AppState.currentUser && AppState.currentUser.id) return true;
+      if (AppState && AppState.sbAuth && AppState.sbAuth.id) return true;
+    } catch(_) {}
+    return false;
   },
 
   isAdmin() {
@@ -23,10 +169,10 @@ const Router = {
       const MASTER_EMAIL = '4hashprotocol@gmail.com'.toLowerCase();
       if (uid === MASTER_UUID || eml === MASTER_EMAIL) return true;
     } catch(_) {}
-    const localRole = AppState.userRole === 'admin';
-    const directFlag = AppState.isAdmin === true;
-    const bancoRole = AppState.sbProfile && (AppState.sbProfile.role === 'admin' || AppState.sbProfile.role === 'superadmin');
-    const currentRole = AppState.currentUser && (AppState.currentUser.role === 'admin' || AppState.currentUser.role === 'superadmin');
+    const localRole = AppState && AppState.userRole === 'admin';
+    const directFlag = AppState && AppState.isAdmin === true;
+    const bancoRole = AppState && AppState.sbProfile && (AppState.sbProfile.role === 'admin' || AppState.sbProfile.role === 'superadmin');
+    const currentRole = AppState && AppState.currentUser && (AppState.currentUser.role === 'admin' || AppState.currentUser.role === 'superadmin');
     return localRole || directFlag || bancoRole || currentRole;
   },
 
@@ -63,15 +209,12 @@ const Router = {
     }
 
     this.currentRoute = route;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try { this._routeDataLoaded = Object.create(null); } catch(_rl){}
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(_s1){}
     this.renderNav();
     this.renderView(route, params);
 
-    document.getElementById('mobile-menu').classList.add('hidden');
-  },
-
-  refreshCurrentView() {
-    this.renderView(this.currentRoute);
+    try { document.getElementById('mobile-menu').classList.add('hidden'); } catch(_m1){}
   },
 
   renderNav() {
@@ -240,6 +383,7 @@ const Router = {
       case 'dashboard':
         app.innerHTML = Views.Dashboard();
         Countdown.start('presale-timer-dash', AppState.projectSettings.presaleEndDate);
+        this._scheduleRouteDataLoad(route);
         break;
       case 'position':
         app.innerHTML = Views.Position();
@@ -271,15 +415,19 @@ const Router = {
         break;
       case 'wallet':
         app.innerHTML = Views.Wallet();
+        this._scheduleRouteDataLoad(route);
         break;
       case 'deposit':
         app.innerHTML = Views.Deposit();
+        this._scheduleRouteDataLoad(route);
         break;
       case 'referrals':
         app.innerHTML = Views.Referrals();
+        this._scheduleRouteDataLoad(route);
         break;
       case 'profile':
         app.innerHTML = Views.Profile();
+        this._scheduleRouteDataLoad(route);
         break;
       case 'security':
         app.innerHTML = Views.Security();
@@ -295,21 +443,7 @@ const Router = {
           return;
         }
         app.innerHTML = Views.Admin();
-        try {
-          if (AppState && typeof AppState.refreshAdminSummaries === 'function') {
-            setTimeout(function(){
-              console.log('[ROUTER/admin] disparando refreshFromSupabase (admin)...');
-              if (typeof AppState.refreshFromSupabase === 'function') AppState.refreshFromSupabase();
-              else {
-                AppState.refreshAdminSummaries(); AppState.refreshAdminUsersList(); AppState.refreshFinanceProblems(); AppState.refreshSupportTickets();
-              }
-            }, 250);
-            setTimeout(function(){
-              AppState.refreshAdminSummaries(); AppState.refreshAdminUsersList();
-              if (typeof Router !== 'undefined') Router.refreshCurrentView();
-            }, 1600);
-          }
-        } catch(admErr) {}
+        this._scheduleRouteDataLoad(route);
         break;
       default:
         app.innerHTML = Views.Landing();

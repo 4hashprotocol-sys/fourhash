@@ -684,44 +684,20 @@ const AppState = {
       }
 
       try {
-        var w = await sb.from('wallets').select('*').eq('profile_id', userAuth.id).limit(1).maybeSingle();
-        if (w && w.data) {
-          var rawAvailable = Number(w.data.available_balance || 0);
-          var rawPending   = Number(w.data.pending_balance   || 0);
-          var dep = Number(w.data.total_deposited || 0);
-          var bT = Number(w.data.total_bonus_team || 0);
-          var bM = Number(w.data.total_bonus_matrix || 0);
-          var wT = Number(w.data.total_withdrawn  || 0);
-
-          var totalBonusEarned = bT + bM;
-          var bonusWithdrawn   = Math.min(wT, totalBonusEarned);
-          var bonusNetAvail    = Math.max(0, totalBonusEarned - bonusWithdrawn);
-
-          this.currentUser.blockedActivationBalance = dep;
-          this.currentUser.availableBalance = bonusNetAvail;
-          this.currentUser.pendingBonusBalance = rawPending;
-          this.currentUser.pendingBalance = rawPending;
-          this.currentUser.totalDeposited    = dep;
-          this.currentUser.totalBonusTeam    = bT;
-          this.currentUser.totalBonusMatrix  = bM;
-          this.currentUser.totalBonusReceived = totalBonusEarned;
-          this.currentUser.totalBonusNet = bonusNetAvail;
-          this.currentUser.totalReceived    = dep + totalBonusEarned;
-          this.currentUser.totalWithdrawn   = wT;
-        } else {
-          this.currentUser.blockedActivationBalance = this.currentUser.blockedActivationBalance || 0;
-          this.currentUser.availableBalance = this.currentUser.availableBalance || 0;
-          this.currentUser.pendingBonusBalance = this.currentUser.pendingBonusBalance || 0;
-          this.currentUser.pendingBalance   = this.currentUser.pendingBalance || 0;
-          this.currentUser.totalDeposited   = this.currentUser.totalDeposited   || 0;
-          this.currentUser.totalBonusTeam   = this.currentUser.totalBonusTeam   || 0;
-          this.currentUser.totalBonusMatrix = this.currentUser.totalBonusMatrix || 0;
-          this.currentUser.totalBonusReceived = this.currentUser.totalBonusReceived || 0;
-          this.currentUser.totalBonusNet = this.currentUser.totalBonusNet || 0;
-          this.currentUser.totalReceived    = this.currentUser.totalReceived    || 0;
-          this.currentUser.totalWithdrawn   = this.currentUser.totalWithdrawn   || 0;
-        }
-      } catch(eWallet) {}
+        var _u = this.currentUser || {};
+        if (typeof _u.blockedActivationBalance === 'undefined') _u.blockedActivationBalance = 0;
+        if (typeof _u.availableBalance === 'undefined') _u.availableBalance = 0;
+        if (typeof _u.pendingBonusBalance === 'undefined') _u.pendingBonusBalance = 0;
+        if (typeof _u.pendingBalance === 'undefined') _u.pendingBalance = 0;
+        if (typeof _u.totalDeposited === 'undefined') _u.totalDeposited = 0;
+        if (typeof _u.totalBonusTeam === 'undefined') _u.totalBonusTeam = 0;
+        if (typeof _u.totalBonusMatrix === 'undefined') _u.totalBonusMatrix = 0;
+        if (typeof _u.totalBonusReceived === 'undefined') _u.totalBonusReceived = 0;
+        if (typeof _u.totalBonusNet === 'undefined') _u.totalBonusNet = 0;
+        if (typeof _u.totalReceived === 'undefined') _u.totalReceived = 0;
+        if (typeof _u.totalWithdrawn === 'undefined') _u.totalWithdrawn = 0;
+        try { console.log('[loadProfile] wallet SSOT: carregando via refreshMyWallet em background (evita RLS + duplicidade)'); } catch(_ld1){}
+      } catch(eWalletDefaults) {}
 
       try {
         var newStatus = String(this.currentUser.status || 'PENDING').toUpperCase();
@@ -993,6 +969,20 @@ const AppState = {
   _myWalletCacheTTL: 30000,
 
   async refreshMyWallet(force) {
+    // #region debug-point H2-H4:AppState.refreshMyWallet-entry
+    var __dbg_wId = ('w_' + Math.random().toString(36).slice(2, 7));
+    var __dbg_wT0 = Date.now();
+    var __dbg_cuBefore = null;
+    try {
+      __dbg_cuBefore = {
+        blAct: (this.currentUser && this.currentUser.blockedActivationBalance) || 0,
+        avail: (this.currentUser && this.currentUser.availableBalance) || 0,
+        dep:   (this.currentUser && this.currentUser.totalDeposited) || 0,
+        wd:    (this.currentUser && this.currentUser.totalWithdrawn) || 0
+      };
+      if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H2', 'AppState.js:refreshMyWallet entry', 'refreshMyWallet INÍCIO', { wId: __dbg_wId, force: !!force, me: (this.currentUser && this.currentUser.id) || null, before: __dbg_cuBefore, ttlPass: !force ? (Date.now() - (this._myWalletCacheTs||0)) : -1, ttl: (this._myWalletCacheTTL||0) });
+    } catch(_dWA){}
+    // #endregion
     try {
       if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) return false;
       if (!window.SupabaseOK || !window.SupabaseOK()) return false;
@@ -1003,28 +993,71 @@ const AppState = {
       const me = String(this.currentUser.id);
       var wData = null;
       try {
-        var r = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix, created_at, updated_at').eq('profile_id', me).limit(1).maybeSingle();
-        if (r && r.data && String(r.data.profile_id || '') === me) wData = r.data;
-      } catch (_w1) {}
-      if (!wData && typeof sb.rpc === 'function') {
         try {
-          var rpcR = await sb.rpc('admin_get_my_wallet').catch(function(){ return {data:[]}; });
-          if (rpcR && rpcR.data && Array.isArray(rpcR.data) && rpcR.data.length) {
-            for (var _iw = 0; _iw < rpcR.data.length; _iw++) {
-              if (String(rpcR.data[_iw].profile_id || '') === me) { wData = rpcR.data[_iw]; break; }
-            }
-          }
-          if (!wData) {
+          var r = await sb.from('wallets').select('profile_id, available_balance, pending_balance, frozen_balance, total_deposited, total_withdrawn, total_bonus_team, total_bonus_matrix, created_at, updated_at').eq('profile_id', me).limit(1).maybeSingle();
+          try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback1', 'fallback1 RLS walets.from()', { wId: __dbg_wId, me: me, success: !!(r && r.data && String(r.data.profile_id||'')===me), err: (r && r.error) ? String(r.error.message||r.error) : null, rDataProfileId: (r && r.data && r.data.profile_id) ? String(r.data.profile_id) : null, total_deposited: (r && r.data && typeof r.data.total_deposited !== 'undefined') ? Number(r.data.total_deposited||0) : -1 }); } catch(_dH4a){}
+          if (r && r.data && String(r.data.profile_id || '') === me) wData = r.data;
+        } catch (_w1) {
+          try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback1 catch', 'fallback1 RLS CATCH (RLS bloqueando?)', { wId: __dbg_wId, me: me, errMsg: String((_w1 && _w1.message) || _w1) }); } catch(_dH4b){}
+        }
+        if (!wData) {
+          try {
+            var rpcR = { data: [], _rpcErr: 'fallback2-await-unreachable' };
             try {
-              var rpcR2 = await sb.rpc('admin_get_all_wallets').catch(function(){ return {data:[]}; });
-              if (rpcR2 && rpcR2.data && Array.isArray(rpcR2.data)) {
-                for (var _iw2 = 0; _iw2 < rpcR2.data.length; _iw2++) {
-                  if (String(rpcR2.data[_iw2].profile_id || '') === me) { wData = rpcR2.data[_iw2]; break; }
+              if (typeof sb.rpc === 'function') {
+                try {
+                  rpcR = await Promise.resolve(sb.rpc('admin_get_my_wallet')).catch(function(err){ return {data:[], _rpcErr: String((err && err.message)||err)}; });
+                } catch(_rpc1e) {
+                  rpcR = { data: [], _rpcErr: 'rpc1-throw: ' + String((_rpc1e && _rpc1e.message) || _rpc1e) };
                 }
+              } else {
+                rpcR = { data: [], _rpcErr: 'sb.rpc not a function (client desatualizado)' };
               }
-            } catch (_wrpc) {}
+            } catch(_rpc1Outer) {
+              rpcR = { data: [], _rpcErr: 'outer: ' + String((_rpc1Outer && _rpc1Outer.message) || _rpc1Outer) };
+            }
+            var rpc2Hits = [];
+            if (rpcR && rpcR.data && Array.isArray(rpcR.data) && rpcR.data.length) {
+              for (var _iw = 0; _iw < rpcR.data.length; _iw++) {
+                rpc2Hits.push(String(rpcR.data[_iw].profile_id || ''));
+                if (String(rpcR.data[_iw].profile_id || '') === me) { wData = rpcR.data[_iw]; break; }
+              }
+            }
+            try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback2', 'fallback2 RPC admin_get_my_wallet', { wId: __dbg_wId, me: me, hasData: !!(wData), arrLen: (rpcR && rpcR.data && rpcR.data.length) || 0, profileIdsFound: rpc2Hits.slice(0, 5), rpcErr: (rpcR && rpcR._rpcErr) || null, depFromRpc: (wData && typeof wData.total_deposited !== 'undefined') ? Number(wData.total_deposited||0) : null }); } catch(_dH4c){}
+          } catch (_w2) {
+            try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback2 catch', 'fallback2 CATCH GERAL (RPC não existe?)', { wId: __dbg_wId, me: me, errMsg: String((_w2 && _w2.message) || _w2) }); } catch(_dH4c2){}
           }
-        } catch (_w2) {}
+        }
+        if (!wData) {
+          try {
+            var rpcR2 = { data: [], _rpcErr2: 'fallback3-await-unreachable' };
+            try {
+              if (typeof sb.rpc === 'function') {
+                try {
+                  rpcR2 = await Promise.resolve(sb.rpc('admin_get_all_wallets')).catch(function(err){ return {data:[], _rpcErr2: String((err && err.message)||err)}; });
+                } catch(_rpc2e) {
+                  rpcR2 = { data: [], _rpcErr2: 'rpc2-throw: ' + String((_rpc2e && _rpc2e.message) || _rpc2e) };
+                }
+              } else {
+                rpcR2 = { data: [], _rpcErr2: 'sb.rpc not a function' };
+              }
+            } catch(_rpc2Outer) {
+              rpcR2 = { data: [], _rpcErr2: 'outer: ' + String((_rpc2Outer && _rpc2Outer.message) || _rpc2Outer) };
+            }
+            var rpc3Hits = [];
+            if (rpcR2 && rpcR2.data && Array.isArray(rpcR2.data)) {
+              for (var _iw2 = 0; _iw2 < rpcR2.data.length; _iw2++) {
+                rpc3Hits.push(String(rpcR2.data[_iw2].profile_id || ''));
+                if (String(rpcR2.data[_iw2].profile_id || '') === me) { wData = rpcR2.data[_iw2]; break; }
+              }
+            }
+            try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback3', 'fallback3 RPC admin_get_all_wallets', { wId: __dbg_wId, me: me, hasData: !!(wData), arrLen: (rpcR2 && rpcR2.data && rpcR2.data.length) || 0, profileIdsFoundMeSnippet: rpc3Hits.slice(0, 10), rpcErr2: (rpcR2 && rpcR2._rpcErr2) || null, depFromRpc: (wData && typeof wData.total_deposited !== 'undefined') ? Number(wData.total_deposited||0) : null }); } catch(_dH4d){}
+          } catch (_w3) {
+            try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback3 catch', 'fallback3 CATCH GERAL (RPC não existe?)', { wId: __dbg_wId, me: me, errMsg: String((_w3 && _w3.message) || _w3) }); } catch(_dH4d2){}
+          }
+        }
+      } catch (_ewChain) {
+        try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H4', 'AppState.js:refreshMyWallet fallback chain catch', 'FALLBACK CHAIN CATCH GERAL', { wId: __dbg_wId, me: me, errMsg: String((_ewChain && _ewChain.message) || _ewChain) }); } catch(_dCh){}
       }
       if (wData) {
         var rawAvailable = Number(wData.available_balance || 0);
@@ -1053,13 +1086,26 @@ const AppState = {
         var curr = [this.currentUser.totalDeposited||0, this.currentUser.totalBonusReceived||0, this.currentUser.availableBalance||0, this.currentUser.totalWithdrawn||0];
         var changed = prev[0]!==curr[0] || prev[1]!==curr[1] || prev[2]!==curr[2] || prev[3]!==curr[3];
         console.log('[refreshMyWallet] ' + (changed?'ATUALIZADO':'OK') + ' | depositado=$' + dep.toFixed(2) + ' | bonus=$' + totalBonusEarned.toFixed(2) + ' | saques=$' + wT.toFixed(2) + ' | liquido=$' + bonusNetAvail.toFixed(2));
+        // #region debug-point H2-H4:AppState.refreshMyWallet-wData
+        try {
+          if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H2', 'AppState.js:refreshMyWallet wData atribuiu', 'refreshMyWallet wData encontrou & aplicou', { wId: __dbg_wId, wDataDep: dep, wDataAvailBonus: bonusNetAvail, wDataWd: wT, prev, curr, changed, durMs: Date.now() - __dbg_wT0 });
+        } catch(_dH2){}
+        // #endregion
         return changed;
       }
+      // #region debug-point H2-H4:AppState.refreshMyWallet-noData
+      try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H2', 'AppState.js:refreshMyWallet SEM wData', 'refreshMyWallet FALHOU todos fallbacks', { wId: __dbg_wId, wDataIsNull: true, before: __dbg_cuBefore, durMs: Date.now() - __dbg_wT0 }); } catch(_dH2b){}
+      // #endregion
       return false;
     } catch (_ew) { console.log('[refreshMyWallet ERR]:', String((_ew&&_ew.message)||_ew)); return false; }
   },
 
   async loadAdminData(whichTab, force) {
+    // #region debug-point H3:AppState.loadAdminData-entry
+    var __dbg_callId = ('ld_' + (Date.now() & 0xffffff).toString(36) + Math.random().toString(36).slice(2, 5));
+    var __dbg_t0 = Date.now();
+    try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'AppState.js:loadAdminData entry', 'loadAdminData INÍCIO', { callId: __dbg_callId, tab: whichTab, force: !!force, adminActiveTab: (this.adminActiveTab) || null }); } catch(_dLDA){}
+    // #endregion
     try {
       const now = Date.now();
       const TTL = this._adminCache.TTL || 30000;
@@ -1072,13 +1118,76 @@ const AppState = {
         else if (whichTab==='finance') { needs.fin = !(this.financeProblems && this.financeProblems.length && this._adminCache.finTs && (now - this._adminCache.finTs < TTL)); }
         else if (whichTab==='support') { needs.sup = !(this.supportTickets && this.supportTickets.length && this._adminCache.supTs && (now - this._adminCache.supTs < TTL)); }
       }
+      function _deepEqual(a, b) {
+        try {
+          if (a === b) return true;
+          if (!a || !b) return (a === b);
+          if (typeof a !== typeof b) return false;
+          if (Array.isArray(a) && Array.isArray(b)) {
+            if (a.length !== b.length) return false;
+            for (var _i = 0; _i < a.length; _i++) { if (!_deepEqual(a[_i], b[_i])) return false; }
+            return true;
+          }
+          if (typeof a === 'object' && typeof b === 'object') {
+            var keysA = Object.keys(a), keysB = Object.keys(b);
+            if (keysA.length !== keysB.length) return false;
+            for (var _k = 0; _k < keysA.length; _k++) { if (!_deepEqual(a[keysA[_k]], b[keysA[_k]])) return false; }
+            return true;
+          }
+          return false;
+        } catch (_eq) { return false; }
+      }
       var qs = [];
-      if (needs.summ) qs.push(this.refreshAdminSummaries().then(ok=>{if(ok){this._adminCache.summTs=Date.now();changed=true;}}));
-      if (needs.users) qs.push(this.refreshAdminUsersList().then(ok=>{if(ok){this._adminCache.usersTs=Date.now();changed=true;}}));
-      if (needs.reports) qs.push(this.refreshAdminReports().then(ok=>{if(ok){this._adminCache.reportsTs=Date.now();changed=true;}}));
-      if (needs.fin) qs.push(this.refreshFinanceProblems ? this.refreshFinanceProblems().then(ok=>{if(ok!==false){this._adminCache.finTs=Date.now();changed=true;}}) : Promise.resolve(false));
-      if (needs.sup) qs.push(this.refreshSupportTickets ? this.refreshSupportTickets().then(ok=>{if(ok!==false){this._adminCache.supTs=Date.now();changed=true;}}) : Promise.resolve(false));
+      if (needs.summ) {
+        var oldSumm = this.adminSummaries ? JSON.parse(JSON.stringify(this.adminSummaries)) : null;
+        qs.push(this.refreshAdminSummaries().then(function(ok){
+          if (ok) {
+            if (!_deepEqual(oldSumm, this && this.adminSummaries)) changed = true;
+            this._adminCache.summTs = Date.now();
+          }
+        }.bind(this)));
+      }
+      if (needs.users) {
+        var oldUsers = this.adminUsersList ? JSON.parse(JSON.stringify(this.adminUsersList)) : null;
+        qs.push(this.refreshAdminUsersList().then(function(ok){
+          if (ok) {
+            if (!_deepEqual(oldUsers, this && this.adminUsersList)) changed = true;
+            this._adminCache.usersTs = Date.now();
+          }
+        }.bind(this)));
+      }
+      if (needs.reports) {
+        var oldReports = this.adminReports ? JSON.parse(JSON.stringify(this.adminReports)) : null;
+        qs.push(this.refreshAdminReports().then(function(ok){
+          if (ok) {
+            if (!_deepEqual(oldReports, this && this.adminReports)) changed = true;
+            this._adminCache.reportsTs = Date.now();
+          }
+        }.bind(this)));
+      }
+      if (needs.fin) {
+        var oldFin = this.financeProblems ? JSON.parse(JSON.stringify(this.financeProblems)) : null;
+        qs.push((this.refreshFinanceProblems ? this.refreshFinanceProblems() : Promise.resolve(false)).then(function(ok){
+          if (ok !== false) {
+            if (!_deepEqual(oldFin, this && this.financeProblems)) changed = true;
+            this._adminCache.finTs = Date.now();
+          }
+        }.bind(this)));
+      }
+      if (needs.sup) {
+        var oldSup = this.supportTickets ? JSON.parse(JSON.stringify(this.supportTickets)) : null;
+        qs.push((this.refreshSupportTickets ? this.refreshSupportTickets() : Promise.resolve(false)).then(function(ok){
+          if (ok !== false) {
+            if (!_deepEqual(oldSup, this && this.supportTickets)) changed = true;
+            this._adminCache.supTs = Date.now();
+          }
+        }.bind(this)));
+      }
       if (qs.length) { console.log('[loadAdminData] ⚡ PARALELO qtde='+qs.length+' | force='+!!force+' | tab='+whichTab); await Promise.all(qs); }
+      try { console.log('[loadAdminData] finished | changed=' + changed + ' | tab=' + whichTab); } catch(_ll){}
+      // #region debug-point H3:AppState.loadAdminData-exit
+      try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'AppState.js:loadAdminData exit', 'loadAdminData FIM', { callId: __dbg_callId, tab: whichTab, force: !!force, durationMs: Date.now() - __dbg_t0, needs: needs, qsLen: qs.length, changed: !!changed, lenUsers: (this.adminUsersList && this.adminUsersList.length) || 0, lenFin: (this.financeProblems && this.financeProblems.length) || 0, lenSup: (this.supportTickets && this.supportTickets.length) || 0 }); } catch(_dLDB){}
+      // #endregion
       return changed;
     } catch(_e) { console.log('[loadAdminData ERR]:', String((_e&&_e.message)||_e)); return false; }
   },
@@ -1126,7 +1235,7 @@ const AppState = {
         else pos = '-';
         var lvl = Number(p.level_number || 0);
         var w = walletByPid[p.id] || {};
-        return {
+        var mapped = {
           id: p.id,
           username: p.username || '',
           fullName: full || p.username || '',
@@ -1150,7 +1259,23 @@ const AppState = {
             total_bonus_team: Number(w.total_bonus_team || 0)
           }
         };
+        // #region debug-point H2:AppState.refreshAdminUsersList-superadmin-overlap
+        try {
+          if (window.AppState && window.AppState.currentUser && window.AppState.currentUser.id && String(window.AppState.currentUser.id) === String(p.id || '')) {
+            if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H2', 'AppState.js:refreshAdminUsersList SUPERADMIN OVERLAP', '⚠ refreshAdminUsersList está processando MESMO usuário de currentUser (risco de sobreescrita $0)', { rowProfileId: String(p.id||''), meId: String(window.AppState.currentUser.id||''), walletFromRpc_totalDep: Number(w.total_deposited || 0), currentUser_totalDep_BEFORE: Number(window.AppState.currentUser.totalDeposited || 0), cu_blockedActivationBalance_BEFORE: Number(window.AppState.currentUser.blockedActivationBalance || 0) });
+          }
+        } catch(_dH2so){}
+        // #endregion
+        return mapped;
       });
+      // #region debug-point H5:AppState.refreshAdminUsersList-summaries-source
+      try {
+        if (window.__dbg && typeof window.__dbg.store === 'function') {
+          var __my = (this && this.adminSummaries && this.adminSummaries.volume) ? Number(this.adminSummaries.volume.totalDeposited || this.adminSummaries.volume.depositedVolume || 0) : 0;
+          window.__dbg.store('H5', 'AppState.js:refreshAdminUsersList summaries vs wallet', 'Admin summaries vs wallet do Superadmin (H5: origens diferentes?)', { rowsLen: rows.length, walletPidsLen: Object.keys(walletByPid).length, adminSummariesTotalDepositedFromVol: __my });
+        }
+      } catch(_dH5){}
+      // #endregion
       return true;
     } catch (e) {
       this.sbError = 'admin-users: ' + ((e && e.message) || String(e));

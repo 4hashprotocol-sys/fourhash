@@ -13,6 +13,68 @@
    10. app.js           (bootstrap, global listeners, onload)
    ============================================================ */
 
+// #region debug-point BOOTSTRAP:debug-server-env
+(function () {
+  try {
+    var __dbg = window.__dbg || (window.__dbg = {});
+    __dbg.sessionId = 'admin-oscillation-wallet-empty';
+    __dbg.runId = 'pre-fix';
+    __dbg.url = 'http://127.0.0.1:7777/event';
+    __dbg.port = 7777;
+    __dbg.queue = [];
+    __dbg.lastFlush = 0;
+    __dbg.sent = 0;
+    __dbg.total = 0;
+    __dbg.store = function (hypothesisId, location, msg, data, traceId) {
+      try {
+        __dbg.total++;
+        var evt = {
+          sessionId: __dbg.sessionId,
+          runId: __dbg.runId,
+          hypothesisId: hypothesisId || 'A',
+          ts: Date.now(),
+          location: location || '',
+          msg: '[DEBUG] ' + (msg || ''),
+          data: data || {},
+          traceId: traceId || ('tr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6))
+        };
+        __dbg.queue.push(evt);
+        try { console.log('[DEBUG:event][' + evt.hypothesisId + '] ' + evt.msg + ' | ' + JSON.stringify(evt.data || {})); } catch(_lc){}
+        __dbg.flush();
+      } catch(_es) {}
+    };
+    __dbg.flush = function () {
+      try {
+        if (!__dbg.queue.length) return;
+        if (navigator && typeof navigator.sendBeacon === 'function') {
+          try {
+            while (__dbg.queue.length) {
+              var ev = __dbg.queue.shift();
+              try {
+                navigator.sendBeacon(__dbg.url, new Blob([JSON.stringify(ev)], { type: 'application/json' }));
+                __dbg.sent++;
+              } catch(_bea){ __dbg.queue.unshift(ev); break; }
+            }
+            return;
+          } catch(_beaconErr){}
+        }
+        var batch = __dbg.queue.slice(0, 8);
+        var doFetch = function () {
+          try {
+            var evB = batch.shift();
+            if (!evB) { if (!batch.length) __dbg.queue = __dbg.queue.slice(8); return; }
+            fetch(__dbg.url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(evB) }).then(function(){ __dbg.sent++; doFetch(); }).catch(function(){ batch.unshift(evB); setTimeout(doFetch, 500); });
+          } catch(_ef){}
+        };
+        doFetch();
+      } catch(_efl){}
+    };
+    setInterval(function(){ try { __dbg.flush(); } catch(_t){} }, 800);
+    __dbg.store('BOOT', 'app.js:16', 'debugger bootstrap | queue ready', { runId: __dbg.runId, url: __dbg.url });
+  } catch(_eb){}
+})();
+// #endregion
+
 window.addEventListener('DOMContentLoaded', function() {
   // Auto-atualiza DDI do Telefone quando usuário troca País no Cadastro
   document.addEventListener('change', function(e) {

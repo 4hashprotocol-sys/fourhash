@@ -230,19 +230,6 @@ const Views = {
   },
 
   Dashboard() {
-    try {
-      var now = Date.now();
-      if (!window._vWalletTs || (now - window._vWalletTs) > 2500) {
-        window._vWalletTs = now;
-        setTimeout(function(){
-          if (AppState.refreshMyWallet) {
-            AppState.refreshMyWallet(false).then(function(changed){
-              if (changed && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_r){}
-            }).catch(function(){});
-          }
-        }, 0);
-      }
-    } catch(_swv){}
     const u = AppState.currentUser;
     const _st = (v) => Number(v || 0);
     const uiAvailable = _st(u.availableBalance);  // SÓ bônus líquido, NÃO depósito
@@ -1015,19 +1002,6 @@ const Views = {
   },
 
   Wallet() {
-    try {
-      var nowW = Date.now();
-      if (!window._vWalletTs || (nowW - window._vWalletTs) > 1500) {
-        window._vWalletTs = nowW;
-        setTimeout(function(){
-          if (AppState.refreshMyWallet) {
-            AppState.refreshMyWallet(true).then(function(changed){
-              if (typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_rw){}
-            }).catch(function(){});
-          }
-        }, 0);
-      }
-    } catch(_sw2){}
     const u = AppState.currentUser;
     const s = AppState.projectSettings.withdraw;
     const _st = (v) => Number(v || 0);
@@ -1939,31 +1913,10 @@ const Views = {
   },
 
   Admin() {
-    try {
-      var nowA = Date.now();
-      if (!window._vWalletTs || (nowA - window._vWalletTs) > 3000) {
-        window._vWalletTs = nowA;
-        setTimeout(function(){
-          if (AppState.refreshMyWallet) {
-            AppState.refreshMyWallet(false).then(function(changed){
-              if (changed && typeof Router !== 'undefined') try { Router.refreshCurrentView(); } catch(_raw){}
-            }).catch(function(){});
-          }
-        }, 0);
-      }
-    } catch(_sw3){}
     const s = AppState.projectSettings;
     const tab = AppState.adminActiveTab || 'backoffice';
     const fin = AppState.financeProblems || [];
     const tks = AppState.supportTickets || [];
-
-    // === CARREGAMENTO ADMIN UNIFICADO (async, cache TTL, aba instantânea) ===
-    try {
-      if (typeof AppState.loadAdminData === 'function') {
-        var needNow = !AppState.adminSummaries || !AppState.adminUsersList || !AppState.adminReports;
-        Promise.resolve().then(function(){ return AppState.loadAdminData(tab, needNow); }).then(function(changed){ if (changed && typeof Router !== 'undefined') Router.refreshCurrentView(); }).catch(function(){});
-      }
-    } catch(_lErr){}
 
     const vol = (AppState.adminSummaries && AppState.adminSummaries.volume) ? AppState.adminSummaries.volume : {};
     const todayVol = Number(vol.todayVolume || 0);
@@ -2048,18 +2001,18 @@ const Views = {
         </div>
 
         <div class="flex flex-wrap items-stretch gap-2 p-1.5 rounded-2xl bg-brand-surface/80 border border-white/5">
-          <button onclick="AppState.adminActiveTab='backoffice'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('backoffice',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='backoffice'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="Router._switchAdminTab('backoffice')" class="flex-1 min-w-[180px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='backoffice'?'bg-gradient-to-r from-brand to-brand-glow text-black shadow-neon-sm':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-gauge-high"></i>BACKOFFICE
           </button>
-          <button onclick="AppState.adminActiveTab='reports'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('reports',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='reports'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="Router._switchAdminTab('reports')" class="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='reports'?'bg-gradient-to-r from-emerald-500 to-green-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-chart-column"></i>RELATÓRIO · AUDITORIA
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='reports'?'bg-black/20 text-black':'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20'} text-[10px] font-bold border">60/40</span>
           </button>
-          <button onclick="AppState.adminActiveTab='finance'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('finance',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="Router._switchAdminTab('finance')" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='finance'?'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_18px_rgba(245,158,11,0.35)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-sack-dollar"></i>FINANCEIRO · PAGAMENTOS
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='finance'?'bg-black/20 text-black':'bg-red-500/15 text-red-300 border border-red-500/20'} text-[10px] font-bold border">${finPendentes>0?finPendentes+' PEND':'0'}</span>
           </button>
-          <button onclick="AppState.adminActiveTab='support'; Router.refreshCurrentView(); Promise.resolve().then(function(){ return AppState.loadAdminData('support',true); }).then(function(changed){ if (changed) Router.refreshCurrentView(); }).catch(function(){});" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='support'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
+          <button onclick="Router._switchAdminTab('support')" class="flex-1 min-w-[240px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black font-mono transition ${tab==='support'?'bg-gradient-to-r from-sky-500 to-blue-500 text-black shadow-[0_0_18px_rgba(14,165,233,0.38)]':'text-gray-400 hover:text-white hover:bg-white/5'}">
             <i class="fa-solid fa-headset"></i>CENTRAL DE SUPORTE
             <span class="ml-1 px-2 py-0.5 rounded-md ${tab==='support'?'bg-black/20 text-black':'bg-green-500/15 text-green-300 border border-green-500/20'} text-[10px] font-bold border">${tkAbertos>0?tkAbertos+' ABERTO'+(tkAbertos>1?'S':''):'0'}</span>
           </button>
