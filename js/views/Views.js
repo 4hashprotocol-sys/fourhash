@@ -86,12 +86,12 @@ const Views = {
             <p class="text-xs text-gray-400 mt-1">Acesso exclusivo por e-mail cadastrado</p>
           </div>
 
-          <form id="login-form" class="space-y-4" onsubmit="event.preventDefault(); return false;">
+          <form id="login-form" class="space-y-4" onsubmit="event.preventDefault(); try { handleLoginSubmit(); } catch(e){ console.error('[LOGIN onsubmit INLINE FAIL]', e); } return false;" novalidate>
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">E-mail</label>
               <div class="relative">
                 <i class="fa-solid fa-envelope absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
-                <input id="login-email" type="email" required value="" placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="login-email" type="email" value="" placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
             </div>
 
@@ -102,14 +102,14 @@ const Views = {
               </div>
               <div class="relative">
                 <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-gray-500 text-xs"></i>
-                <input id="login-pass" type="password" required value="" placeholder="••••••••" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="login-pass" type="password" value="" placeholder="••••••••" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
                 <button type="button" onclick="UI.togglePasswordVisibility('login-pass', this)" class="absolute right-3.5 top-3.5 text-gray-400 hover:text-white">
                   <i class="fa-solid fa-eye text-xs"></i>
                 </button>
               </div>
             </div>
 
-            <button id="login-submit" type="submit" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="login">
+            <button id="login-submit" type="button" onclick="try { handleLoginSubmit(); } catch(e){ console.error('[LOGIN button onclick INLINE FAIL]', e); UI.showToast('Erro interno. Contate o suporte.', 'error'); }" class="w-full py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-bold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="login">
               ENTRAR
             </button>
           </form>
@@ -155,31 +155,31 @@ const Views = {
             <div class="text-[11px] text-gray-400 mt-1">Posicionamento vitalício na estrutura linear de 12 níveis</div>
           </div>
 
-          <form id="register-form" class="space-y-4" data-sponsor="${sponsorRef}" onsubmit="event.preventDefault(); return false;">
+          <form id="register-form" class="space-y-4" data-sponsor="${sponsorRef}" onsubmit="event.preventDefault(); try { handleRegisterSubmit(); } catch(e){ console.error('[REGISTER onsubmit INLINE FAIL]', e); } return false;" novalidate>
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">Nome Completo</label>
-              <input id="reg-fullname" type="text" required placeholder="Seu nome completo" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input id="reg-fullname" type="text" placeholder="Seu nome completo" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">Username (@)</label>
               <div class="relative">
                 <span class="absolute left-3.5 top-2.5 text-gray-400 text-sm font-mono">@</span>
-                <input id="reg-username" type="text" required placeholder="seu_username" pattern="[a-zA-Z0-9_]+" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="reg-username" type="text" placeholder="seu_username" class="w-full bg-brand-surface border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
               <span class="text-[10px] text-gray-500 mt-1 block">Apenas letras, números e underline. Sem espaços. (3-32 chars)</span>
             </div>
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">E-mail</label>
-              <input id="reg-email" type="email" required placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+              <input id="reg-email" type="email" placeholder="seu@email.com" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">País</label>
-                <select id="reg-country" required class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <select id="reg-country" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
                   ${(typeof COUNTRIES !== 'undefined' ? COUNTRIES : window.COUNTRIES || []).map(function(c) {
                     const L = (typeof AppState !== 'undefined' ? AppState.currentLang : null) || (typeof I18n !== 'undefined' ? (I18n.lang || 'pt') : 'pt');
                     const i18n = (window.COUNTRY_I18N && window.COUNTRY_I18N[L]) ? window.COUNTRY_I18N[L][c.code] : null;
@@ -193,7 +193,7 @@ const Views = {
               </div>
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">Telefone / WhatsApp</label>
-                <input id="reg-phone" type="tel" required placeholder="(11) 99999-9999" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
+                <input id="reg-phone" type="tel" placeholder="(11) 99999-9999" class="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition">
               </div>
             </div>
 
@@ -201,7 +201,7 @@ const Views = {
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">Senha</label>
                 <div class="relative">
-                  <input id="reg-pass" type="password" required minlength="6" placeholder="Mínimo 6 dígitos" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
+                  <input id="reg-pass" type="password" placeholder="Mínimo 6 dígitos" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
                   <button type="button" onclick="UI.togglePasswordVisibility('reg-pass', this)" class="absolute right-2.5 top-3 text-gray-400">
                     <i class="fa-solid fa-eye text-xs"></i>
                   </button>
@@ -210,7 +210,7 @@ const Views = {
               <div>
                 <label class="block text-xs font-mono text-gray-300 mb-1">Confirmar Senha</label>
                 <div class="relative">
-                  <input id="reg-pass-confirm" type="password" required minlength="6" placeholder="Repita a senha" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
+                  <input id="reg-pass-confirm" type="password" placeholder="Repita a senha" class="w-full bg-brand-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand transition pr-8">
                   <button type="button" onclick="UI.togglePasswordVisibility('reg-pass-confirm', this)" class="absolute right-2.5 top-3 text-gray-400">
                     <i class="fa-solid fa-eye text-xs"></i>
                   </button>
@@ -219,7 +219,7 @@ const Views = {
             </div>
 
             <div class="pt-2">
-              <button id="register-submit" type="submit" class="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="createAccount">
+              <button id="register-submit" type="button" onclick="try { handleRegisterSubmit(); } catch(e){ console.error('[REGISTER button onclick INLINE FAIL]', e); UI.showToast('Erro interno. Contate o suporte.', 'error'); }" class="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-sm tracking-wider shadow-neon transition transform hover:scale-[1.01]" data-i18n="createAccount">
                 FINALIZAR CADASTRO
               </button>
             </div>
