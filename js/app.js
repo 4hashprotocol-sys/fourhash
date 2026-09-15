@@ -126,6 +126,7 @@ function bindFormHandlers() {
         e.preventDefault();
         handleLoginSubmit();
       });
+      if (window.console && console.log) console.log('[BIND OK] login-form listener atachado');
     }
     var regForm = document.getElementById('register-form');
     if (regForm && !regForm.getAttribute('data-bound')) {
@@ -134,19 +135,20 @@ function bindFormHandlers() {
         e.preventDefault();
         handleRegisterSubmit();
       });
+      if (window.console && console.log) console.log('[BIND OK] register-form listener atachado. Sponsor data-sponsor:', regForm.getAttribute('data-sponsor'));
     }
-  } catch(e) { /* forms ainda não montados; Router vai ligar de novo via onRoute */ }
+  } catch(e) { console.error('[BIND FAIL] bindFormHandlers:', e); }
 }
 
 if (typeof Router !== 'undefined') {
   var _origRNav = Router.navigate;
   Router.navigate = function() {
-    try { _origRNav.apply(this, arguments); } catch(e) {}
+    try { _origRNav.apply(this, arguments); } catch(e) { console.error('[Router.navigate FAIL]', e); }
     setTimeout(bindFormHandlers, 60);
   };
   var _origRRefresh = Router.refresh;
   Router.refresh = function() {
-    try { _origRRefresh.apply(this, arguments); } catch(e) {}
+    try { _origRRefresh.apply(this, arguments); } catch(e) { console.error('[Router.refresh FAIL]', e); }
     setTimeout(bindFormHandlers, 60);
   };
 }
@@ -186,6 +188,7 @@ function handleLoginSubmit() {
 }
 
 function handleRegisterSubmit() {
+  if (window.console && console.log) console.log('[REGISTER] handleRegisterSubmit INICIADO às', new Date().toISOString());
   var fullnameEl = document.getElementById('reg-fullname');
   var userEl     = document.getElementById('reg-username');
   var emailEl    = document.getElementById('reg-email');
@@ -201,6 +204,7 @@ function handleRegisterSubmit() {
   if (!sponsorRef) try { if (window.localStorage) sponsorRef = (window.localStorage.getItem('fh_register_ref') || '').trim(); } catch(_lSp){}
   if (!sponsorRef && typeof Router !== 'undefined' && Router._lastRegisterRef) sponsorRef = String(Router._lastRegisterRef).trim();
   if (!sponsorRef) sponsorRef = '4hashprotocol';
+  if (window.console && console.log) console.log('[REGISTER] sponsorRef resolvido =', sponsorRef);
 
   var fullname = fullnameEl ? fullnameEl.value.trim() : '';
   var username = userEl     ? userEl.value.replace(/^@/,'').trim() : '';
@@ -209,18 +213,51 @@ function handleRegisterSubmit() {
   var pass2    = pass2El    ? pass2El.value : '';
   var country  = countryEl  ? countryEl.value : 'BR';
   var phone    = phoneEl    ? phoneEl.value.trim() : '';
+  if (window.console && console.log) console.log('[REGISTER] campos preenchidos. fullname:', !!fullname, 'username:', username, 'email:', email, 'pass.length:', pass.length, 'pass2.length:', pass2.length);
 
-  if (!fullname || !username || !email || !pass || !pass2) { UI.showToast('Preencha todos os campos.', 'warning', 'fa-triangle-exclamation'); return; }
-  if (username.length < 3 || username.length > 20) { UI.showToast('Username precisa ter 3–20 caracteres.', 'warning'); return; }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) { UI.showToast('Username: apenas letras, números e underline.', 'warning'); return; }
+  if (!fullname || !username || !email || !pass || !pass2) {
+    var m1 = 'Preencha todos os campos.';
+    console.error('[REGISTER VALIDATION]', m1, {fullname:!!fullname,username:!!username,email:!!email,pass:!!pass,pass2:!!pass2});
+    UI.showToast(m1, 'warning', 'fa-triangle-exclamation'); return;
+  }
+  if (username.length < 3 || username.length > 20) {
+    var m2 = 'Username precisa ter 3–20 caracteres.';
+    console.error('[REGISTER VALIDATION]', m2, 'username.length:', username.length);
+    UI.showToast(m2, 'warning'); return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    var m3 = 'Username: apenas letras, números e underline.';
+    console.error('[REGISTER VALIDATION]', m3, 'username:', username);
+    UI.showToast(m3, 'warning'); return;
+  }
   var FORBIDDEN_UN = ['guest','register','login','logout','signin','signup','sign-in','sign_up','sign-up','admin','administrator','adm','root','owner','staff','team','profile','user','users','account','accounts','support','ticket','tickets','wallet','wallets','deposit','deposits','withdraw','withdrawal','withdrawals','dashboard','dash','home','landing','index','referral','referrals','ref','sponsor','sponsors','tree','matrix','network','plan','plans','system','sys','config','settings','setup','app','4h','fourhash','four-hash','four_hash','protocol','official','oficial','ceo','founder','supabase','resend','support-team','financeiro','backoffice','painel','painel-admin'];
   var lowUn = username.toLowerCase();
-  for (var ifb = 0; ifb < FORBIDDEN_UN.length; ifb++) { if (lowUn === FORBIDDEN_UN[ifb]) { UI.showToast('Username "'+username+'" reservado. Escolha outro.', 'warning'); return; } }
+  for (var ifb = 0; ifb < FORBIDDEN_UN.length; ifb++) { if (lowUn === FORBIDDEN_UN[ifb]) {
+    var m4 = 'Username "'+username+'" reservado. Escolha outro.';
+    console.error('[REGISTER VALIDATION]', m4);
+    UI.showToast(m4, 'warning'); return;
+  }}
   var PREFIX = ['admin','adm_','staff_','root_','official_','fourhash','4h','support_'];
-  for (var ip = 0; ip < PREFIX.length; ip++) { if (lowUn.indexOf(PREFIX[ip]) === 0) { UI.showToast('Prefixo de username reservado. Tente outro.', 'warning'); return; } }
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { UI.showToast('E-mail inválido.', 'warning'); return; }
-  if (pass.length < 6) { UI.showToast('Senha mínima de 6 dígitos.', 'warning'); return; }
-  if (pass !== pass2) { UI.showToast('Senhas não correspondem.', 'warning'); return; }
+  for (var ip = 0; ip < PREFIX.length; ip++) { if (lowUn.indexOf(PREFIX[ip]) === 0) {
+    var m5 = 'Prefixo de username reservado. Tente outro.';
+    console.error('[REGISTER VALIDATION]', m5, 'prefixo:', PREFIX[ip]);
+    UI.showToast(m5, 'warning'); return;
+  }}
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    var m6 = 'E-mail inválido.';
+    console.error('[REGISTER VALIDATION]', m6, 'email:', email);
+    UI.showToast(m6, 'warning'); return;
+  }
+  if (pass.length < 6) {
+    var m7 = 'Senha mínima de 6 dígitos.';
+    console.error('[REGISTER VALIDATION]', m7, 'length:', pass.length);
+    UI.showToast(m7, 'warning'); return;
+  }
+  if (pass !== pass2) {
+    var m8 = 'Senhas não correspondem.';
+    console.error('[REGISTER VALIDATION]', m8);
+    UI.showToast(m8, 'warning'); return;
+  }
 
   var first_name = fullname, last_name = '';
   var sp = fullname.indexOf(' ');
@@ -233,7 +270,8 @@ function handleRegisterSubmit() {
       btnEl.style.opacity = '1';
       try { if (typeof origBtnHtml !== 'undefined') btnEl.innerHTML = origBtnHtml; } catch(_btn) {}
     }
-    if (errMsg) UI.showToast(errMsg, 'error', 'fa-circle-xmark');
+    if (errMsg) { console.error('[REGISTER FINALIZE ERROR]', errMsg); UI.showToast(errMsg, 'error', 'fa-circle-xmark'); }
+    else { if (window.console && console.log) console.log('[REGISTER FINALIZE] OK (sem erro)'); }
   };
 
   var meta = {
@@ -249,13 +287,16 @@ function handleRegisterSubmit() {
   };
 
   if (window.SupabaseOK && window.SupabaseOK() && typeof AppState !== 'undefined' && typeof AppState.sbSignUp === 'function') {
+    if (window.console && console.log) console.log('[REGISTER] Chamando AppState.sbSignUp. email:', email, 'meta:', meta);
     Promise.resolve(AppState.sbSignUp(email, pass, meta)).then(function(ok){
+      console.log('[REGISTER] AppState.sbSignUp PROMISE RESOLVIDA. ok =', ok);
       if (ok) {
         UI.showToast('Conta criada com sucesso! Verifique seu e-mail (' + email + ') para confirmar o cadastro.', 'success', 'fa-envelope-circle-check', 6000);
-        try { Router.navigate('login'); } catch(_navL) {}
+        try { Router.navigate('login'); } catch(_navL) { console.error('[REGISTER FAIL Router.navigate login pós sucesso]', _navL); }
       }
       finalize(ok ? null : 'Não foi possível criar a conta. Tente novamente.');
     }).catch(function(err){
+      console.error('[REGISTER AppState.sbSignUp PROMISE CATCH] err =', err, 'raw =', JSON.stringify(err));
       var m = (err && err.message) ? String(err.message) : ('Erro ao criar conta.');
       if (/already.*regist|user.*already.*exist|email.*already.*taken/i.test(m.toLowerCase())) m = 'Este e-mail já está cadastrado. Faça login ou recupere a senha.';
       if (/password.*at least|weak.*password|password.*length/i.test(m.toLowerCase())) m = 'Senha muito fraca. Use pelo menos 6 caracteres com letra e número.';
@@ -263,6 +304,7 @@ function handleRegisterSubmit() {
     });
     return;
   }
+  console.error('[REGISTER] NÃO ROLOU AppState.sbSignUp. SupabaseOK:', window.SupabaseOK && window.SupabaseOK(), 'AppState existe:', typeof AppState !== 'undefined', 'sbSignUp:', typeof (AppState && AppState.sbSignUp));
   /* Fallback offline demo */
   UI.showToast('Modo offline: Conta criada (demo). Redirecionando...', 'success');
   setTimeout(function(){ if (Router) Router.navigate('deposit'); }, 900);

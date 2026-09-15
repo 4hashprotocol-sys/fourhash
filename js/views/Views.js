@@ -86,7 +86,7 @@ const Views = {
             <p class="text-xs text-gray-400 mt-1">Acesso exclusivo por e-mail cadastrado</p>
           </div>
 
-          <form id="login-form" class="space-y-4">
+          <form id="login-form" class="space-y-4" onsubmit="event.preventDefault(); return false;">
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">E-mail</label>
               <div class="relative">
@@ -155,7 +155,7 @@ const Views = {
             <div class="text-[11px] text-gray-400 mt-1">Posicionamento vitalício na estrutura linear de 12 níveis</div>
           </div>
 
-          <form id="register-form" class="space-y-4" data-sponsor="${sponsorRef}">
+          <form id="register-form" class="space-y-4" data-sponsor="${sponsorRef}" onsubmit="event.preventDefault(); return false;">
 
             <div>
               <label class="block text-xs font-mono text-gray-300 mb-1">Nome Completo</label>
