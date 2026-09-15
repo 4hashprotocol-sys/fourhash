@@ -2131,7 +2131,7 @@ const AppState = {
             <h3 class="font-black text-white text-xl sm:text-2xl leading-tight font-['Space_Grotesk']">Valide a sua caixa de entrada</h3>
             <div class="text-[11px] font-mono text-gray-500 mt-1">A conta FourHash exige verificação antes do primeiro acesso</div>
           </div>
-          <button onclick="UI.closeModal()" class="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition flex items-center justify-center flex-shrink-0">
+          <button onclick="UI.closeModal(); try { Router.navigate('login'); } catch(_){}" class="w-9 h-9 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition flex items-center justify-center flex-shrink-0">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
@@ -2154,13 +2154,13 @@ const AppState = {
         <div class="space-y-1.5 text-[11px] text-gray-400 leading-relaxed px-1">
           <div>• <span class="font-bold text-gray-300">Não recebeu?</span> Verifique a pasta <span class="font-mono text-white">Promoções</span>, <span class="font-mono text-white">Spam</span> ou <span class="font-mono text-white">Lixo Eletrónico</span>.</div>
           <div>• O link de confirmação expira em 24 horas. Clique em "Reenviar E-mail" abaixo se necessário.</div>
-          <div>• Usou um e-mail errado no cadastro? <button onclick="UI.closeModal(); Router.navigate('register');" class="text-brand font-bold hover:underline">Clique aqui para se recadastrar</button>.</div>
+          <div>• Usou um e-mail errado no cadastro? <button onclick="UI.closeModal(); try { Router.navigate('register'); } catch(_){}" class="text-brand font-bold hover:underline">Clique aqui para se recadastrar</button>.</div>
         </div>
 
         <div class="grid grid-cols-2 gap-3 pt-1">
-          <button onclick="UI.closeModal()" class="py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 hover:text-white font-bold text-xs tracking-wider transition inline-flex items-center justify-center gap-2">
+          <button onclick="UI.closeModal(); try { Router.navigate('login'); } catch(_){}" class="py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 hover:text-white font-bold text-xs tracking-wider transition inline-flex items-center justify-center gap-2">
             <i class="fa-solid fa-arrow-left"></i>
-            Voltar ao Login
+            Ir para o Login
           </button>
           <button onclick="AppState.resendConfirmationEmail('${safeEmail}', this)" class="py-3 rounded-xl bg-brand hover:bg-brand-glow text-black font-extrabold text-xs tracking-wider shadow-[0_0_30px_rgba(0,255,102,0.35)] transition transform hover:scale-[1.01] active:scale-100 inline-flex items-center justify-center gap-2">
             <i class="fa-solid fa-paper-plane"></i>
@@ -2324,20 +2324,56 @@ const AppState = {
           emailRedirectTo: (globalThis.location && globalThis.location.origin ? globalThis.location.origin : 'https://fourhash.app') + '/#/login?confirmed=1'
         }
       });
-      if (r && r.error) { UI.showToast(r.error.message || 'Erro registo', 'error'); return false; }
+      if (r && r.error) {
+        var rawMsg = String((r.error.message || '') + '').toLowerCase();
+        var codeStr = String((r.error.code || '') + '').toLowerCase();
+        var userErr = null;
+        if (/already.*regist|user.*already.*exist|email.*already.*taken|email.*already.*regist|user_already_exists/.test(rawMsg) || codeStr === 'user_already_exists') {
+          userErr = 'Este e-mail já está cadastrado. Faça login ou use "Esqueci minha senha".';
+        } else if (/password.*at least|weak.*password|password.*length|password.*complex|too short.*password/.test(rawMsg)) {
+          userErr = 'Senha muito fraca. Use pelo menos 6 caracteres (misture letras e números).';
+        } else if (/invalid.*email|email.*format|bad email/.test(rawMsg)) {
+          userErr = 'Formato de e-mail inválido. Verifique o endereço digitado.';
+        } else if (/rate.*limit|too many.*request|quota.*exceeded|429|throttl/.test(rawMsg) || codeStr === 'over_request_rate_limit') {
+          userErr = 'Muitas tentativas em pouco tempo. Aguarde 1 minuto e tente novamente.';
+        } else if (/email.*send|smtp|template|sender|from address|no.*sender|mail.*config/.test(rawMsg) || /send_email|smtp_error|email_template_error/.test(codeStr)) {
+          userErr = 'A conta foi criada (usuário salvo). Não conseguimos enviar o e-mail no momento — use "Reenviar E-mail" abaixo ou entre em contato com o suporte.';
+          try {
+            var userFallback = (r && r.data && r.data.user) ? r.data.user : { email: email };
+            try { if (sb) await sb.auth.signOut(); } catch(_s1){}
+            this.showEmailPendingModal((userFallback && userFallback.email) || email);
+            return true;
+          } catch(_mb){}
+        } else if (/signups.*disabled|signup.*disabled|registrations.*closed/.test(rawMsg) || codeStr === 'signup_disabled') {
+          userErr = 'Cadastros temporariamente desativados pelo administrador. Tente novamente mais tarde.';
+        } else if (/new.*password.*requirements|password.*requirements|reauthentication.*required/.test(rawMsg)) {
+          userErr = 'Senha não atende aos requisitos de segurança. Mínimo de 6 caracteres.';
+        } else if (/identity.*already|provider.*already|oauth.*already/.test(rawMsg)) {
+          userErr = 'Este endereço já está vinculado a outra conta de login. Tente a opção "Esqueci minha senha".';
+        }
+        UI.showToast(userErr || (r.error.message || 'Erro ao criar conta.'), 'error', 'fa-circle-xmark');
+        return false;
+      }
       var userAuth = (r && r.data && r.data.user) ? r.data.user : null;
       var sessAuth = (r && r.data && r.data.session) ? r.data.session : null;
       var identLen = (r && r.data && Array.isArray(r.data.user && r.data.user.identities)) ? r.data.user.identities.length : 0;
-      var weakConf = userAuth && userAuth.email_confirmed_at;
-      if (weakConf || (sessAuth && identLen > 0)) {
-        try { await sb.auth.signOut(); } catch(_) {}
-        this.showEmailPendingModal(userAuth.email || email);
+      var confirmedAt = userAuth && userAuth.email_confirmed_at ? String(userAuth.email_confirmed_at) : '';
+      var isAutoConfirmed = !!(confirmedAt && confirmedAt.length > 4);
+      try { if (sb) await sb.auth.signOut(); } catch(_sOut){}
+      if (isAutoConfirmed) {
+        UI.showToast('Conta criada e confirmada! Faça login com seu e-mail e senha.', 'success', 'fa-circle-check', 6000);
+        try { if (typeof Router !== 'undefined') Router.navigate('login'); } catch(_nLogin){}
         return true;
       }
-      try { await sb.auth.signOut(); } catch(_) {}
-      this.showEmailPendingModal(userAuth.email || email);
+      this.showEmailPendingModal((userAuth && userAuth.email) || email);
       return true;
-    } catch (e) { UI.showToast((e && e.message) || 'Erro registo', 'error'); return false; }
+    } catch (e) {
+      var msgGlob = String((e && e.message) ? e.message : 'Erro ao criar conta.');
+      if (/already|exist|taken/i.test(msgGlob)) msgGlob = 'Este e-mail já está cadastrado. Faça login ou recupere a senha.';
+      if (/password.*length|weak/i.test(msgGlob)) msgGlob = 'Senha muito curta ou fraca. Use pelo menos 6 caracteres.';
+      UI.showToast(msgGlob, 'error', 'fa-circle-xmark');
+      return false;
+    }
   },
 
   async sbSignOut() {

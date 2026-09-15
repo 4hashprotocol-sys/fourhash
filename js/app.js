@@ -226,9 +226,13 @@ function handleRegisterSubmit() {
   var sp = fullname.indexOf(' ');
   if (sp > 0) { first_name = fullname.slice(0, sp); last_name = fullname.slice(sp+1).trim(); }
 
-  if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
+  if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.6'; try { var origBtnHtml = btnEl.innerHTML; var procTxt = ''; try { procTxt = (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') ? String(I18n.t('processing') || '') : ''; } catch(_i1){} if (!procTxt || procTxt === 'processing') procTxt = 'Processando'; btnEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>' + procTxt + '…'; } catch(_orig) {} }
   var finalize = function(errMsg){
-    if (btnEl) { btnEl.disabled = false; btnEl.style.opacity = '1'; }
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.style.opacity = '1';
+      try { if (typeof origBtnHtml !== 'undefined') btnEl.innerHTML = origBtnHtml; } catch(_btn) {}
+    }
     if (errMsg) UI.showToast(errMsg, 'error', 'fa-circle-xmark');
   };
 
@@ -246,8 +250,17 @@ function handleRegisterSubmit() {
 
   if (window.SupabaseOK && window.SupabaseOK() && typeof AppState !== 'undefined' && typeof AppState.sbSignUp === 'function') {
     Promise.resolve(AppState.sbSignUp(email, pass, meta)).then(function(ok){
-      if (!ok) finalize('Não foi possível criar a conta. Tente novamente.');
-    }).catch(function(err){ finalize((err && err.message) || 'Erro ao criar conta.'); });
+      if (ok) {
+        UI.showToast('Conta criada com sucesso! Verifique seu e-mail (' + email + ') para confirmar o cadastro.', 'success', 'fa-envelope-circle-check', 6000);
+        try { Router.navigate('login'); } catch(_navL) {}
+      }
+      finalize(ok ? null : 'Não foi possível criar a conta. Tente novamente.');
+    }).catch(function(err){
+      var m = (err && err.message) ? String(err.message) : ('Erro ao criar conta.');
+      if (/already.*regist|user.*already.*exist|email.*already.*taken/i.test(m.toLowerCase())) m = 'Este e-mail já está cadastrado. Faça login ou recupere a senha.';
+      if (/password.*at least|weak.*password|password.*length/i.test(m.toLowerCase())) m = 'Senha muito fraca. Use pelo menos 6 caracteres com letra e número.';
+      finalize(m);
+    });
     return;
   }
   /* Fallback offline demo */

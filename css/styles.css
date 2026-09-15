@@ -674,6 +674,66 @@ html.dark .bg-white\/20 {
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
+/* ====== CORES DE MARCA (brand) NO DARK — DETALHES VERDES EQUIVALENTES AO LIGHT ======
+   Print user LIGHT mostra verde em bordas, badges, texto e cards.
+   Print user DARK tudo preto/branco. Resolvemos abaixo forçando
+   utilitários Tailwind de brand no tema escuro. */
+html.dark .text-brand { color: #00FF66 !important; }
+
+html.dark .bg-brand\/5  { background: rgba(0, 255, 102, 0.05) !important; }
+html.dark .bg-brand\/10 { background: rgba(0, 255, 102, 0.10) !important; }
+html.dark .bg-brand\/20 { background: rgba(0, 255, 102, 0.18) !important; }
+html.dark .bg-brand\/30 { background: rgba(0, 255, 102, 0.30) !important; }
+
+html.dark .border-brand\/10          { border-color: rgba(0, 255, 102, 0.10) !important; }
+html.dark .border-brand\/20          { border-color: rgba(0, 255, 102, 0.20) !important; }
+html.dark .border-brand\/30          { border-color: rgba(0, 255, 102, 0.30) !important; }
+html.dark .border-brand\/40          { border-color: rgba(0, 255, 102, 0.40) !important; }
+html.dark .border-brand\/60          { border-color: rgba(0, 255, 102, 0.60) !important; }
+html.dark .border-brand\/100,
+html.dark .border-brand              { border-color: #00FF66 !important; }
+
+/* ====== SOMBRAS NEON NO DARK (botão CRIAR CONTA, cards) ====== */
+html.dark .shadow-neon {
+  box-shadow: 0 0 20px rgba(0, 255, 102, 0.35) !important;
+}
+html.dark .shadow-neon-lg {
+  box-shadow: 0 0 35px rgba(0, 255, 102, 0.50) !important;
+}
+html.dark .shadow-neon-sm {
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.25) !important;
+}
+html.dark .shadow-card {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6) !important;
+}
+html.dark .shadow-2xl {
+  box-shadow: 0 20px 40px -15px rgba(0, 255, 102, 0.18) !important;
+}
+
+/* ====== BORDAS / FUNDO ESPECÍFICOS DOS CARDS DO REGISTER NO DARK (Pills + Badges)
+   Espelham as mesmas regras especiais do LIGHT para manter coerência visual. */
+html.dark .rounded-2xl.border.border-brand\/30.p-6 {
+  border-color: rgba(0, 255, 102, 0.30) !important;
+}
+html.dark .rounded.bg-brand\/10.text-brand,
+html.dark .bg-brand\/10.border.border-brand\/30 {
+  background: rgba(0, 255, 102, 0.10) !important;
+  border-color: rgba(0, 255, 102, 0.30) !important;
+  color: #00FF66 !important;
+}
+html.dark #notif-dropdown .bg-brand\/5 {
+  background: rgba(0, 255, 102, 0.05) !important;
+}
+html.dark footer .rounded.bg-brand\/10.border.border-brand\/40 {
+  background: rgba(0, 255, 102, 0.10) !important;
+  border-color: rgba(0, 255, 102, 0.40) !important;
+}
+html.dark footer .border-brand\/30.bg-brand\/10.text-brand {
+  background: rgba(0, 255, 102, 0.10) !important;
+  border-color: rgba(0, 255, 102, 0.30) !important;
+  color: #00FF66 !important;
+}
+
 /* ====== HOVER STATES DARK (Tailwind hover:bg-*) ====== */
 html.dark .hover\:bg-brand-surface:hover  { background: #1a1a1a !important; }
 html.dark .hover\:bg-brand-card:hover     { background: #0d0d0d !important; }
