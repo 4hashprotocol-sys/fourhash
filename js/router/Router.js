@@ -16,6 +16,43 @@ const Router = {
   _lastAdminTab: null,
   _lastAdminTabAt: 0,
   _switchAdminTabTimer: null,
+  _lastRegisterRef: null,
+
+  _resolveRegisterSponsor(params) {
+    const DEFAULT_SPONSOR = '4hashprotocol';
+    try {
+      var urlRef = '';
+      try {
+        var usp = new URLSearchParams(window.location.search);
+        urlRef = (usp.get('ref') || '').toString().trim();
+      } catch(_q) { urlRef = ''; }
+      if (urlRef) {
+        try { if (window.localStorage) window.localStorage.setItem('fh_register_ref', urlRef); } catch(_ls1) {}
+        this._lastRegisterRef = urlRef;
+        return urlRef;
+      }
+    } catch(_eu) {}
+    try {
+      var pRef = (params && typeof params.ref !== undefined && params.ref !== null) ? String(params.ref).trim() : '';
+      if (pRef) {
+        try { if (window.localStorage) window.localStorage.setItem('fh_register_ref', pRef); } catch(_ls2) {}
+        this._lastRegisterRef = pRef;
+        return pRef;
+      }
+    } catch(_ep) {}
+    try {
+      var lsRef = '';
+      try { if (window.localStorage) lsRef = (window.localStorage.getItem('fh_register_ref') || '').toString().trim(); } catch(_ls3) {}
+      if (lsRef) {
+        this._lastRegisterRef = lsRef;
+        return lsRef;
+      }
+    } catch(_els) {}
+    try {
+      if (this._lastRegisterRef) return this._lastRegisterRef;
+    } catch(_) {}
+    return DEFAULT_SPONSOR;
+  },
 
   _switchAdminTab(tab) {
     try {
@@ -367,6 +404,7 @@ const Router = {
   },
 
   renderView(route, params) {
+    params = params || {};
     const app = document.getElementById('app-view');
     app.innerHTML = '';
     app.className = 'flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 cyber-grid view-transition';
@@ -390,7 +428,8 @@ const Router = {
         app.innerHTML = Views.Login();
         break;
       case 'register':
-        app.innerHTML = Views.Register(params.ref || '4hashprotocol');
+        var regSponsor = this._resolveRegisterSponsor(params);
+        app.innerHTML = Views.Register(regSponsor);
         break;
       case 'dashboard':
         app.innerHTML = Views.Dashboard();

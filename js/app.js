@@ -187,6 +187,9 @@ function handleRegisterSubmit() {
   var regForm = document.getElementById('register-form');
   if (regForm) sponsorRef = (regForm.getAttribute('data-sponsor') || '').trim();
   if (!sponsorRef) sponsorRef = (new URLSearchParams(window.location.search).get('ref') || '').trim();
+  if (!sponsorRef) try { if (window.localStorage) sponsorRef = (window.localStorage.getItem('fh_register_ref') || '').trim(); } catch(_lSp){}
+  if (!sponsorRef && typeof Router !== 'undefined' && Router._lastRegisterRef) sponsorRef = String(Router._lastRegisterRef).trim();
+  if (!sponsorRef) sponsorRef = '4hashprotocol';
 
   var fullname = fullnameEl ? fullnameEl.value.trim() : '';
   var username = userEl     ? userEl.value.replace(/^@/,'').trim() : '';
@@ -250,6 +253,10 @@ window.onload = async function() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
+  if (refCode) {
+    try { if (window.localStorage) window.localStorage.setItem('fh_register_ref', String(refCode).trim()); } catch(_lsRef){}
+    try { if (window.Router) window.Router._lastRegisterRef = String(refCode).trim(); } catch(_lrRef){}
+  }
 
   // ============ RENDER PRIMEIRO, DEPOIS CARREGA (tela NÃO FICA PRETA) ============
   try {
