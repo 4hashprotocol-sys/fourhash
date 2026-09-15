@@ -1,0 +1,23 @@
+/*.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=60, must-revalidate
+
+/*.jpg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=60, must-revalidate
+
+/*.ico
+  Content-Type: image/x-icon
+  Cache-Control: public, max-age=60, must-revalidate
+
+/favicon.png
+  Content-Type: image/png
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/favicon.ico
+  Content-Type: image/x-icon
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/Logo_4h_solo.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=60, must-revalidate

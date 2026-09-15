@@ -1,0 +1,12 @@
+/*  /index.html  200
+/favicon.png  /favicon.png  200
+/favicon.ico  /favicon.ico  200
+/Logo_4h_solo.png  /Logo_4h_solo.png  200
+/assets/*  /assets/:splat  200
+/css/*  /css/:splat  200
+/js/*  /js/:splat  200
+/logo/*  /logo/:splat  200
+/public/*  /public/:splat  200
+/robots.txt  /robots.txt  200
+/sitemap.xml  /sitemap.xml  200
+/DOMAIN.md  /DOMAIN.md  200
