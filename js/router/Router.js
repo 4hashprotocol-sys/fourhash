@@ -369,7 +369,13 @@ const Router = {
         <button onclick="Router.navigate('support')" class="hover:text-brand transition">${I18n.t('navSupport')}</button>
       `;
       mobileNav.innerHTML = `
-        <div class="space-y-2">
+        <div class="grid grid-cols-2 gap-2 mb-3 pt-2 border-t border-white/5">
+          <div class="col-span-2 text-[10px] font-mono text-gray-500 uppercase px-1">Preferências</div>
+          <button onclick="Theme.toggle()" class="col-span-2 p-2.5 rounded-lg bg-brand-card text-left text-xs font-medium hover:text-brand border border-white/5 flex items-center gap-2">
+            <i class="fa-solid fa-circle-half-stroke text-brand"></i><span data-i18n="toggleTheme">Alternar Tema</span>
+          </button>
+        </div>
+        <div class="space-y-2 pt-2 border-t border-white/5">
           <button onclick="Router.navigate('landing')" class="w-full py-2.5 text-left text-sm text-gray-200 font-medium"><i class="fa-solid fa-house mr-2 text-brand"></i>${I18n.t('navHome')}</button>
           <button onclick="Router.navigate('login')" class="w-full py-2.5 text-left text-sm text-gray-200 font-medium"><i class="fa-solid fa-right-to-bracket mr-2 text-brand"></i>${I18n.t('login')}</button>
           <button onclick="Router.navigate('register')" class="w-full py-2.5 text-center text-sm font-bold bg-brand text-black rounded-lg"><i class="fa-solid fa-user-plus mr-2"></i>${I18n.t('createAccount')}</button>

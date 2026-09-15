@@ -258,6 +258,7 @@ function handleRegisterSubmit() {
 
 window.onload = async function() {
   AppState.init();
+  try { if (window.Theme && typeof Theme.init === 'function') Theme.init(); } catch(_ti){}
 
   const themeBtn = document.getElementById('theme-btn');
   if (themeBtn) themeBtn.setAttribute('title', I18n.t('toggleTheme'));
