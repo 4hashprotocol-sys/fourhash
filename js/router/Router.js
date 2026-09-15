@@ -18,6 +18,22 @@ const Router = {
   _switchAdminTabTimer: null,
   _lastRegisterRef: null,
 
+  _isLocalDev() {
+    try {
+      var hn = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';
+      return (hn === 'localhost' || hn === '127.0.0.1' || hn.indexOf('localhost') >= 0);
+    } catch(_) { return false; }
+  },
+
+  _logInfo() {
+    if (!this._isLocalDev()) return;
+    try { console.log.apply(console, Array.prototype.slice.call(arguments)); } catch(_) {}
+  },
+
+  _logErr() {
+    try { console.log.apply(console, Array.prototype.slice.call(arguments)); } catch(_) {}
+  },
+
   _resolveRegisterSponsor(params) {
     const DEFAULT_SPONSOR = '4hashprotocol';
     try {
@@ -67,7 +83,7 @@ const Router = {
       // #region debug-point H3:Router.switchAdminTab-start
       try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'Router.js:_switchAdminTab', 'switchAdminTab chamado', { tab: tab, prevTab: prevTab || null, tabChanged: tabChanged, count: (Router && Router._renderCount) || 0 }); } catch(_dH3a){}
       // #endregion
-      try { console.log('[Router._switchAdminTab] ' + (tabChanged?'MUDOU':'IGUAL') + ' tab=' + tab + ' prev=' + prevTab); } catch(_lt){}
+      try { self._logInfo('[Router._switchAdminTab] ' + (tabChanged?'MUDOU':'IGUAL') + ' tab=' + tab + ' prev=' + prevTab); } catch(_lt){}
       try { this.refreshCurrentView(true); } catch(_rc1){}
       if (!tabChanged) return;
       this._lastAdminTab = tab;
@@ -83,7 +99,7 @@ const Router = {
           // #endregion
           Promise.resolve().then(function(){ return AppState.loadAdminData(tab, true); })
             .then(function(changed){
-              try { console.log('[Router._switchAdminTab] loadAdminData done | changed=' + !!changed + ' tab=' + tab); } catch(_llt){}
+              try { self._logInfo('[Router._switchAdminTab] loadAdminData done | changed=' + !!changed + ' tab=' + tab); } catch(_llt){}
               if (changed && self.currentRoute === 'admin') {
                 var currTab3 = (AppState && AppState.adminActiveTab) ? AppState.adminActiveTab : null;
                 if (currTab3 === tab) try { self.refreshCurrentView(true); } catch(_rc2){}
@@ -130,7 +146,7 @@ const Router = {
           try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H3', 'Router.js:_scheduleRouteDataLoad admin', 'scheduleRouteDataLoad admin section', { route: route, tab: tab, lastAdminTab: self._lastAdminTab || null, msSinceTabSwitch: (self._lastAdminTabAt ? (now - self._lastAdminTabAt) : -1), recentTabSwitch: !!recentTabSwitch, force: false }); } catch(_dH3c){}
           // #endregion
           if (recentTabSwitch) {
-            try { console.log('[Router._scheduleRouteDataLoad] admin recent switch tab=' + tab + ' → pulando (tab já está carregando via _switchAdminTab)'); } catch(_lgr){}
+            try { self._logInfo('[Router._scheduleRouteDataLoad] admin recent switch tab=' + tab + ' → pulando (tab já está carregando via _switchAdminTab)'); } catch(_lgr){}
           } else if (typeof AppState.loadAdminData === 'function') {
             Promise.resolve().then(function(){ return AppState.loadAdminData(tab, false); })
               .then(function(changed){
@@ -178,9 +194,9 @@ const Router = {
         // #region debug-point H1:Router.refresh-bypass
         try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H1', 'Router.js:refreshCurrentView(bypass)', 'Router.refresh bypass', { count: c, route: route, bypass: true, adminActiveTab: (window.AppState && AppState.adminActiveTab) || null }); } catch(_dH1){}
         // #endregion
-        try { console.log('[Router.refresh] #' + c + ' route=' + route + ' t=' + Date.now()); } catch(_lg){}
+        try { self._logInfo('[Router.refresh] #' + c + ' route=' + route + ' t=' + Date.now()); } catch(_lg){}
         self.renderView(route);
-      } catch(e) { try { console.log('[Router.refresh ERR]:', String((e&&e.message)||e)); } catch(_le){} }
+      } catch(e) { try { self._logErr('[Router.refresh ERR]:', String((e&&e.message)||e)); } catch(_le){} }
       return;
     }
     try { clearTimeout(self._refreshDebounceTimer); } catch(_){}
@@ -193,9 +209,9 @@ const Router = {
         // #region debug-point H1:Router.refresh-debounced
         try { if (window.__dbg && typeof window.__dbg.store === 'function') window.__dbg.store('H1', 'Router.js:refreshCurrentView(debounced)', 'Router.refresh debounced', { count: c2, route: route2, bypass: false, adminActiveTab: (window.AppState && AppState.adminActiveTab) || null }); } catch(_dH1d){}
         // #endregion
-        try { console.log('[Router.refresh] #' + c2 + ' route=' + route2 + ' t=' + Date.now()); } catch(_lg2){}
+        try { self._logInfo('[Router.refresh] #' + c2 + ' route=' + route2 + ' t=' + Date.now()); } catch(_lg2){}
         self.renderView(route2);
-      } catch(e2) { try { console.log('[Router.refresh ERR debounced]:', String((e2&&e2.message)||e2)); } catch(_le2){} }
+      } catch(e2) { try { self._logErr('[Router.refresh ERR debounced]:', String((e2&&e2.message)||e2)); } catch(_le2){} }
     }, 180);
   },
 
@@ -454,8 +470,8 @@ const Router = {
               if (window._treeReady || hasData) {
                 var vp = document.getElementById('tree-viewport');
                 if (vp) {
-                  try { TreeEngine.render(); } catch(e) { try { console.log('[Router.position] TreeEngine.render erro:', e && e.message ? e.message : String(e)); } catch(_) {} }
-                  try { console.log('[Router.position] Árvore renderizada | window._treeReady:', !!window._treeReady, '| hasPositions:', hasData, '| tentativa:', tries + 1); } catch(_) {}
+                  try { TreeEngine.render(); } catch(e) { try { self._logErr('[Router.position] TreeEngine.render erro:', e && e.message ? e.message : String(e)); } catch(_) {} }
+                  try { self._logInfo('[Router.position] Árvore renderizada | window._treeReady:', !!window._treeReady, '| hasPositions:', hasData, '| tentativa:', tries + 1); } catch(_) {}
                 }
               }
             } catch(_) {}

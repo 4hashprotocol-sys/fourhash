@@ -17,6 +17,17 @@
 (function () {
   try {
     var __dbg = window.__dbg || (window.__dbg = {});
+    var _hn = (window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : '';
+    var isLocal = (_hn === 'localhost' || _hn === '127.0.0.1' || _hn.indexOf('localhost') >= 0);
+    __dbg._isLocalDev = isLocal;
+    if (!isLocal) {
+      // EM PRODUÇÃO (fourhash.app) — desativar 100% o debug forwarder para não poluir console e não gerar ERR_CONNECTION_REFUSED
+      __dbg.store = function () {};
+      __dbg.flush = function () {};
+      __dbg.queue = [];
+      __dbg.disabled = true;
+      return;
+    }
     __dbg.sessionId = 'admin-oscillation-wallet-empty';
     __dbg.runId = 'pre-fix';
     __dbg.url = 'http://127.0.0.1:7777/event';
