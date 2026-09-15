@@ -106,23 +106,53 @@ const AppState = {
   startPaymentPolling(onChangeCb) {
     var self = this;
     this.stopPaymentPolling();
+    var tickNo = 0;
     this._paymentPollTimer = setInterval(async function(){
+      tickNo++;
       if (!self.hasOpenPayment()) { self.stopPaymentPolling(); return; }
       try {
         var pay = self.currentPayment; if (!pay || !pay.payment_id) return;
+
+        if (typeof self.refreshMyUserStatusOnly === 'function') {
+          try { await Promise.resolve(self.refreshMyUserStatusOnly()); } catch(_uSt){}
+        } else if (typeof self.loadMyProfile === 'function') {
+          try { await Promise.resolve(self.loadMyProfile()); } catch(_uSt2){}
+        }
+        if (self.currentUser && String(self.currentUser.status || '').toUpperCase() === 'ACTIVE') {
+          console.log('[POLLING WATCHDOG] status=ACTIVE detectado → dispara finished. pay:', pay.payment_id);
+          self.stopPaymentPolling();
+          try { self.setCurrentPayment(null); } catch(_) {}
+          try { if (typeof onChangeCb === 'function') onChangeCb('finished', { status: 'finished', source: 'profile_active' }, pay); } catch(_) {}
+          return;
+        }
+
+        if ((tickNo % 3) === 0 && typeof self.npReconcilePendingPayments === 'function') {
+          try {
+            await Promise.resolve(self.npReconcilePendingPayments({ force: true }));
+            if (self.currentUser && String(self.currentUser.status || '').toUpperCase() === 'ACTIVE') {
+              console.log('[POLLING WATCHDOG] npReconcile → status=ACTIVE detectado.');
+              self.stopPaymentPolling();
+              try { self.setCurrentPayment(null); } catch(_) {}
+              try { if (typeof onChangeCb === 'function') onChangeCb('finished', { status: 'finished', source: 'np_reconcile' }, pay); } catch(_) {}
+              return;
+            }
+          } catch(_rcErr) { console.error('[POLLING npReconcile fail (ignorado)]', _rcErr); }
+        }
+
         var raw = await fetch('/api/np-payment-status/' + encodeURIComponent(String(pay.payment_id)), { method: 'GET', headers: { 'Accept': 'application/json' } });
         var j = await raw.json().catch(function(){ return {}; });
-        if (j && (j.ok === true || j.data)) {
+        if (j && (j.ok === true || j.data || j.status)) {
           var d = j.data || j;
           var newSt = String(d.status || pay.status || 'waiting').toLowerCase();
           var changed = (newSt !== pay.status) || (d.pay_amount && Number(d.pay_amount) !== Number(pay.pay_amount)) || (d.pay_address && String(d.pay_address) !== String(pay.pay_address));
-          if (newSt === 'finished' || newSt === 'confirmed' || newSt === 'paid' || newSt === 'success') {
+          console.log('[POLLING NP status] tick=' + tickNo + ' newSt=' + newSt + ' changed=' + changed + ' payid=' + String(pay.payment_id).slice(0,8));
+          if (newSt === 'finished' || newSt === 'confirmed' || newSt === 'paid' || newSt === 'success' || newSt === 'partially_paid' || newSt === 'settled') {
             self.stopPaymentPolling();
             try { self.setCurrentPayment(null); } catch(_) {}
             try { if (typeof onChangeCb === 'function') onChangeCb('finished', d, pay); } catch(_) {}
             return;
           }
-          if (newSt === 'expired' || newSt === 'cancelled' || newSt === 'canceled' || newSt === 'refunded' || newSt === 'closed') {
+          if (newSt === 'expired' || newSt === 'cancelled' || newSt === 'canceled' || newSt === 'refunded' || newSt === 'closed' || newSt === 'failed') {
             pay.status = newSt;
             self.currentPayment = pay;
             try { self._persistCurrentPayment(); } catch(_) {}
@@ -139,9 +169,14 @@ const AppState = {
             try { if (typeof onChangeCb === 'function') onChangeCb('updated', d, pay); } catch(_) {}
             if (typeof Router !== 'undefined') Router.refreshCurrentView();
           }
+        } else {
+          if ((tickNo % 4) === 0) console.log('[POLLING NP status] sem resposta HTTP json tick=' + tickNo + ', raw.status=' + (raw ? raw.status : 'no-raw'));
         }
-      } catch(_pollErr) {}
+      } catch(_pollErr) { console.error('[POLLING startPaymentPolling erro (continuando...) ]', _pollErr); }
     }, 5000);
+    try {
+      if (typeof AppState.refreshMyUserStatusOnly === 'function') Promise.resolve(AppState.refreshMyUserStatusOnly()).catch(function(){});
+    } catch(_) {}
   },
 
   isValidEvmAddress(addr) {
@@ -159,6 +194,44 @@ const AppState = {
       const s = addr.trim();
       return /^T[a-zA-Z0-9]{33}$/.test(s);
     } catch (e) { return false; }
+  },
+
+  async refreshMyUserStatusOnly() {
+    try {
+      if (!this.isAuthenticated || !this.currentUser || !this.currentUser.id) return false;
+      if (!window.SupabaseOK || !window.SupabaseOK()) return false;
+      const sb = this._sb();
+      if (!sb) return false;
+      const meId = this.currentUser.id;
+      var r = null;
+      try {
+        r = await sb.from('profiles').select('id,status,username,level_number,entry_date,activation_tx,available_balance,pending_balance,bonus_pending_balance,frozen_balance,upline_username,sponsor_code').eq('id', meId).limit(1).maybeSingle();
+      } catch(_e){ r = null; }
+      if (!r || !r.data) {
+        try {
+          var r2 = await sb.from('profiles').select('id,status,username,level_number,entry_date,activation_tx').eq('id', meId).limit(1).maybeSingle();
+          if (r2 && r2.data) r = r2;
+        } catch(_e2){ return false; }
+      }
+      const p = (r && r.data) ? r.data : null;
+      if (!p) return false;
+      if (p.status) this.currentUser.status = String(p.status);
+      if (p.username) this.currentUser.username = String(p.username);
+      if (typeof p.level_number !== 'undefined') this.currentUser.level = Number(p.level_number || 0);
+      if (p.entry_date) this.currentUser.entryDate = String(p.entry_date);
+      if (p.activation_tx) this.currentUser.activationTx = String(p.activation_tx);
+      if (typeof p.available_balance !== 'undefined') this.currentUser.availableBalance = Number(p.available_balance || 0);
+      if (typeof p.pending_balance !== 'undefined') this.currentUser.pendingBalance = Number(p.pending_balance || 0);
+      if (typeof p.bonus_pending_balance !== 'undefined') this.currentUser.bonusPending = Number(p.bonus_pending_balance || 0);
+      if (typeof p.frozen_balance !== 'undefined') this.currentUser.frozenBalance = Number(p.frozen_balance || 0);
+      if (p.upline_username) this.currentUser.sponsor = String(p.upline_username);
+      else if (p.sponsor_code) this.currentUser.sponsor = String(p.sponsor_code);
+      console.log('[refreshMyUserStatusOnly] OK. status=', this.currentUser.status, 'level=', this.currentUser.level);
+      return true;
+    } catch(e) {
+      console.error('[refreshMyUserStatusOnly FAIL]', e);
+      return false;
+    }
   },
 
   projectSettings: {

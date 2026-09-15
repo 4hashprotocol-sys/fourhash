@@ -202,7 +202,9 @@
 
       const payAddress = useNowPayments ? String(np.pay_address || '') : net.address;
       const payAmountRaw = useNowPayments ? Number(np.pay_amount || entryAmount) : entryAmount;
-      const payAmount = Number(Number(payAmountRaw).toFixed(Math.max(2, (np.pay_currency === 'btc' || np.pay_currency === 'eth' ? 8 : 6))));
+      const payAmountPrecise = Number(Number(payAmountRaw).toFixed(Math.max(2, (np.pay_currency === 'btc' || np.pay_currency === 'eth' ? 8 : 6))));
+      const payAmount = Number(Number(entryAmount).toFixed(2));
+      const payAmountDisplay = payAmount;
       const paymentId = String(np.payment_id || '');
       const paymentUrl = String(np.payment_url || '');
       const netTag = useNowPayments ? (String(np.network || net.short || '').toUpperCase()) : net.short;
@@ -259,7 +261,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="sm:col-span-2 space-y-2">
-              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor a Enviar (EXATO)</div>
+              <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Valor a Enviar (Arredondado para US$ ` + String(payAmount) + `)</div>
               <div class="flex items-center gap-3 p-4 rounded-2xl border border-brand-border bg-brand-surface/50">
                 <div class="w-11 h-11 rounded-2xl bg-brand/20 border border-brand/40 flex items-center justify-center text-brand flex-shrink-0 shadow-neon-sm">
                   <i class="fa-solid fa-coins text-xl"></i>
@@ -267,7 +269,8 @@
                 <div class="flex-1 min-w-0">
                   <div class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">USDT ` + netTag + `</div>
                   <div class="font-black font-mono text-2xl sm:text-3xl text-white leading-none">
-                    <span id="pv-amount" class="text-white">` + String(payAmount) + `</span>
+                    <span id="pv-amount" class="text-white">` + String(payAmount.toFixed(2)) + `</span>
+                    <input type="hidden" id="pv-amount-precise" value="` + String(payAmountPrecise) + `">
                     <span class="ml-1.5 text-base text-gray-400 font-bold align-middle">USDT</span>
                   </div>
                 </div>
@@ -329,7 +332,7 @@
               </div>
               <div class="text-[11px] text-amber-200/90 leading-relaxed space-y-1">
                 <div class="font-black uppercase tracking-wider text-amber-300 text-[11px]">Instruções Obrigatórias</div>
-                <div><span class="font-black">1. Envie EXATAMENTE ` + String(payAmount) + ` USDT</span> pela rede <span class="font-black uppercase">` + netTag + `</span> para o endereço acima.</div>
+                <div><span class="font-black">1. Envie EXATAMENTE ` + String(payAmount.toFixed(2)) + ` USDT (valor arredondado)</span> pela rede <span class="font-black uppercase">` + netTag + `</span> para o endereço acima. O gateway aceita valores de 9.00 a 10.10 USDT para cobrir taxas mínimas de rede.</div>
                 <div><span class="font-black">2. Confirme SEMPRE a rede antes de autorizar.</span> Envios em redes erradas (ex: USDT BEP20 para TRC20) resultam em perda irreversível e não são creditados.</div>
                 <div>3. Após 12 confirmações on-chain, a validação automática credita o valor. Se demorar >30min, cole o TXID acima e clique em Confirmar ou abra ticket de suporte.</div>
               </div>
@@ -480,6 +483,7 @@
     },
 
     _onPaymentFinished(pay, kind, amount) {
+      const self = this;
       try { if (this._timerRef) { clearInterval(this._timerRef); this._timerRef = null; } } catch(_) {}
       try { AppState.stopPaymentPolling(); } catch(_) {}
       try { if (typeof AppState !== 'undefined' && typeof AppState.setCurrentPayment === 'function') AppState.setCurrentPayment(null); } catch(_s) {}
@@ -487,25 +491,29 @@
         var pill = document.getElementById('pv-status-pill');
         if (pill) {
           pill.className = 'flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-black text-xs sm:text-sm font-mono uppercase tracking-[0.18em]';
-          pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Pagamento confirmado ✓';
+          pill.innerHTML = '<i class="fa-solid fa-circle-check"></i> Pagamento confirmado ✓ Entrando…';
         }
       } catch(_) {}
-      UI.showToast('Pagamento confirmado com sucesso! Entrando…', 'success', 'fa-circle-check', 2500);
-      setTimeout(async function(){
-        try {
-          if (typeof AppState !== 'undefined' && typeof AppState.refreshFromSupabase === 'function') {
-            await Promise.resolve(AppState.refreshFromSupabase());
-          }
-        } catch(_r) {}
-        try { if (typeof AppState !== 'undefined' && typeof AppState.setCurrentPayment === 'function') AppState.setCurrentPayment(null); } catch(_s2) {}
+      UI.showToast('Pagamento confirmado com sucesso! Entrando…', 'success', 'fa-circle-check', 3000);
+      function go(force) {
         try { if (typeof UI !== 'undefined' && typeof UI.closeModal === 'function') UI.closeModal(); } catch(_c) {}
+        try { if (typeof AppState !== 'undefined' && typeof AppState.setCurrentPayment === 'function') AppState.setCurrentPayment(null); } catch(_s2) {}
         try {
           if (typeof Router !== 'undefined') {
             Router.navigate(kind === 'activation' ? 'dashboard' : 'wallet');
-            try { Router.refreshCurrentView(); } catch(_r) {}
+            try { Router.refreshCurrentView(true); } catch(_r) {}
           }
         } catch(_n) {}
-      }, 900);
+      }
+      setTimeout(async function(){
+        try {
+          if (typeof AppState !== 'undefined' && typeof AppState.refreshFromSupabase === 'function') {
+            try { await Promise.resolve(AppState.refreshFromSupabase()); } catch(_r) { console.error('[PayVault _onPaymentFinished refreshFromSupabase fail (CONTINUA mesmo assim)]', _r); }
+          }
+        } catch(_rBig) {}
+        setTimeout(function(){ go(true); }, 500);
+      }, 700);
+      setTimeout(function(){ go(true); }, 4500);
     },
 
     _showGatewayUnavailableModal(reason, netCode, entryAmount, kind) {
